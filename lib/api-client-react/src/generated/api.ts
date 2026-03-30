@@ -5,18 +5,29 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  Artwork,
+  CheckoutSessionResponse,
+  CreateCheckoutSessionBody,
+  ErrorResponse,
+  HandleStripeWebhookBody,
+  HealthStatus,
+  WebhookResponse,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -99,3 +110,339 @@ export function useHealthCheck<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Returns all artworks ordered with featured pieces first
+ * @summary List all artworks
+ */
+export const getListArtworksUrl = () => {
+  return `/api/artworks`;
+};
+
+export const listArtworks = async (
+  options?: RequestInit,
+): Promise<Artwork[]> => {
+  return customFetch<Artwork[]>(getListArtworksUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListArtworksQueryKey = () => {
+  return [`/api/artworks`] as const;
+};
+
+export const getListArtworksQueryOptions = <
+  TData = Awaited<ReturnType<typeof listArtworks>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listArtworks>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListArtworksQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listArtworks>>> = ({
+    signal,
+  }) => listArtworks({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listArtworks>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListArtworksQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listArtworks>>
+>;
+export type ListArtworksQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all artworks
+ */
+
+export function useListArtworks<
+  TData = Awaited<ReturnType<typeof listArtworks>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listArtworks>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListArtworksQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get artwork by slug
+ */
+export const getGetArtworkUrl = (slug: string) => {
+  return `/api/artworks/${slug}`;
+};
+
+export const getArtwork = async (
+  slug: string,
+  options?: RequestInit,
+): Promise<Artwork> => {
+  return customFetch<Artwork>(getGetArtworkUrl(slug), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetArtworkQueryKey = (slug: string) => {
+  return [`/api/artworks/${slug}`] as const;
+};
+
+export const getGetArtworkQueryOptions = <
+  TData = Awaited<ReturnType<typeof getArtwork>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  slug: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getArtwork>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetArtworkQueryKey(slug);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getArtwork>>> = ({
+    signal,
+  }) => getArtwork(slug, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!slug,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getArtwork>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetArtworkQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getArtwork>>
+>;
+export type GetArtworkQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get artwork by slug
+ */
+
+export function useGetArtwork<
+  TData = Awaited<ReturnType<typeof getArtwork>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  slug: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getArtwork>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetArtworkQueryOptions(slug, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a Stripe checkout session
+ */
+export const getCreateCheckoutSessionUrl = () => {
+  return `/api/checkout/session`;
+};
+
+export const createCheckoutSession = async (
+  createCheckoutSessionBody: CreateCheckoutSessionBody,
+  options?: RequestInit,
+): Promise<CheckoutSessionResponse> => {
+  return customFetch<CheckoutSessionResponse>(getCreateCheckoutSessionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createCheckoutSessionBody),
+  });
+};
+
+export const getCreateCheckoutSessionMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCheckoutSession>>,
+    TError,
+    { data: BodyType<CreateCheckoutSessionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCheckoutSession>>,
+  TError,
+  { data: BodyType<CreateCheckoutSessionBody> },
+  TContext
+> => {
+  const mutationKey = ["createCheckoutSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCheckoutSession>>,
+    { data: BodyType<CreateCheckoutSessionBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCheckoutSession(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCheckoutSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCheckoutSession>>
+>;
+export type CreateCheckoutSessionMutationBody =
+  BodyType<CreateCheckoutSessionBody>;
+export type CreateCheckoutSessionMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a Stripe checkout session
+ */
+export const useCreateCheckoutSession = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCheckoutSession>>,
+    TError,
+    { data: BodyType<CreateCheckoutSessionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createCheckoutSession>>,
+  TError,
+  { data: BodyType<CreateCheckoutSessionBody> },
+  TContext
+> => {
+  return useMutation(getCreateCheckoutSessionMutationOptions(options));
+};
+
+/**
+ * @summary Handle Stripe webhook events
+ */
+export const getHandleStripeWebhookUrl = () => {
+  return `/api/checkout/webhook`;
+};
+
+export const handleStripeWebhook = async (
+  handleStripeWebhookBody: HandleStripeWebhookBody,
+  options?: RequestInit,
+): Promise<WebhookResponse> => {
+  return customFetch<WebhookResponse>(getHandleStripeWebhookUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(handleStripeWebhookBody),
+  });
+};
+
+export const getHandleStripeWebhookMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof handleStripeWebhook>>,
+    TError,
+    { data: BodyType<HandleStripeWebhookBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof handleStripeWebhook>>,
+  TError,
+  { data: BodyType<HandleStripeWebhookBody> },
+  TContext
+> => {
+  const mutationKey = ["handleStripeWebhook"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof handleStripeWebhook>>,
+    { data: BodyType<HandleStripeWebhookBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return handleStripeWebhook(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type HandleStripeWebhookMutationResult = NonNullable<
+  Awaited<ReturnType<typeof handleStripeWebhook>>
+>;
+export type HandleStripeWebhookMutationBody = BodyType<HandleStripeWebhookBody>;
+export type HandleStripeWebhookMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Handle Stripe webhook events
+ */
+export const useHandleStripeWebhook = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof handleStripeWebhook>>,
+    TError,
+    { data: BodyType<HandleStripeWebhookBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof handleStripeWebhook>>,
+  TError,
+  { data: BodyType<HandleStripeWebhookBody> },
+  TContext
+> => {
+  return useMutation(getHandleStripeWebhookMutationOptions(options));
+};

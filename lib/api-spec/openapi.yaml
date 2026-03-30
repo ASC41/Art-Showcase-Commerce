@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: artworks
+    description: Artwork operations
+  - name: checkout
+    description: Checkout and payment operations
 paths:
   /healthz:
     get:
@@ -24,6 +28,98 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /artworks:
+    get:
+      operationId: listArtworks
+      tags: [artworks]
+      summary: List all artworks
+      description: Returns all artworks ordered with featured pieces first
+      responses:
+        "200":
+          description: List of artworks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Artwork"
+
+  /artworks/{slug}:
+    get:
+      operationId: getArtwork
+      tags: [artworks]
+      summary: Get artwork by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Artwork
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artwork"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /checkout/session:
+    post:
+      operationId: createCheckoutSession
+      tags: [checkout]
+      summary: Create a Stripe checkout session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutSessionBody"
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSessionResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Artwork not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /checkout/webhook:
+    post:
+      operationId: handleStripeWebhook
+      tags: [checkout]
+      summary: Handle Stripe webhook events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +130,87 @@ components:
       required:
         - status
 
+    Artwork:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        title:
+          type: string
+        medium:
+          type: ["string", "null"]
+        dimensions:
+          type: ["string", "null"]
+        price:
+          type: ["integer", "null"]
+        status:
+          type: string
+          enum: [available, sold, unavailable]
+        description:
+          type: ["string", "null"]
+        imageUrl:
+          type: string
+        isFeatured:
+          type: boolean
+        year:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - slug
+        - title
+        - status
+        - imageUrl
+        - isFeatured
+        - createdAt
+
+    CreateCheckoutSessionBody:
+      type: object
+      properties:
+        artworkSlug:
+          type: string
+        purchaseType:
+          type: string
+          enum: [original, print]
+        customerEmail:
+          type: ["string", "null"]
+        successUrl:
+          type: string
+        cancelUrl:
+          type: string
+      required:
+        - artworkSlug
+        - purchaseType
+        - successUrl
+        - cancelUrl
+
+    CheckoutSessionResponse:
+      type: object
+      properties:
+        url:
+          type: string
+        sessionId:
+          type: string
+      required:
+        - url
+        - sessionId
+
+    WebhookResponse:
+      type: object
+      properties:
+        received:
+          type: boolean
+      required:
+        - received
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

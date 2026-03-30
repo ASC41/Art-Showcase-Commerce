@@ -8,3 +8,63 @@
 export interface HealthStatus {
   status: string;
 }
+
+export type ArtworkStatus = (typeof ArtworkStatus)[keyof typeof ArtworkStatus];
+
+export const ArtworkStatus = {
+  available: "available",
+  sold: "sold",
+  unavailable: "unavailable",
+} as const;
+
+export interface Artwork {
+  id: number;
+  slug: string;
+  title: string;
+  /** @nullable */
+  medium?: string | null;
+  /** @nullable */
+  dimensions?: string | null;
+  /** @nullable */
+  price?: number | null;
+  status: ArtworkStatus;
+  /** @nullable */
+  description?: string | null;
+  imageUrl: string;
+  isFeatured: boolean;
+  /** @nullable */
+  year?: number | null;
+  createdAt: string;
+}
+
+export type CreateCheckoutSessionBodyPurchaseType =
+  (typeof CreateCheckoutSessionBodyPurchaseType)[keyof typeof CreateCheckoutSessionBodyPurchaseType];
+
+export const CreateCheckoutSessionBodyPurchaseType = {
+  original: "original",
+  print: "print",
+} as const;
+
+export interface CreateCheckoutSessionBody {
+  artworkSlug: string;
+  purchaseType: CreateCheckoutSessionBodyPurchaseType;
+  /** @nullable */
+  customerEmail?: string | null;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+export interface CheckoutSessionResponse {
+  url: string;
+  sessionId: string;
+}
+
+export interface WebhookResponse {
+  received: boolean;
+}
+
+export interface ErrorResponse {
+  error: string;
+}
+
+export type HandleStripeWebhookBody = { [key: string]: unknown };

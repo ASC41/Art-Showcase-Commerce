@@ -14,3 +14,70 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Returns all artworks ordered with featured pieces first
+ * @summary List all artworks
+ */
+export const ListArtworksResponseItem = zod.object({
+  id: zod.number(),
+  slug: zod.string(),
+  title: zod.string(),
+  medium: zod.string().nullish(),
+  dimensions: zod.string().nullish(),
+  price: zod.number().nullish(),
+  status: zod.enum(["available", "sold", "unavailable"]),
+  description: zod.string().nullish(),
+  imageUrl: zod.string(),
+  isFeatured: zod.boolean(),
+  year: zod.number().nullish(),
+  createdAt: zod.date(),
+});
+export const ListArtworksResponse = zod.array(ListArtworksResponseItem);
+
+/**
+ * @summary Get artwork by slug
+ */
+export const GetArtworkParams = zod.object({
+  slug: zod.coerce.string(),
+});
+
+export const GetArtworkResponse = zod.object({
+  id: zod.number(),
+  slug: zod.string(),
+  title: zod.string(),
+  medium: zod.string().nullish(),
+  dimensions: zod.string().nullish(),
+  price: zod.number().nullish(),
+  status: zod.enum(["available", "sold", "unavailable"]),
+  description: zod.string().nullish(),
+  imageUrl: zod.string(),
+  isFeatured: zod.boolean(),
+  year: zod.number().nullish(),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary Create a Stripe checkout session
+ */
+export const CreateCheckoutSessionBody = zod.object({
+  artworkSlug: zod.string(),
+  purchaseType: zod.enum(["original", "print"]),
+  customerEmail: zod.string().nullish(),
+  successUrl: zod.string(),
+  cancelUrl: zod.string(),
+});
+
+export const CreateCheckoutSessionResponse = zod.object({
+  url: zod.string(),
+  sessionId: zod.string(),
+});
+
+/**
+ * @summary Handle Stripe webhook events
+ */
+export const HandleStripeWebhookBody = zod.object({}).passthrough();
+
+export const HandleStripeWebhookResponse = zod.object({
+  received: zod.boolean(),
+});
