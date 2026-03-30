@@ -7,6 +7,7 @@ export interface DraggableGalleryItem {
   title?: string;
   cover?: string;
   slug?: string;
+  aspectRatio?: number;
   [key: string]: unknown;
 }
 
