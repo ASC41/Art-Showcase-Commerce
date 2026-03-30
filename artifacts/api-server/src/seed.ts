@@ -1,0 +1,274 @@
+import { db } from "@workspace/db";
+import { artworksTable } from "@workspace/db/schema";
+
+const BASE =
+  "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design";
+
+const artworks = [
+  // ── Featured / For Sale Originals ──────────────────────────────────────────
+  {
+    slug: "grin-and-bear-it",
+    title: "Grin and Bear It",
+    medium: "Acrylic on Canvas",
+    dimensions: "3' × 1.5'",
+    price: 75000,
+    status: "available" as const,
+    imageUrl: `${BASE}@543b8056aee8e2e39560fee8533ae82d0f707a07/uploads/2026-03-30T20-55-07-996Z-co1m2osgt.jpg`,
+    isFeatured: true,
+    year: 2024,
+    description:
+      "This piece captures the circus-like dance of mental awakening — the sensation of consciousness returning, almost blinding in its intensity, as the light of the world rushes back in.",
+  },
+  {
+    slug: "the-warm-waking-cold",
+    title: "The Warm Waking Cold",
+    medium: "Acrylic on Wood",
+    dimensions: "3' × 3'",
+    price: 100000,
+    status: "available" as const,
+    imageUrl: `${BASE}@c8bd91b79ea3ea9eb0d0edd9139854008d0d5766/uploads/2026-03-30T20-55-46-776Z-28sv8qptt.jpg`,
+    isFeatured: true,
+    year: 2024,
+    description:
+      "This piece explores the experience of waking into mania — and the shadow of depression that follows, haunting the self as an ever-present fear of return.",
+  },
+  {
+    slug: "hands-to-yourself",
+    title: "Hands to Yourself",
+    medium: "Acrylic on Canvas",
+    dimensions: "3' × 1.5'",
+    price: 75000,
+    status: "available" as const,
+    imageUrl: `${BASE}@6f1b614055b286df6030dd9bbc5400decb619c5c/uploads/2026-03-30T20-56-07-001Z-59ddwbthe.jpg`,
+    isFeatured: true,
+    year: 2023,
+    description:
+      "This piece confronts the feeling of helplessness and grotesquery that comes in dreams about being sexually violated.",
+  },
+  {
+    slug: "endure",
+    title: "Endure",
+    medium: "Acrylic on Canvas",
+    dimensions: "4' × 3.5'",
+    price: 250000,
+    status: "available" as const,
+    imageUrl: `${BASE}@a06169277ae7c11ddf17d46271df1ceb7b85418d/uploads/2026-03-30T20-57-08-625Z-bt4s164un.png`,
+    isFeatured: true,
+    year: 2024,
+    description:
+      "This work is rooted in the weight of the mind — and the world the mind creates for itself. Color, for me, is a form of confrontation; I work with it as a means of facing my mental illness directly, a practice of exposure therapy embedded in the creative process. Though heavy and emotional in nature, the piece carries an underlying message of perseverance and personal fortitude. It is among the works I am most proud of. There is a cosmic, otherworldly quality to it — one that emerged organically, almost beyond my own understanding of how it came to be.",
+  },
+  // ── Sold / Named Works ─────────────────────────────────────────────────────
+  {
+    slug: "give-me-peace",
+    title: "Give Me Peace",
+    medium: "Acrylic on Canvas",
+    dimensions: null,
+    price: null,
+    status: "sold" as const,
+    imageUrl: `${BASE}@fee6f3b52df3ba33e46d0f6e6af0debf68a77961/uploads/2026-03-30T21-03-19-054Z-pm2l8672k.jpg`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+  {
+    slug: "hilarity",
+    title: "Hilarity",
+    medium: "Acrylic on Canvas",
+    dimensions: null,
+    price: null,
+    status: "sold" as const,
+    imageUrl: `${BASE}@388df2c51c71d49e11d724272677cbd53b06b321/uploads/2026-03-30T21-04-27-018Z-6xky4oyxe.jpg`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+  {
+    slug: "untitled-01",
+    title: "Untitled 01",
+    medium: null,
+    dimensions: null,
+    price: null,
+    status: "unavailable" as const,
+    imageUrl: `${BASE}@3b6b596746b7a82170b3f75ea043a98421abe4a4/uploads/2026-03-30T21-05-03-301Z-nqwte8805.JPG`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+  {
+    slug: "maybe-tomorrow",
+    title: "Maybe Tomorrow",
+    medium: "Acrylic on Canvas",
+    dimensions: null,
+    price: null,
+    status: "sold" as const,
+    imageUrl: `${BASE}@fc10bbdb30b39c1dcf311a80bd7845cc62799d8b/uploads/2026-03-30T21-05-32-392Z-xaiulv9nt.jpg`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+  {
+    slug: "our-lives",
+    title: "Our Lives",
+    medium: "Acrylic on Canvas",
+    dimensions: null,
+    price: null,
+    status: "sold" as const,
+    imageUrl: `${BASE}@4ec50af74c2aaacf4cb722cdc27da215c4bd6468/uploads/2026-03-30T21-08-40-264Z-b09z48ro3.jpg`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+  {
+    slug: "the-toast",
+    title: "The Toast",
+    medium: "Acrylic on Canvas",
+    dimensions: null,
+    price: null,
+    status: "sold" as const,
+    imageUrl: `${BASE}@7d6ce1693f82f7320c9a29c5879112c60d7f2b53/uploads/2026-03-30T21-09-35-470Z-6wxs4057t.jpg`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+  {
+    slug: "hope-far-away-hope",
+    title: "Hope, Far Away Hope",
+    medium: null,
+    dimensions: null,
+    price: null,
+    status: "unavailable" as const,
+    imageUrl: `${BASE}@aa70c53b91df12ce12301bc817ebefdd0a49eba4/uploads/2026-03-30T21-10-06-133Z-2mvkzz8rd.png`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+  // ── Untitled Works ─────────────────────────────────────────────────────────
+  {
+    slug: "untitled-02",
+    title: "Untitled 02",
+    medium: null,
+    dimensions: null,
+    price: null,
+    status: "unavailable" as const,
+    imageUrl: `${BASE}@3bb300a6f5b00e7b86597c03aac3bcec627ac11c/uploads/2026-03-30T21-11-10-339Z-nkfgqvr0z.jpg`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+  {
+    slug: "untitled-03",
+    title: "Untitled 03",
+    medium: null,
+    dimensions: null,
+    price: null,
+    status: "unavailable" as const,
+    imageUrl: `${BASE}@706d6331d2e16056a8c254ef73f67949ecaa859e/uploads/2026-03-30T21-11-37-856Z-8nrulpnzi.jpg`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+  {
+    slug: "untitled-04",
+    title: "Untitled 04",
+    medium: null,
+    dimensions: null,
+    price: null,
+    status: "unavailable" as const,
+    imageUrl: `${BASE}@461b56e80d3e3c10126cd8edfa4cce80fc50fc8d/uploads/2026-03-30T21-12-06-756Z-vpls5n41h.jpg`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+  {
+    slug: "untitled-05",
+    title: "Untitled 05",
+    medium: null,
+    dimensions: null,
+    price: null,
+    status: "unavailable" as const,
+    imageUrl: `${BASE}@dd6d754e03fab5c9a7634e56fcacab6f648ac1c3/uploads/2026-03-30T21-12-30-294Z-hvi3p5ryp.jpg`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+  {
+    slug: "untitled-06",
+    title: "Untitled 06",
+    medium: null,
+    dimensions: null,
+    price: null,
+    status: "unavailable" as const,
+    imageUrl: `${BASE}@fd2b7c7eccf64fe6fc0139c40e8ae0394965fbbe/uploads/2026-03-30T21-12-54-045Z-bpo5mjqy6.jpg`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+  {
+    slug: "untitled-07",
+    title: "Untitled 07",
+    medium: null,
+    dimensions: null,
+    price: null,
+    status: "unavailable" as const,
+    imageUrl: `${BASE}@e968480b9bc4b54d5eeb8d46701f815c5cc7233a/uploads/2026-03-30T21-15-00-026Z-ywv7z8ljy.jpg`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+  {
+    slug: "untitled-08",
+    title: "Untitled 08",
+    medium: null,
+    dimensions: null,
+    price: null,
+    status: "unavailable" as const,
+    imageUrl: `${BASE}@87331cd0df3f16b19c5dd36d129847bdc08c7943/uploads/2026-03-30T21-15-53-287Z-q8l3g6634.JPG`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+  {
+    slug: "untitled-09",
+    title: "Untitled 09",
+    medium: null,
+    dimensions: null,
+    price: null,
+    status: "unavailable" as const,
+    imageUrl: `${BASE}@bd0905c1cd2366e717f55eec6430fa030886f156/uploads/2026-03-30T21-16-30-498Z-fiyt8otld.JPG`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+  {
+    slug: "untitled-10",
+    title: "Untitled 10",
+    medium: null,
+    dimensions: null,
+    price: null,
+    status: "unavailable" as const,
+    imageUrl: `${BASE}@a5a7948f105845838e8fb13d2c80257f07a71253/uploads/2026-03-30T21-16-48-168Z-3adbmnpq7.JPG`,
+    isFeatured: false,
+    year: null,
+    description: null,
+  },
+];
+
+async function seed() {
+  console.log("Clearing existing artworks...");
+  await db.delete(artworksTable);
+
+  console.log("Seeding artworks...");
+  for (const artwork of artworks) {
+    await db.insert(artworksTable).values(artwork);
+    console.log(`  Inserted: ${artwork.title}`);
+  }
+  console.log(`\nSeed complete. ${artworks.length} artworks inserted.`);
+}
+
+seed()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error("Seed failed:", err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  });

@@ -6,4 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type HandleStripeWebhookBody = { [key: string]: unknown };
+export interface VerifyCheckoutBody {
+  sessionId: string;
+}

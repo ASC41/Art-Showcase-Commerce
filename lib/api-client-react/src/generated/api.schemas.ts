@@ -59,12 +59,25 @@ export interface CheckoutSessionResponse {
   sessionId: string;
 }
 
-export interface WebhookResponse {
-  received: boolean;
+export interface VerifyCheckoutBody {
+  sessionId: string;
+}
+
+export type VerifyCheckoutResponsePurchaseType =
+  (typeof VerifyCheckoutResponsePurchaseType)[keyof typeof VerifyCheckoutResponsePurchaseType];
+
+export const VerifyCheckoutResponsePurchaseType = {
+  original: "original",
+  print: "print",
+} as const;
+
+export interface VerifyCheckoutResponse {
+  success: boolean;
+  purchaseType: VerifyCheckoutResponsePurchaseType;
+  artworkTitle: string;
+  message: string;
 }
 
 export interface ErrorResponse {
   error: string;
 }
-
-export type HandleStripeWebhookBody = { [key: string]: unknown };

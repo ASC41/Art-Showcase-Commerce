@@ -101,24 +101,30 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /checkout/webhook:
+  /checkout/verify:
     post:
-      operationId: handleStripeWebhook
+      operationId: verifyCheckout
       tags: [checkout]
-      summary: Handle Stripe webhook events
+      summary: Verify a completed Stripe checkout session and fulfill the order
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
+              $ref: "#/components/schemas/VerifyCheckoutBody"
       responses:
         "200":
-          description: Webhook processed
+          description: Order verified and fulfilled
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WebhookResponse"
+                $ref: "#/components/schemas/VerifyCheckoutResponse"
+        "400":
+          description: Payment not completed or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:
@@ -199,13 +205,31 @@ components:
         - url
         - sessionId
 
-    WebhookResponse:
+    VerifyCheckoutBody:
       type: object
       properties:
-        received:
-          type: boolean
+        sessionId:
+          type: string
       required:
-        - received
+        - sessionId
+
+    VerifyCheckoutResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        purchaseType:
+          type: string
+          enum: [original, print]
+        artworkTitle:
+          type: string
+        message:
+          type: string
+      required:
+        - success
+        - purchaseType
+        - artworkTitle
+        - message
 
     ErrorResponse:
       type: object

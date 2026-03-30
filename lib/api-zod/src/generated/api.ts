@@ -74,10 +74,15 @@ export const CreateCheckoutSessionResponse = zod.object({
 });
 
 /**
- * @summary Handle Stripe webhook events
+ * @summary Verify a completed Stripe checkout session and fulfill the order
  */
-export const HandleStripeWebhookBody = zod.object({}).passthrough();
+export const VerifyCheckoutBody = zod.object({
+  sessionId: zod.string(),
+});
 
-export const HandleStripeWebhookResponse = zod.object({
-  received: zod.boolean(),
+export const VerifyCheckoutResponse = zod.object({
+  success: zod.boolean(),
+  purchaseType: zod.enum(["original", "print"]),
+  artworkTitle: zod.string(),
+  message: zod.string(),
 });
