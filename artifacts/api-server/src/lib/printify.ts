@@ -21,13 +21,23 @@ async function printifyRequest(path: string, options: RequestInit = {}) {
 }
 
 async function getShopId(): Promise<string> {
+  const envShopId = process.env.PRINTIFY_SHOP_ID;
+  if (envShopId) {
+    return envShopId;
+  }
+  // Dynamic fallback when PRINTIFY_SHOP_ID is not set
   const shops = (await printifyRequest("/shops.json")) as Array<{
     id: string | number;
   }>;
   if (!shops || shops.length === 0) {
     throw new Error("No Printify shops found");
   }
-  return String(shops[0].id);
+  const shopId = String(shops[0].id);
+  console.warn(
+    `PRINTIFY_SHOP_ID not set — using first shop: ${shopId}. ` +
+      `Set PRINTIFY_SHOP_ID to avoid ambiguity in multi-shop accounts.`
+  );
+  return shopId;
 }
 
 export interface PrintifyOrderOpts {

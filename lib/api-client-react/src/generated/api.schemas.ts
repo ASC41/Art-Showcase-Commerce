@@ -78,6 +78,12 @@ export interface VerifyCheckoutResponse {
   message: string;
 }
 
+export interface WebhookAck {
+  received: boolean;
+}
+
 export interface ErrorResponse {
   error: string;
 }
+
+export type StripeWebhookBody = { [key: string]: unknown };

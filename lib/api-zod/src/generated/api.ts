@@ -74,7 +74,8 @@ export const CreateCheckoutSessionResponse = zod.object({
 });
 
 /**
- * @summary Verify a completed Stripe checkout session and fulfill the order
+ * Returns order status from the database. Fulfillment is handled by the Stripe webhook; this endpoint is safe to poll without side effects.
+ * @summary Poll order status after Stripe checkout
  */
 export const VerifyCheckoutBody = zod.object({
   sessionId: zod.string(),
@@ -85,4 +86,14 @@ export const VerifyCheckoutResponse = zod.object({
   purchaseType: zod.enum(["original", "print"]),
   artworkTitle: zod.string(),
   message: zod.string(),
+});
+
+/**
+ * Receives Stripe webhook events. Requires raw request body and a valid Stripe-Signature header.
+ * @summary Stripe webhook receiver
+ */
+export const StripeWebhookBody = zod.object({}).passthrough();
+
+export const StripeWebhookResponse = zod.object({
+  received: zod.boolean(),
 });

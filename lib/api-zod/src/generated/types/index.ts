@@ -13,6 +13,8 @@ export * from "./createCheckoutSessionBody";
 export * from "./createCheckoutSessionBodyPurchaseType";
 export * from "./errorResponse";
 export * from "./healthStatus";
+export * from "./stripeWebhookBody";
 export * from "./verifyCheckoutBody";
 export * from "./verifyCheckoutResponse";
 export * from "./verifyCheckoutResponsePurchaseType";
+export * from "./webhookAck";
