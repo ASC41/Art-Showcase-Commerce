@@ -7,14 +7,19 @@ export default function Landing() {
   const { data: artworks, isLoading } = useListArtworks();
   const [, navigate] = useLocation();
 
-  const items: DraggableGalleryItem[] =
-    artworks?.map((a) => ({
-      type: "image" as const,
-      src: a.imageUrl,
-      alt: a.title,
-      title: a.title,
-      slug: a.slug,
-    })) ?? [];
+  // Weave artwork items with sporadic empty spacers for negative space.
+  // Every 4 artworks → 1 spacer, giving a 25-item cycle (20 art + 5 spacers)
+  // so scrolling once in any direction shows all pieces before any repeats.
+  const SPACER: DraggableGalleryItem = { type: "empty", src: "", alt: "", title: "" };
+  const items: DraggableGalleryItem[] = (() => {
+    if (!artworks) return [];
+    const result: DraggableGalleryItem[] = [];
+    artworks.forEach((a, i) => {
+      result.push({ type: "image", src: a.imageUrl, alt: a.title, title: a.title, slug: a.slug });
+      if ((i + 1) % 4 === 0) result.push(SPACER);
+    });
+    return result;
+  })();
 
   function handleItemClick(item: DraggableGalleryItem) {
     if (item.slug) {

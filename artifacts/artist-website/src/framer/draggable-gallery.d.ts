@@ -1,7 +1,7 @@
 import { CSSProperties } from "react";
 
 export interface DraggableGalleryItem {
-  type: "image" | "video";
+  type: "image" | "video" | "empty";
   src: string;
   alt?: string;
   title?: string;
