@@ -1,0 +1,250 @@
+Artist name: Ryan Cellar
+
+Gmail: ryancellart@gmail.com
+
+Website Architecture:
+
+Landing page and tabs at the top for Portflio, and about. We want any of the images clicked in from the landing page to go to their counterpart in the portfolio. Portfolio pieces should be able to be opened into a gllaery full screen view. On each painting will be the title, materials, size, Available or Sold as well as Print (all items will have print available) plus description.
+
+I have attached the reacts element for the landing page. that code should be updated to have the artist imagery from below. the code for the portfolio i believe is this but let me know if this is not useable 
+
+3d Grid Gallery for the portfolio preview
+
+// 3D Scroll Grid with multiple animation styles for image galleries
+import{jsx as _jsx,jsxs as _jsxs,Fragment as _Fragment}from"react/jsx-runtime";import{useRef,useMemo,startTransition,useState,useEffect}from"react";import{motion,useScroll,useTransform}from"framer-motion";import{addPropertyControls,ControlType}from"framer";var AnimationType;/**
+ * ANIMATION TYPES
+ */(function(AnimationType){AnimationType["PERSPECTIVE_SLIDE"]="perspective-slide";AnimationType["ROTATION_FADE"]="rotation-fade";AnimationType["ZOOM_IN"]="zoom-in";AnimationType["POP_OUT"]="pop-out";AnimationType["ROW_SLIDE"]="row-slide";AnimationType["SPIN_UP"]="spin-up";})(AnimationType||(AnimationType={}));/**
+ * MOCK DATA
+ */const DEFAULT_DATA=Array.from({length:12}).map((_,i)=>({id:`img-${i}`,url:"https://framerusercontent.com/images/GfGkADagM4KEibNcIiRUWlfrR0.jpg"}));/**
+ * INDIVIDUAL GRID ITEM COMPONENT
+ */function GridItem({data,type,index,columns,borderRadius,boxShadow,aspectRatio}){const ref=useRef(null);const{scrollYProgress}=useScroll({target:ref,offset:["start end","center center"]});const opacity=useTransform(scrollYProgress,[0,1],[0,1]);const x=useTransform(scrollYProgress,[0,1],type==="perspective-slide"?[index%2===0?150:-150,0]:type==="row-slide"?[Math.floor(index/columns)%2===0?-250:250,0]:[0,0]);const y=useTransform(scrollYProgress,[0,1],type==="rotation-fade"?[200,0]:type==="spin-up"?[150,0]:[0,0]);const rotateY=useTransform(scrollYProgress,[0,1],type==="perspective-slide"?[index%2===0?45:-45,0]:type==="spin-up"?[360,0]:[0,0]);const rotateX=useTransform(scrollYProgress,[0,1],type==="rotation-fade"?[-90,0]:type==="pop-out"?[45,0]:[0,0]);const scale=useTransform(scrollYProgress,[0,1],type==="zoom-in"?[.2,1]:[1,1]);const z=useTransform(scrollYProgress,[0,1],type==="zoom-in"?[-1e3,0]:type==="pop-out"?[800,0]:[0,0]);const filter=useTransform(scrollYProgress,[0,1],type==="rotation-fade"?["brightness(300%) grayscale(100%)","brightness(100%) grayscale(0%)"]:["none","none"]);return /*#__PURE__*/_jsx(motion.div,{ref:ref,style:{x,y,z,rotateX,rotateY,scale,opacity,filter,position:"relative",aspectRatio:aspectRatio,borderRadius:`${borderRadius}px`,overflow:"hidden",backgroundColor:"#111",transformStyle:"preserve-3d",boxShadow:boxShadow},children:/*#__PURE__*/_jsx("img",{src:data.url,alt:"",style:{width:"100%",height:"100%",objectFit:"cover"}})});}/**
+ * @framerIntrinsicWidth 800
+ * @framerIntrinsicHeight 800
+ * @framerSupportedLayoutWidth any-prefer-fixed
+ * @framerSupportedLayoutHeight any-prefer-fixed
+ */export default function FramerScroll3DGrid(props){const{type="perspective-slide",columns=3,gap=24,perspective=1200,images=[],borderRadius=24,boxShadow="0 20px 50px rgba(0,0,0,0.5)",aspectRatio="3/4",containerBackground="transparent",showButtonBar=true,buttonBar={background:"rgba(255, 255, 255, 0.03)",border:"rgba(255, 255, 255, 0.08)",activeBackground:"linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%)",activeText:"#000",inactiveText:"rgba(255, 255, 255, 0.7)",padding:12,borderRadius:12,gap:6,font:{fontSize:"13px",fontWeight:600,letterSpacing:"0.02em",fontFamily:"inherit"}}}=props;const[currentType,setCurrentType]=useState(type);const containerRef=useRef(null);const displayData=useMemo(()=>{if(images&&images.length>0){return images.map((img,i)=>({id:`c-${i}`,url:img.src}));}return DEFAULT_DATA;},[images]);const animationTypes=Object.values(AnimationType);const animationTitles=["Perspective Slide","Rotation Fade","Zoom In","Pop Out","Row Slide","Spin Up"];const handleCycleAnimation=()=>{const currentIndex=animationTypes.indexOf(currentType);const nextIndex=(currentIndex+1)%animationTypes.length;startTransition(()=>setCurrentType(animationTypes[nextIndex]));};const currentAnimationTitle=animationTitles[animationTypes.indexOf(currentType)];// Scroll to top when animation type changes
+useEffect(()=>{if(containerRef.current&&typeof window!=="undefined"){const containerTop=containerRef.current.getBoundingClientRect().top+window.scrollY;window.scrollTo({top:containerTop-100,behavior:"smooth"});}},[currentType]);return /*#__PURE__*/_jsxs(_Fragment,{children:[/*#__PURE__*/_jsx("style",{children:`
+                @media (max-width: 480px) {
+                    .grid-container-responsive {
+                        grid-template-columns: repeat(1, 1fr) !important;
+                        gap: 12px !important;
+                        padding: 12px !important;
+                    }
+                    .button-bar-responsive {
+                        flex-wrap: wrap !important;
+                        padding: 4px !important;
+                        top: 8px !important;
+                        margin-bottom: 12px !important;
+                        border-radius: 12px !important;
+                    }
+                    .button-bar-responsive button {
+                        font-size: 10px !important;
+                        padding: 6px 10px !important;
+                        border-radius: 8px !important;
+                    }
+                }
+                @media (min-width: 481px) and (max-width: 768px) {
+                    .grid-container-responsive {
+                        grid-template-columns: repeat(2, 1fr) !important;
+                        gap: 16px !important;
+                        padding: 16px !important;
+                    }
+                    .button-bar-responsive {
+                        flex-wrap: wrap !important;
+                        padding: 6px !important;
+                        top: 12px !important;
+                        margin-bottom: 16px !important;
+                        border-radius: 14px !important;
+                    }
+                    .button-bar-responsive button {
+                        font-size: 11px !important;
+                        padding: 8px 14px !important;
+                        border-radius: 10px !important;
+                    }
+                }
+                @media (min-width: 769px) and (max-width: 1024px) {
+                    .grid-container-responsive {
+                        grid-template-columns: repeat(${Math.min(columns,3)}, 1fr) !important;
+                        gap: 20px !important;
+                        padding: 20px !important;
+                    }
+                    .button-bar-responsive {
+                        padding: 6px !important;
+                        top: 16px !important;
+                        margin-bottom: 20px !important;
+                    }
+                    .button-bar-responsive button {
+                        font-size: 12px !important;
+                        padding: 10px 16px !important;
+                    }
+                }
+                @media (min-width: 1025px) {
+                    .grid-container-responsive {
+                        padding: 24px !important;
+                    }
+                    .button-bar-responsive {
+                        top: 24px !important;
+                        margin-bottom: 24px !important;
+                    }
+                }
+            `}),/*#__PURE__*/_jsxs("div",{ref:containerRef,style:{width:"100%",padding:"24px",boxSizing:"border-box",backgroundColor:containerBackground,position:"relative"},className:"grid-container-responsive",children:[showButtonBar&&/*#__PURE__*/_jsx("div",{className:"button-bar-responsive",style:{display:"flex",justifyContent:"center",alignItems:"center",width:"100%",maxWidth:"100%",padding:"8px",backgroundColor:buttonBar.background,border:`1px solid ${buttonBar.border}`,borderRadius:"16px",fontSize:"14px",fontWeight:500,color:"#fff",cursor:"pointer",backdropFilter:"blur(20px)",boxShadow:"0 8px 32px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.05)",transition:"all 0.2s ease",zIndex:1e3,gap:`${buttonBar.gap}px`,position:"sticky",top:"24px",marginBottom:"24px",overflowX:"auto",WebkitOverflowScrolling:"touch"},children:animationTitles.map((title,index)=>{const isActive=currentType===animationTypes[index];return /*#__PURE__*/_jsx("button",{onClick:()=>startTransition(()=>setCurrentType(animationTypes[index])),style:{padding:`${buttonBar.padding}px ${buttonBar.padding*2}px`,background:isActive?buttonBar.activeBackground:"transparent",border:"none",borderRadius:`${buttonBar.borderRadius}px`,fontSize:buttonBar.font.fontSize,fontWeight:buttonBar.font.fontWeight,fontFamily:buttonBar.font.fontFamily,letterSpacing:buttonBar.font.letterSpacing,color:isActive?buttonBar.activeText:buttonBar.inactiveText,cursor:"pointer",transition:"all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",zIndex:1e3,position:"relative",overflow:"hidden",boxShadow:isActive?"0 4px 24px rgba(255, 255, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.5)":"none",transform:isActive?"translateY(-1px) scale(1)":"translateY(0) scale(1)"},onMouseEnter:e=>{if(!isActive){e.currentTarget.style.background="rgba(255, 255, 255, 0.08)";e.currentTarget.style.color="rgba(255, 255, 255, 0.95)";e.currentTarget.style.transform="translateY(-1px) scale(1.02)";e.currentTarget.style.boxShadow="0 4px 16px rgba(255, 255, 255, 0.08)";}},onMouseLeave:e=>{if(!isActive){e.currentTarget.style.background="transparent";e.currentTarget.style.color=buttonBar.inactiveText;e.currentTarget.style.transform="translateY(0) scale(1)";e.currentTarget.style.boxShadow="none";}},onMouseDown:e=>{e.currentTarget.style.transform="translateY(0) scale(0.96)";e.currentTarget.style.transition="all 0.1s cubic-bezier(0.4, 0, 0.2, 1)";},onMouseUp:e=>{e.currentTarget.style.transform=isActive?"translateY(-1px) scale(1)":"translateY(-1px) scale(1.02)";e.currentTarget.style.transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)";},children:title},index);})}),/*#__PURE__*/_jsx("div",{style:{display:"grid",gridTemplateColumns:`repeat(${columns}, 1fr)`,gap:`${gap}px`,perspective:`${perspective}px`,transformStyle:"preserve-3d",margin:"0 auto"},children:displayData.map((item,index)=>/*#__PURE__*/_jsx(GridItem,{data:item,type:currentType,index:index,columns:columns,borderRadius:borderRadius,boxShadow:boxShadow,aspectRatio:aspectRatio},`${item.id}-${currentType}`))})]})]});}addPropertyControls(FramerScroll3DGrid,{images:{type:ControlType.Array,title:"Images",description:"Add images to display in the grid. Each image will animate as you scroll.",control:{type:ControlType.ResponsiveImage},defaultValue:[{src:"https://framerusercontent.com/images/GfGkADagM4KEibNcIiRUWlfrR0.jpg",alt:"Gradient 1 - Blue"},{src:"https://framerusercontent.com/images/aNsAT3jCvt4zglbWCUoFe33Q.jpg",alt:"Gradient 2 - Purple"},{src:"https://framerusercontent.com/images/BYnxEV1zjYb9bhWh1IwBZ1ZoS60.jpg",alt:"Gradient 3 - Orange"},{src:"https://framerusercontent.com/images/2uTNEj5aTl2K3NJaEFWMbnrA.jpg",alt:"Gradient 4 - Yellow"},{src:"https://framerusercontent.com/images/f9RiWoNpmlCMqVRIHz8l8wYfeI.jpg",alt:"Gradient 5 - Green"}]},type:{type:ControlType.Enum,title:"Animation",description:"Choose the animation style for the grid items as they scroll into view",options:Object.values(AnimationType),optionTitles:["Perspective Slide","Rotation Fade","Zoom In","Pop Out","Row Slide","Spin Up"],defaultValue:"perspective-slide"},columns:{type:ControlType.Number,title:"Columns",description:"Number of columns in the grid layout",min:1,max:6,defaultValue:3,displayStepper:true},gap:{type:ControlType.Number,title:"Gap",description:"Space between grid items in pixels",min:0,max:100,defaultValue:24,unit:"px"},perspective:{type:ControlType.Number,title:"Depth",description:"Controls the 3D perspective depth effect. Higher values create more subtle 3D effects.",min:500,max:3e3,defaultValue:1200,unit:"px"},borderRadius:{type:ControlType.Number,title:"Border Radius",description:"Roundness of the corners for each grid item",min:0,max:50,defaultValue:24,unit:"px"},boxShadow:{type:ControlType.BoxShadow,title:"Box Shadow",description:"Shadow effect applied to each grid item",defaultValue:"0 20px 50px rgba(0,0,0,0.5)"},aspectRatio:{type:ControlType.Enum,title:"Aspect Ratio",description:"The width-to-height ratio of each grid item",options:["1/1","3/4","4/3","16/9","9/16","2/3","3/2"],optionTitles:["Square (1:1)","Portrait (3:4)","Landscape (4:3)","Wide (16:9)","Tall (9:16)","Portrait (2:3)","Landscape (3:2)"],defaultValue:"3/4"},containerBackground:{type:ControlType.Color,title:"Background Color",description:"Background color of the entire grid container",defaultValue:"transparent"},showButtonBar:{type:ControlType.Boolean,title:"Show Button Bar",description:"Toggle visibility of the animation control buttons",defaultValue:true},buttonBar:{type:ControlType.Object,title:"Button Bar",description:"Customize the appearance and behavior of the animation control buttons",controls:{background:{type:ControlType.Color,title:"Background",description:"Background color of the button bar container",defaultValue:"rgba(255, 255, 255, 0.03)"},border:{type:ControlType.Color,title:"Border",description:"Border color of the button bar container",defaultValue:"rgba(255, 255, 255, 0.08)"},activeBackground:{type:ControlType.Color,title:"Active Background",description:"Background color of the currently selected button",defaultValue:"linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%)"},activeText:{type:ControlType.Color,title:"Active Text",description:"Text color of the currently selected button",defaultValue:"#000"},inactiveText:{type:ControlType.Color,title:"Inactive Text",description:"Text color of unselected buttons",defaultValue:"rgba(255, 255, 255, 0.7)"},padding:{type:ControlType.Number,title:"Padding",description:"Internal padding of each button",min:6,max:36,defaultValue:12,unit:"px"},borderRadius:{type:ControlType.Number,title:"Border Radius",description:"Roundness of button corners",min:6,max:36,defaultValue:12,unit:"px"},gap:{type:ControlType.Number,title:"Gap",description:"Space between buttons in the bar",min:6,max:36,defaultValue:6,unit:"px"},font:{type:ControlType.Font,title:"Font",description:"Typography settings for button text",controls:"extended",defaultFontType:"sans-serif",defaultValue:{fontSize:"13px",variant:"Semibold",letterSpacing:"0.02em"}}},defaultValue:{background:"rgba(255, 255, 255, 0.03)",border:"rgba(255, 255, 255, 0.08)",activeBackground:"linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%)",activeText:"#000",inactiveText:"rgba(255, 255, 255, 0.7)",padding:12,borderRadius:12,gap:6,font:{fontSize:"13px",variant:"Semibold",letterSpacing:"0.02em"}}}});
+export const __FramerMetadata__ = {"exports":{"default":{"type":"reactComponent","name":"FramerScroll3DGrid","slots":[],"annotations":{"framerContractVersion":"1","framerSupportedLayoutHeight":"any-prefer-fixed","framerSupportedLayoutWidth":"any-prefer-fixed","framerIntrinsicHeight":"800","framerIntrinsicWidth":"800"}},"__FramerMetadata__":{"type":"variable"}}}
+//# sourceMappingURL=./FramerScroll3DGrid.map
+
+
+For the art pieces to be displayed, feature these first four that are for sale prominently. Format all art pieces with placeholders for Name, materials, size, available or Sold. On the landing page, if clicked it shoudl show title but then we want it to have a link to gallery and that when clicked, you will be taken to that specific piece full screen in the gallery view, and then from their the user should be able to navigate to the other pieces in the gallery (portfolio). For each piece i have provided the image url before the title name to be used with it
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@543b8056aee8e2e39560fee8533ae82d0f707a07/uploads/2026-03-30T20-55-07-996Z-co1m2osgt.jpg
+
+Grin and Bear It
+Acrylic on Canvas
+3’ by 1.5’
+Available for sale
+$750
+This piece captures the circus-like dance of mental awakening — the sensation of consciousness returning, almost blinding in its intensity, as the light of the world rushes back in.
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@c8bd91b79ea3ea9eb0d0edd9139854008d0d5766/uploads/2026-03-30T20-55-46-776Z-28sv8qptt.jpg
+
+The Warm Waking Cold
+Acrylic on Wood
+3’ by 3’
+Available
+$1000
+This piece explores the experience of waking into mania — and the shadow of depression that follows, haunting the self as an ever-present fear of return.
+
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@6f1b614055b286df6030dd9bbc5400decb619c5c/uploads/2026-03-30T20-56-07-001Z-59ddwbthe.jpg
+
+Hands to Yourself
+Acrylic on Canvas
+3’ by 1.5’
+Available
+$750
+This piece confronts the feeling of
+helplessness and grotesquery that comes in
+dreams about being sexual violated.
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@a06169277ae7c11ddf17d46271df1ceb7b85418d/uploads/2026-03-30T20-57-08-625Z-bt4s164un.png
+
+Endure
+Acrylic on Canvas
+4’ by 3.5’
+Available
+$2,500
+This work is rooted in the weight of the mind — and the world the mind creates for itself. Color, for me, is a form of confrontation; I work with it as a means of facing my mental illness directly, a practice of exposure therapy embedded in the creative process.
+
+Though heavy and emotional in nature, the piece carries an underlying message of perseverance and personal fortitude. It is among the works I am most proud of. There is a cosmic, otherworldly quality to it — one that emerged organically, almost beyond my own understanding of how it came to be.
+
+
+
+
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@fee6f3b52df3ba33e46d0f6e6af0debf68a77961/uploads/2026-03-30T21-03-19-054Z-pm2l8672k.jpg
+
+Give me Peace
+
+Acrylic on Canvas
+
+Sold
+
+
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@fc10bbdb30b39c1dcf311a80bd7845cc62799d8b/uploads/2026-03-30T21-05-32-392Z-xaiulv9nt.jpg
+
+Maybe Tomorrow
+
+Acrylic on Canvas
+
+Sold
+
+
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@4ec50af74c2aaacf4cb722cdc27da215c4bd6468/uploads/2026-03-30T21-08-40-264Z-b09z48ro3.jpg
+
+Our Lives
+
+Acrylic on Canvas
+
+Sold
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@7d6ce1693f82f7320c9a29c5879112c60d7f2b53/uploads/2026-03-30T21-09-35-470Z-6wxs4057t.jpg
+
+The Toast
+
+Acrylic on Canvas
+
+Sold
+
+
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@aa70c53b91df12ce12301bc817ebefdd0a49eba4/uploads/2026-03-30T21-10-06-133Z-2mvkzz8rd.png
+
+Hope, Far Away Hope
+
+
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@388df2c51c71d49e11d724272677cbd53b06b321/uploads/2026-03-30T21-04-27-018Z-6xky4oyxe.jpg
+
+Hilarity
+
+Acrylic on Canvas
+
+Sold
+
+
+
+
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@3b6b596746b7a82170b3f75ea043a98421abe4a4/uploads/2026-03-30T21-05-03-301Z-nqwte8805.JPG
+
+Untitled 01
+
+
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@3bb300a6f5b00e7b86597c03aac3bcec627ac11c/uploads/2026-03-30T21-11-10-339Z-nkfgqvr0z.jpg
+
+Untitled 02
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@706d6331d2e16056a8c254ef73f67949ecaa859e/uploads/2026-03-30T21-11-37-856Z-8nrulpnzi.jpg
+
+Untitled 03
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@461b56e80d3e3c10126cd8edfa4cce80fc50fc8d/uploads/2026-03-30T21-12-06-756Z-vpls5n41h.jpg
+
+Untitled 04
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@dd6d754e03fab5c9a7634e56fcacab6f648ac1c3/uploads/2026-03-30T21-12-30-294Z-hvi3p5ryp.jpg
+
+Untitled 05
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@fd2b7c7eccf64fe6fc0139c40e8ae0394965fbbe/uploads/2026-03-30T21-12-54-045Z-bpo5mjqy6.jpg
+
+Untitled 06
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@e968480b9bc4b54d5eeb8d46701f815c5cc7233a/uploads/2026-03-30T21-15-00-026Z-ywv7z8ljy.jpg
+
+Untitled 07
+
+
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@87331cd0df3f16b19c5dd36d129847bdc08c7943/uploads/2026-03-30T21-15-53-287Z-q8l3g6634.JPG
+
+
+
+7537
+
+
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@bd0905c1cd2366e717f55eec6430fa030886f156/uploads/2026-03-30T21-16-30-498Z-fiyt8otld.JPG
+
+
+
+7538
+
+
+
+https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@a5a7948f105845838e8fb13d2c80257f07a71253/uploads/2026-03-30T21-16-48-168Z-3adbmnpq7.JPG
+
+
+
+7539
