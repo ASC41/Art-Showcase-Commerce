@@ -157,18 +157,25 @@ async function fulfillOrder(
       },
     })
       .then(async (printifyOrderId) => {
-        await db
-          .update(ordersTable)
-          .set({
-            printifyOrderId: printifyOrderId ?? null,
-            status: "fulfilled",
-          })
-          .where(eq(ordersTable.stripeSessionId, sessionId));
-        console.log(
-          printifyOrderId
-            ? `Print order fulfilled via Printify: ${printifyOrderId}`
-            : `Print order marked fulfilled (Printify not configured — artist notified)`
-        );
+        if (printifyOrderId) {
+          await db
+            .update(ordersTable)
+            .set({ printifyOrderId, status: "fulfilled" })
+            .where(eq(ordersTable.stripeSessionId, sessionId));
+          console.log(`Print order fulfilled via Printify: ${printifyOrderId}`);
+        } else {
+          // createPrintOrder returned null — PRINTIFY_PRODUCT_ID or PRINTIFY_VARIANT_ID
+          // is not configured. Mark as failed so the artist knows manual fulfilment is needed.
+          await db
+            .update(ordersTable)
+            .set({ status: "failed" })
+            .where(eq(ordersTable.stripeSessionId, sessionId));
+          console.warn(
+            `Print order NOT auto-fulfilled for session ${sessionId}: ` +
+              `PRINTIFY_PRODUCT_ID or PRINTIFY_VARIANT_ID is not configured. ` +
+              `Manual fulfilment required — artist has been notified via email.`
+          );
+        }
       })
       .catch(async (e) => {
         console.error(
