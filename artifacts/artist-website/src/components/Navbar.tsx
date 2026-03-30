@@ -38,6 +38,7 @@ export default function Navbar() {
 
       <div style={{ display: "flex", gap: "36px", alignItems: "center" }}>
         {[
+          { label: "Gallery", href: "/" },
           { label: "Portfolio", href: "/portfolio" },
           { label: "About", href: "/about" },
         ].map(({ label, href }) => (

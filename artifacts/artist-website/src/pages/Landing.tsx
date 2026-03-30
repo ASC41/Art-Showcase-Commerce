@@ -1,21 +1,16 @@
-import { useEffect, useRef } from "react";
-import { useLocation } from "wouter";
 import { useListArtworks } from "@workspace/api-client-react";
-import GalleryX from "@/framer/gallery-x";
-import "@/framer/styles.css";
+import DraggableGallery from "@/framer/draggable-gallery";
 import Navbar from "@/components/Navbar";
 
 export default function Landing() {
-  const [, navigate] = useLocation();
   const { data: artworks, isLoading } = useListArtworks();
 
   const items =
     artworks?.map((a) => ({
+      type: "image" as const,
+      src: a.imageUrl,
+      alt: a.title,
       title: a.title,
-      image: { src: a.imageUrl, alt: a.title },
-      year: a.year ?? 2024,
-      hoverColor: ["#ffffff"],
-      link: `/portfolio?artwork=${a.slug}`,
     })) ?? [];
 
   return (
@@ -68,7 +63,7 @@ export default function Landing() {
         </div>
       </div>
 
-      {/* Scroll hint */}
+      {/* Drag hint */}
       <div
         style={{
           position: "absolute",
@@ -96,20 +91,39 @@ export default function Landing() {
         </span>
       </div>
 
-      {/* GalleryX */}
+      {/* DraggableGallery */}
       {!isLoading && items.length > 0 && (
         <div style={{ position: "absolute", inset: 0 }}>
-          <GalleryX
+          <DraggableGallery
             items={items}
-            cellSize={200}
-            imageGap={8}
+            columns={4}
+            baseWidth={280}
+            smallHeight={200}
+            largeHeight={340}
+            itemGap={12}
+            hoverScale={1.04}
+            expandedScale={0.82}
+            dragEase={0.1}
+            momentumFactor={20}
+            bufferZone={0.5}
+            borderRadius={4}
             background="#080808"
-            arcAmount={0.4}
-            arcMaxAngle={20}
-            arcAxis="Horizontal"
-            edgeFade={0.25}
-            parallax={true}
-            parallaxStrength={0.3}
+            vignetteStrength={0.7}
+            vignetteSize={160}
+            overlayOpacity={0.88}
+            overlayDuration={0.45}
+            animationDelay={0.05}
+            closeAnimationDelay={0}
+            font={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "15px",
+              fontWeight: 400,
+              letterSpacing: "0.04em",
+              lineHeight: 1.3,
+              textAlign: "left",
+            }}
+            captionColor="#f5f5f5"
+            introAnimation="topLeft"
             style={{ width: "100%", height: "100%" }}
           />
         </div>
