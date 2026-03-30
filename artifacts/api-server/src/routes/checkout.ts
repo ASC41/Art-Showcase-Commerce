@@ -1,8 +1,7 @@
 import { Router, type IRouter } from "express";
 import Stripe from "stripe";
-import { db } from "@workspace/db";
-import { artworksTable, ordersTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { db, artworksTable, ordersTable } from "@workspace/db";
+import { eq, or } from "drizzle-orm";
 import {
   CreateCheckoutSessionBody,
   CreateCheckoutSessionResponse,
@@ -13,6 +12,9 @@ import { sendOrderNotification } from "../lib/mailer";
 import { createPrintOrder } from "../lib/printify";
 
 const router: IRouter = Router();
+
+const PRINT_PRICE_CENTS = 4500; // $45
+const TERMINAL_STATUSES = ["paid", "fulfilled", "failed"] as const;
 
 function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -35,7 +37,6 @@ router.post("/checkout/session", async (req, res) => {
       return;
     }
 
-    // Look up the artwork
     const [artwork] = await db
       .select()
       .from(artworksTable)
@@ -58,8 +59,6 @@ router.post("/checkout/session", async (req, res) => {
       }
     }
 
-    // Determine price
-    const PRINT_PRICE_CENTS = 4500; // $45 for a print
     const unitAmount = purchaseType === "original" ? artwork.price! : PRINT_PRICE_CENTS;
     const productName =
       purchaseType === "original"
@@ -68,9 +67,9 @@ router.post("/checkout/session", async (req, res) => {
     const description =
       purchaseType === "original"
         ? `Original artwork by Ryan Cellar${artwork.medium ? ` · ${artwork.medium}` : ""}${artwork.dimensions ? ` · ${artwork.dimensions}` : ""}`
-        : `Fine art print by Ryan Cellar — archival quality giclee print`;
+        : `Fine art giclee print by Ryan Cellar — archival quality`;
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
       payment_method_types: ["card"],
       customer_email: customerEmail ?? undefined,
@@ -96,7 +95,21 @@ router.post("/checkout/session", async (req, res) => {
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
-    });
+    };
+
+    // For print purchases, collect shipping address via Stripe Checkout
+    if (purchaseType === "print") {
+      sessionParams.shipping_address_collection = {
+        allowed_countries: [
+          "US", "CA", "GB", "AU", "DE", "FR", "NL", "SE", "NO", "DK",
+          "FI", "BE", "AT", "CH", "IE", "NZ", "SG", "JP",
+        ],
+      };
+      // Also collect phone (optional but helpful for couriers)
+      sessionParams.phone_number_collection = { enabled: true };
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     const data = CreateCheckoutSessionResponse.parse({
       url: session.url,
@@ -105,12 +118,16 @@ router.post("/checkout/session", async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error("createCheckoutSession error:", err);
+    console.error(
+      "createCheckoutSession error:",
+      err instanceof Error ? err.message : String(err)
+    );
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // POST /api/checkout/verify — verify payment and fulfill order
+// Fully idempotent: any terminal order state short-circuits without re-triggering side effects.
 router.post("/checkout/verify", async (req, res) => {
   try {
     const { sessionId } = VerifyCheckoutBody.parse(req.body);
@@ -122,45 +139,44 @@ router.post("/checkout/verify", async (req, res) => {
     }
 
     // Retrieve session from Stripe
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ["shipping_details"],
+    });
 
     if (session.payment_status !== "paid") {
       res.status(400).json({ error: "Payment not completed" });
       return;
     }
 
-    const { artworkSlug, artworkId, purchaseType, artworkTitle } =
-      session.metadata as {
-        artworkSlug: string;
-        artworkId: string;
-        purchaseType: "original" | "print";
-        artworkTitle: string;
-      };
+    const meta = session.metadata as {
+      artworkSlug: string;
+      artworkId: string;
+      purchaseType: "original" | "print";
+      artworkTitle: string;
+    };
+    const { artworkSlug, artworkId, purchaseType, artworkTitle } = meta;
 
-    // Check if this session was already processed
-    const existingOrder = await db
+    // Check for existing order in ANY terminal state — never re-run side effects
+    const [existingOrder] = await db
       .select()
       .from(ordersTable)
       .where(eq(ordersTable.stripeSessionId, sessionId))
       .limit(1);
 
-    if (existingOrder.length > 0 && existingOrder[0].status === "paid") {
-      // Already fulfilled — return success idempotently
-      const data = VerifyCheckoutResponse.parse({
-        success: true,
-        purchaseType,
-        artworkTitle,
-        message:
-          purchaseType === "original"
-            ? "Ryan will be in touch shortly to arrange delivery of your original artwork."
-            : "Your fine art print is being prepared for shipping.",
-      });
-      res.json(data);
+    if (existingOrder && (TERMINAL_STATUSES as readonly string[]).includes(existingOrder.status)) {
+      res.json(
+        VerifyCheckoutResponse.parse({
+          success: true,
+          purchaseType,
+          artworkTitle,
+          message: successMessage(purchaseType, existingOrder.status),
+        })
+      );
       return;
     }
 
-    // Create or update order record
-    if (existingOrder.length === 0) {
+    // ── Insert or set to "paid" ────────────────────────────────────────────
+    if (!existingOrder) {
       await db.insert(ordersTable).values({
         artworkId: parseInt(artworkId, 10),
         type: purchaseType,
@@ -175,7 +191,7 @@ router.post("/checkout/verify", async (req, res) => {
         .where(eq(ordersTable.stripeSessionId, sessionId));
     }
 
-    // If original, mark artwork as sold
+    // ── Mark original as sold ─────────────────────────────────────────────
     if (purchaseType === "original") {
       await db
         .update(artworksTable)
@@ -183,37 +199,61 @@ router.post("/checkout/verify", async (req, res) => {
         .where(eq(artworksTable.slug, artworkSlug));
     }
 
-    // Send email notification (non-blocking)
+    // ── Email notification (non-blocking, best-effort) ────────────────────
     sendOrderNotification({
       artworkTitle,
       purchaseType,
       customerEmail: session.customer_details?.email ?? null,
       stripeSessionId: sessionId,
-    }).catch(console.error);
+    }).catch((e) =>
+      console.error("Email notification failed:", e instanceof Error ? e.message : String(e))
+    );
 
-    // Create Printify order for prints (non-blocking)
-    if (purchaseType === "print" && session.customer_details) {
-      const details = session.customer_details;
-      const addr = details.address;
+    // ── Printify fulfillment for prints ───────────────────────────────────
+    if (purchaseType === "print") {
+      // shipping_details is set on the session when shipping_address_collection was enabled
+      const shipping = (session as any).shipping_details ?? (session as any).shipping;
+      const addr = shipping?.address ?? session.customer_details?.address;
+      const customerName =
+        shipping?.name ?? session.customer_details?.name ?? "Customer";
+      const customerEmail = session.customer_details?.email ?? "";
 
-      if (addr) {
-        const nameParts = (details.name ?? "Customer").split(" ");
+      const missingFields: string[] = [];
+      if (!addr?.line1) missingFields.push("address line 1");
+      if (!addr?.city) missingFields.push("city");
+      if (!addr?.country) missingFields.push("country");
+      if (!addr?.postal_code) missingFields.push("postal code");
+
+      if (missingFields.length > 0) {
+        // Payment is valid — log the gap and notify artist to fulfil manually
+        console.warn(
+          `Print fulfillment: missing shipping fields [${missingFields.join(", ")}] for session ${sessionId}. ` +
+            `Artist will need to fulfil manually.`
+        );
+        // Update order to "failed" so we know fulfillment needs manual attention
+        await db
+          .update(ordersTable)
+          .set({ status: "failed" })
+          .where(eq(ordersTable.stripeSessionId, sessionId));
+      } else {
+        const nameParts = customerName.split(" ");
         const firstName = nameParts[0] ?? "Customer";
         const lastName = nameParts.slice(1).join(" ") || "Buyer";
 
+        // Run asynchronously and update order status when done
         createPrintOrder({
           artworkTitle,
-          artworkImageUrl: "", // Printify uses product variant, not direct URL
-          customerEmail: details.email ?? "",
+          artworkImageUrl: "",
+          customerEmail,
           shippingAddress: {
             first_name: firstName,
             last_name: lastName,
-            email: details.email ?? "",
-            country: addr.country ?? "US",
-            region: addr.state ?? "",
-            address1: addr.line1 ?? "",
-            city: addr.city ?? "",
-            zip: addr.postal_code ?? "",
+            email: customerEmail,
+            country: addr!.country ?? "US",
+            region: addr!.state ?? "",
+            address1: addr!.line1 ?? "",
+            city: addr!.city ?? "",
+            zip: addr!.postal_code ?? "",
           },
         })
           .then(async (printifyOrderId) => {
@@ -222,27 +262,63 @@ router.post("/checkout/verify", async (req, res) => {
                 .update(ordersTable)
                 .set({ printifyOrderId, status: "fulfilled" })
                 .where(eq(ordersTable.stripeSessionId, sessionId));
+              console.log(`Print order fulfilled: ${printifyOrderId}`);
+            } else {
+              // Printify not configured (missing env vars) — mark as fulfilled
+              // since payment was taken and artist was notified via email
+              await db
+                .update(ordersTable)
+                .set({ status: "fulfilled" })
+                .where(eq(ordersTable.stripeSessionId, sessionId));
             }
           })
-          .catch(console.error);
+          .catch(async (e) => {
+            console.error(
+              "Printify order failed:",
+              e instanceof Error ? e.message : String(e)
+            );
+            await db
+              .update(ordersTable)
+              .set({ status: "failed" })
+              .where(eq(ordersTable.stripeSessionId, sessionId));
+          });
       }
+    } else {
+      // Original purchase — mark as fulfilled (artist handles shipping manually)
+      await db
+        .update(ordersTable)
+        .set({ status: "fulfilled" })
+        .where(eq(ordersTable.stripeSessionId, sessionId));
     }
 
-    const data = VerifyCheckoutResponse.parse({
-      success: true,
-      purchaseType,
-      artworkTitle,
-      message:
-        purchaseType === "original"
-          ? "Ryan will be in touch shortly to arrange delivery of your original artwork."
-          : "Your fine art print is being prepared for shipping.",
-    });
-
-    res.json(data);
+    res.json(
+      VerifyCheckoutResponse.parse({
+        success: true,
+        purchaseType,
+        artworkTitle,
+        message: successMessage(purchaseType, "fulfilled"),
+      })
+    );
   } catch (err) {
-    console.error("verifyCheckout error:", err);
+    console.error(
+      "verifyCheckout error:",
+      err instanceof Error ? err.message : String(err)
+    );
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+function successMessage(
+  purchaseType: "original" | "print",
+  status: string
+): string {
+  if (purchaseType === "original") {
+    return "Ryan will be in touch shortly to arrange delivery of your original artwork.";
+  }
+  if (status === "failed") {
+    return "Your payment was received. Our team will be in touch to arrange shipping of your print.";
+  }
+  return "Your fine art print is being prepared for shipping.";
+}
 
 export default router;

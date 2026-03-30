@@ -1,5 +1,4 @@
-import { db } from "@workspace/db";
-import { artworksTable } from "@workspace/db/schema";
+import { db, artworksTable } from "@workspace/db";
 
 const BASE =
   "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design";
