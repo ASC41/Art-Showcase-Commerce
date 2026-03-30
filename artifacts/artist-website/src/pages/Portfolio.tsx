@@ -100,7 +100,7 @@ export default function Portfolio() {
           </span>
         </div>
       ) : artworks ? (
-        <ScrollGrid artworks={artworks} columns={3} gap={20} onItemClick={handleItemClick} />
+        <ScrollGrid artworks={artworks} columns={3} gap={20} onItemClick={handleItemClick} showAnimationBar={false} />
       ) : null}
 
       {/* Lightbox */}
