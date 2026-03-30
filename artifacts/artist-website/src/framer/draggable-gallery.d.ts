@@ -6,6 +6,8 @@ export interface DraggableGalleryItem {
   alt?: string;
   title?: string;
   cover?: string;
+  slug?: string;
+  [key: string]: unknown;
 }
 
 export interface DraggableGalleryFont {
@@ -41,6 +43,7 @@ export interface DraggableGalleryProps {
   font?: DraggableGalleryFont;
   captionColor?: string;
   introAnimation?: string;
+  onItemClick?: (item: DraggableGalleryItem) => void;
   style?: CSSProperties;
 }
 

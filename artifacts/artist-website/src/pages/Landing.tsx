@@ -1,17 +1,28 @@
 import { useListArtworks } from "@workspace/api-client-react";
-import DraggableGallery from "@/framer/draggable-gallery";
+import { useLocation } from "wouter";
+import DraggableGallery, { DraggableGalleryItem } from "@/framer/draggable-gallery";
 import Navbar from "@/components/Navbar";
 
 export default function Landing() {
   const { data: artworks, isLoading } = useListArtworks();
+  const [, navigate] = useLocation();
 
-  const items =
+  const items: DraggableGalleryItem[] =
     artworks?.map((a) => ({
       type: "image" as const,
       src: a.imageUrl,
       alt: a.title,
       title: a.title,
+      slug: a.slug,
     })) ?? [];
+
+  function handleItemClick(item: DraggableGalleryItem) {
+    if (item.slug) {
+      navigate(`/portfolio?artwork=${item.slug}`);
+    } else {
+      navigate("/portfolio");
+    }
+  }
 
   return (
     <div
@@ -124,6 +135,7 @@ export default function Landing() {
             }}
             captionColor="#f5f5f5"
             introAnimation="topLeft"
+            onItemClick={handleItemClick}
             style={{ width: "100%", height: "100%" }}
           />
         </div>

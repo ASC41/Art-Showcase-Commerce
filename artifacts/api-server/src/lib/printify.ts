@@ -1,6 +1,14 @@
 const PRINTIFY_API_KEY = process.env.PRINTIFY_API_KEY;
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 
+// ── Print product configuration ──────────────────────────────────────────────
+// Replace these placeholder values with your actual Printify product and variant
+// IDs after creating your print product in the Printify dashboard.
+// You may also override them at runtime via PRINTIFY_PRODUCT_ID / PRINTIFY_VARIANT_ID
+// environment variables.
+const PRINTIFY_PRODUCT_ID_DEFAULT = "REPLACE_WITH_PRINTIFY_PRODUCT_ID";
+const PRINTIFY_VARIANT_ID_DEFAULT = 0; // REPLACE_WITH_PRINTIFY_VARIANT_ID (numeric)
+
 async function printifyRequest(path: string, options: RequestInit = {}) {
   if (!PRINTIFY_API_KEY) {
     throw new Error("PRINTIFY_API_KEY not configured");
@@ -63,18 +71,11 @@ export async function createPrintOrder(opts: PrintifyOrderOpts): Promise<string 
     return null;
   }
 
-  const PRINTIFY_PRODUCT_ID = process.env.PRINTIFY_PRODUCT_ID;
-  const PRINTIFY_VARIANT_ID = process.env.PRINTIFY_VARIANT_ID
+  // Prefer env var overrides, fall back to in-code placeholder constants
+  const productId = process.env.PRINTIFY_PRODUCT_ID ?? PRINTIFY_PRODUCT_ID_DEFAULT;
+  const variantId = process.env.PRINTIFY_VARIANT_ID
     ? parseInt(process.env.PRINTIFY_VARIANT_ID, 10)
-    : null;
-
-  if (!PRINTIFY_PRODUCT_ID || !PRINTIFY_VARIANT_ID) {
-    console.warn(
-      "PRINTIFY_PRODUCT_ID or PRINTIFY_VARIANT_ID not set — skipping Printify fulfillment. " +
-        "Set these environment variables after creating your print product in Printify."
-    );
-    return null;
-  }
+    : PRINTIFY_VARIANT_ID_DEFAULT;
 
   try {
     const shopId = await getShopId();
@@ -86,8 +87,8 @@ export async function createPrintOrder(opts: PrintifyOrderOpts): Promise<string 
         label: `Print: ${opts.artworkTitle}`,
         line_items: [
           {
-            product_id: PRINTIFY_PRODUCT_ID,
-            variant_id: PRINTIFY_VARIANT_ID,
+            product_id: productId,
+            variant_id: variantId,
             quantity: 1,
           },
         ],
@@ -108,6 +109,6 @@ export async function createPrintOrder(opts: PrintifyOrderOpts): Promise<string 
     return order.id;
   } catch (err) {
     console.error("Printify order error:", err);
-    return null;
+    throw err;
   }
 }
