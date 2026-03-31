@@ -145,9 +145,9 @@ export default function Landing() {
             items={items}
             columns={4}
             baseWidth={280}
-            smallHeight={200}
-            largeHeight={340}
-            itemGap={12}
+            smallHeight={350}
+            largeHeight={350}
+            itemGap={14}
             hoverScale={1.04}
             expandedScale={0.82}
             dragEase={0.1}
