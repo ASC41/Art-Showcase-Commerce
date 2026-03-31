@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import Stripe from "stripe";
 import { db, artworksTable, ordersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import {
   CreateCheckoutSessionBody,
   CreateCheckoutSessionResponse,
@@ -73,20 +73,46 @@ async function fulfillOrder(
     return;
   }
 
-  // Upsert order row
+  // Upsert order row — only proceed with side effects if this webhook
+  // is the one that actually transitions the row to `paid`.
+  let didTransition = false;
+
   if (!existing) {
-    await db.insert(ordersTable).values({
-      artworkId: parseInt(artworkId, 10),
-      type: purchaseType,
-      stripeSessionId: sessionId,
-      status: "paid",
-      customerEmail: session.customer_details?.email ?? null,
-    });
+    // Use onConflictDoNothing so concurrent webhooks for the same session
+    // don't both insert. The one that actually inserts gets a returning row.
+    const inserted = await db
+      .insert(ordersTable)
+      .values({
+        artworkId: parseInt(artworkId, 10),
+        type: purchaseType,
+        stripeSessionId: sessionId,
+        status: "paid",
+        customerEmail: session.customer_details?.email ?? null,
+      })
+      .onConflictDoNothing()
+      .returning({ id: ordersTable.id });
+    didTransition = inserted.length > 0;
   } else {
-    await db
+    // Only update if the row is still in a non-terminal state (pending).
+    // A concurrent webhook may have already moved it to paid/fulfilled/failed.
+    const updated = await db
       .update(ordersTable)
       .set({ status: "paid" })
-      .where(eq(ordersTable.stripeSessionId, sessionId));
+      .where(
+        and(
+          eq(ordersTable.stripeSessionId, sessionId),
+          eq(ordersTable.status, "pending")
+        )
+      )
+      .returning({ id: ordersTable.id });
+    didTransition = updated.length > 0;
+  }
+
+  if (!didTransition) {
+    console.log(
+      `fulfillOrder: session ${sessionId} was already handled by a concurrent webhook — skipping side effects`
+    );
+    return;
   }
 
   // Mark original as sold

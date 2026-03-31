@@ -3,7 +3,7 @@ import { sendInquiry } from "../lib/mailer";
 
 const router: IRouter = Router();
 
-router.post("/api/inquire", async (req: Request, res: Response) => {
+router.post("/inquire", async (req: Request, res: Response) => {
   const { type, name, email, message } = req.body ?? {};
 
   if (!type || !name || !email || !message) {
