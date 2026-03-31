@@ -1,6 +1,7 @@
 import { useRef, useMemo, startTransition, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import type { Artwork } from "@workspace/api-client-react";
+import { ARTWORK_ASPECT } from "@/lib/artworkDimensions";
 
 type AnimationType =
   | "perspective-slide"
@@ -68,6 +69,8 @@ function GridItem({ artwork, type, index, columns, onClick }: GridItemProps) {
       : ["none", "none"]
   );
 
+  const ar = ARTWORK_ASPECT[artwork.slug] ?? 1.33;
+
   return (
     <motion.div
       ref={ref}
@@ -82,7 +85,7 @@ function GridItem({ artwork, type, index, columns, onClick }: GridItemProps) {
         opacity,
         filter,
         position: "relative",
-        aspectRatio: "3/4",
+        aspectRatio: `${1} / ${ar}`,
         borderRadius: "8px",
         overflow: "hidden",
         backgroundColor: "#111",
