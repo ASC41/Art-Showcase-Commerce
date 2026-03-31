@@ -46,6 +46,7 @@ export interface DraggableGalleryProps {
   captionColor?: string;
   introAnimation?: string;
   onItemClick?: (item: DraggableGalleryItem) => void;
+  showCellCaptions?: boolean;
   style?: CSSProperties;
 }
 
