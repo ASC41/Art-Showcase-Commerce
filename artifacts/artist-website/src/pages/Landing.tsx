@@ -56,7 +56,7 @@ export default function Landing() {
           zIndex: 2,
           pointerEvents: "none",
           textAlign: "center",
-          opacity: 0.3,
+          opacity: 1,
         }}
       >
         <div
