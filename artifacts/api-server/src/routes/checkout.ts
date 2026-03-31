@@ -270,11 +270,18 @@ export async function handleStripeWebhook(
       try {
         await fulfillOrder(session);
       } catch (err) {
+        // fulfillOrder only throws for transient infrastructure failures
+        // (DB unavailable, Printify/Gmail network errors, etc.).
+        // Business-logic non-events (missing metadata, already-terminal orders,
+        // concurrent-webhook no-ops) return early without throwing.
+        // Returning 500 here tells Stripe to retry the webhook — the
+        // idempotency guard in fulfillOrder ensures retries are safe.
         console.error(
-          "fulfillOrder error in webhook:",
+          "fulfillOrder infrastructure error — returning 500 for Stripe retry:",
           err instanceof Error ? err.message : String(err)
         );
-        // Still return 200 to Stripe so it doesn't retry indefinitely for non-transient errors
+        res.status(500).json({ error: "Fulfillment failed — will retry" });
+        return;
       }
     }
   }
