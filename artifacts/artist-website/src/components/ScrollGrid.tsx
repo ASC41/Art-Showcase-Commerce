@@ -262,6 +262,7 @@ export default function ScrollGrid({
             gridTemplateColumns: `repeat(${columns}, 1fr)`,
             gap: `${gap}px`,
             perspective: "1200px",
+            alignItems: "end",
           }}
         >
           {artworks.map((artwork, index) => (
