@@ -116,9 +116,9 @@ export default function Landing() {
           <DraggableGallery
             items={items}
             columns={4}
-            baseWidth={280}
-            smallHeight={350}
-            largeHeight={350}
+            baseWidth={320}
+            smallHeight={420}
+            largeHeight={420}
             itemGap={22}
             hoverScale={1.04}
             expandedScale={0.82}
