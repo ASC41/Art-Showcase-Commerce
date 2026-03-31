@@ -1,20 +1,41 @@
 import { useListArtworks } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
-import GalleryX from "@/framer/gallery-x";
+import DraggableGallery, { DraggableGalleryItem } from "@/framer/draggable-gallery";
 import Navbar from "@/components/Navbar";
+
+import { ARTWORK_ASPECT } from "@/lib/artworkDimensions";
 
 export default function Landing() {
   const { data: artworks, isLoading } = useListArtworks();
   const [, navigate] = useLocation();
 
-  const items =
-    artworks?.map((a) => ({
-      title: a.title,
-      image: { src: a.imageUrl, alt: a.title },
-      year: 2024,
-      hoverColor: "#888888",
-      slug: a.slug,
-    })) ?? [];
+  const SPACER: DraggableGalleryItem = { type: "empty", src: "", alt: "", title: "" };
+  const items: DraggableGalleryItem[] = (() => {
+    if (!artworks) return [];
+    const result: DraggableGalleryItem[] = [];
+    artworks.forEach((a, i) => {
+      const ar = ARTWORK_ASPECT[a.slug] ?? 1.33;
+      result.push({
+        type: "image",
+        src: a.imageUrl,
+        alt: a.title,
+        title: a.title,
+        slug: a.slug,
+        aspectRatio: ar,
+        wide: ar < 1,
+      });
+      if ((i + 1) % 4 === 0) result.push(SPACER);
+    });
+    return result;
+  })();
+
+  function handleItemClick(item: DraggableGalleryItem) {
+    if (item.slug) {
+      navigate(`/portfolio?artwork=${item.slug}`);
+    } else {
+      navigate("/portfolio");
+    }
+  }
 
   return (
     <div
@@ -94,28 +115,39 @@ export default function Landing() {
         </span>
       </div>
 
-      {/* GalleryX infinite draggable grid */}
       {!isLoading && items.length > 0 && (
         <div style={{ position: "absolute", inset: 0 }}>
-          <GalleryX
+          <DraggableGallery
             items={items}
-            cellSize={280}
-            gap={14}
-            backgroundColor="#080808"
-            arcAmount={0.4}
-            arcMaxAngleDeg={22}
-            arcAxis="horizontal"
-            edgeFade={0.3}
-            parallaxEnabled={true}
-            parallaxStrength={0.08}
-            parallaxEase={0.1}
-            inertiaEnabled={true}
-            throwFriction={0.92}
-            onItemClick={(item: Record<string, unknown>) =>
-              navigate(
-                `/portfolio?artwork=${item.slug ?? ""}`,
-              )
-            }
+            columns={4}
+            baseWidth={280}
+            smallHeight={350}
+            largeHeight={350}
+            itemGap={14}
+            hoverScale={1.04}
+            expandedScale={0.82}
+            dragEase={0.1}
+            momentumFactor={20}
+            bufferZone={0.5}
+            borderRadius={4}
+            background="#080808"
+            vignetteStrength={0.7}
+            vignetteSize={160}
+            overlayOpacity={0.88}
+            overlayDuration={0.45}
+            animationDelay={0.05}
+            closeAnimationDelay={0}
+            font={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "15px",
+              fontWeight: 400,
+              letterSpacing: "0.04em",
+              lineHeight: 1.3,
+              textAlign: "left",
+            }}
+            captionColor="#f5f5f5"
+            introAnimation="topLeft"
+            onItemClick={handleItemClick}
             style={{ width: "100%", height: "100%" }}
           />
         </div>
