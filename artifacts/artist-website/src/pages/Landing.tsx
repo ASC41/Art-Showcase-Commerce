@@ -23,7 +23,6 @@ export default function Landing() {
         title: a.title,
         slug: a.slug,
         aspectRatio: ar,
-        wide: ar < 1,
       });
       if ((i + 1) % 2 === 0) result.push(SPACER);
     });
