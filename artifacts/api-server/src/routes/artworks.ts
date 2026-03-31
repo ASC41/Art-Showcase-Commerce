@@ -4,6 +4,14 @@ import { asc, eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+function deriveOrientation(w: number | null, h: number | null): "portrait" | "landscape" | "square" {
+  if (!w || !h) return "portrait";
+  const ratio = w / h;
+  if (ratio > 1.05) return "landscape";
+  if (ratio < 0.95) return "portrait";
+  return "square";
+}
+
 function mapArtwork(a: typeof artworksTable.$inferSelect) {
   return {
     id: a.id,
@@ -19,6 +27,7 @@ function mapArtwork(a: typeof artworksTable.$inferSelect) {
     year: a.year ?? null,
     hasMattePrint: a.printifyMatteProductId !== null,
     hasFramedPrint: a.printifyFramedProductId !== null,
+    imageOrientation: deriveOrientation(a.imageWidth, a.imageHeight),
     createdAt: a.createdAt.toISOString(),
   };
 }

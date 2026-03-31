@@ -17,6 +17,8 @@ export const ArtworkStatus = {
   unavailable: "unavailable",
 } as const;
 
+export type ArtworkImageOrientation = "portrait" | "landscape" | "square";
+
 export interface Artwork {
   id: number;
   slug: string;
@@ -36,6 +38,7 @@ export interface Artwork {
   year?: number | null;
   hasMattePrint: boolean;
   hasFramedPrint: boolean;
+  imageOrientation?: ArtworkImageOrientation;
   createdAt: string;
 }
 

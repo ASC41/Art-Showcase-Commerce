@@ -30,6 +30,8 @@ export const artworksTable = pgTable("artworks", {
   year: integer("year"),
   printifyMatteProductId: text("printify_matte_product_id"),
   printifyFramedProductId: text("printify_framed_product_id"),
+  imageWidth: integer("image_width"),
+  imageHeight: integer("image_height"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

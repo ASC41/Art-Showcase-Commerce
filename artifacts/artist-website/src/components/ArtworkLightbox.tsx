@@ -10,11 +10,19 @@ interface Props {
 }
 
 const PRINT_SIZES: PrintSize[] = ["11x14", "18x24", "24x36"];
-const SIZE_LABELS: Record<PrintSize, string> = {
+
+const SIZE_LABELS_PORTRAIT: Record<PrintSize, string> = {
   "11x14": '11" × 14"',
   "18x24": '18" × 24"',
   "24x36": '24" × 36"',
 };
+
+const SIZE_LABELS_LANDSCAPE: Record<PrintSize, string> = {
+  "11x14": '14" × 11"',
+  "18x24": '24" × 18"',
+  "24x36": '36" × 24"',
+};
+
 const PRINT_PRICES: Record<PrintType, Record<PrintSize, number>> = {
   matte:  { "11x14": 45, "18x24": 65, "24x36": 95 },
   framed: { "11x14": 85, "18x24": 115, "24x36": 165 },
@@ -22,6 +30,8 @@ const PRINT_PRICES: Record<PrintType, Record<PrintSize, number>> = {
 
 export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNavigate }: Props) {
   const artwork = artworks[currentIndex];
+  const isLandscape = artwork?.imageOrientation === "landscape";
+  const SIZE_LABELS = isLandscape ? SIZE_LABELS_LANDSCAPE : SIZE_LABELS_PORTRAIT;
   const checkoutMutation = useCreateCheckoutSession();
   const [showInfo, setShowInfo] = useState(false);
   const [showPrintPicker, setShowPrintPicker] = useState(false);

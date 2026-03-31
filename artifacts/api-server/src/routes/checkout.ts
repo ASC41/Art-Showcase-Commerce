@@ -15,6 +15,7 @@ import {
   getVariantId,
   type PrintType,
   type PrintSize,
+  type PrintOrientation,
 } from "../lib/printify";
 
 const router: IRouter = Router();
@@ -362,7 +363,12 @@ router.post("/checkout/session", async (req, res) => {
           ? artwork.printifyMatteProductId
           : artwork.printifyFramedProductId;
 
-      printifyVariantId = getVariantId(printType, printSize);
+      const orientation: PrintOrientation =
+        artwork.imageWidth && artwork.imageHeight && artwork.imageWidth > artwork.imageHeight
+          ? "landscape"
+          : "portrait";
+
+      printifyVariantId = getVariantId(printType, printSize, orientation);
 
       if (!printifyProductId || !printifyVariantId) {
         const missing: string[] = [];
@@ -456,7 +462,7 @@ router.post("/checkout/session", async (req, res) => {
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
-    res.json(
+    return res.json(
       CreateCheckoutSessionResponse.parse({
         url: session.url,
         sessionId: session.id,
@@ -470,7 +476,7 @@ router.post("/checkout/session", async (req, res) => {
       "createCheckoutSession error:",
       err instanceof Error ? err.message : String(err)
     );
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -524,7 +530,7 @@ router.post("/checkout/verify", async (req, res) => {
       artworkTitle: string;
     };
 
-    res.json(
+    return res.json(
       VerifyCheckoutResponse.parse({
         success: true,
         purchaseType: meta.purchaseType,
@@ -540,7 +546,7 @@ router.post("/checkout/verify", async (req, res) => {
       "verifyCheckout error:",
       err instanceof Error ? err.message : String(err)
     );
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

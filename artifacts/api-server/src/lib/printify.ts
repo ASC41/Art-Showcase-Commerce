@@ -5,22 +5,34 @@ const PRINTIFY_BASE = "https://api.printify.com/v1";
 
 export type PrintSize = "11x14" | "18x24" | "24x36";
 export type PrintType = "matte" | "framed";
+export type PrintOrientation = "portrait" | "landscape";
 
 // Canonical size list — all three must be present for a product to be considered valid.
 // Used by both the provisioning script and runtime checkout validation.
 export const REQUIRED_PRINT_SIZES: PrintSize[] = ["11x14", "18x24", "24x36"];
 
 // Maps each PrintSize to the inch dimensions used to match Printify variant titles.
-export const PRINT_SIZE_INCHES: Record<PrintSize, { w: number; h: number }> = {
+// Portrait orientation (width < height).
+export const PRINT_SIZE_INCHES_PORTRAIT: Record<PrintSize, { w: number; h: number }> = {
   "11x14": { w: 11, h: 14 },
   "18x24": { w: 18, h: 24 },
   "24x36": { w: 24, h: 36 },
 };
 
+// Landscape orientation (width > height) — same size tier, different orientation.
+export const PRINT_SIZE_INCHES_LANDSCAPE: Record<PrintSize, { w: number; h: number }> = {
+  "11x14": { w: 14, h: 11 },
+  "18x24": { w: 24, h: 18 },
+  "24x36": { w: 36, h: 24 },
+};
+
 export interface PrintifyBlueprintConfig {
   blueprintId: number;
   printProviderId: number;
-  variantIds: Record<PrintSize, number>;
+  variantIds: {
+    portrait: Record<PrintSize, number>;
+    landscape: Record<PrintSize, number>;
+  };
 }
 
 export interface PrintifyConfig {
@@ -29,19 +41,6 @@ export interface PrintifyConfig {
 }
 
 // ── Config loading ────────────────────────────────────────────────────────────
-// Variant IDs are discovered by the provisioning script and stored in two places,
-// with the following precedence (most-stable to least-stable):
-//
-//   1. PRINTIFY_BLUEPRINT_CONFIG env var — JSON string set in Replit Secrets after
-//      provisioning. Most reliable: survives clean deploys and CI environments.
-//      Example: PRINTIFY_BLUEPRINT_CONFIG='{"matte":{...},"framed":{...}}'
-//
-//   2. src/config/printify-blueprints.json — written by the provisioning script.
-//      Convenient during local development; absent after a fresh clone until
-//      provision-printify is run.
-//
-// Operators should copy the JSON from the config file into PRINTIFY_BLUEPRINT_CONFIG
-// after running the provisioning script to make it environment-independent.
 let _config: PrintifyConfig | null = null;
 let _configLoadAttempted = false;
 
@@ -81,9 +80,13 @@ export function loadPrintifyConfig(): PrintifyConfig | null {
   return _config;
 }
 
-export function getVariantId(type: PrintType, size: PrintSize): number | null {
+export function getVariantId(
+  type: PrintType,
+  size: PrintSize,
+  orientation: PrintOrientation = "portrait"
+): number | null {
   const cfg = loadPrintifyConfig();
-  return cfg?.[type]?.variantIds?.[size] ?? null;
+  return cfg?.[type]?.variantIds?.[orientation]?.[size] ?? null;
 }
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
