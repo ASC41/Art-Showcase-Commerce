@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useCreateCheckoutSession } from "@workspace/api-client-react";
 import type { Artwork } from "@workspace/api-client-react";
 
@@ -12,6 +12,8 @@ interface Props {
 export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNavigate }: Props) {
   const artwork = artworks[currentIndex];
   const checkoutMutation = useCreateCheckoutSession();
+  const [showInfo, setShowInfo] = useState(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -31,6 +33,11 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
       document.body.style.overflow = "";
     };
   }, [handleKeyDown]);
+
+  // Hide info when navigating to a new piece
+  useEffect(() => {
+    setShowInfo(false);
+  }, [currentIndex]);
 
   if (!artwork) return null;
 
@@ -61,6 +68,41 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
 
   const isAvailable = artwork.status === "available";
 
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const threshold = e.currentTarget.getBoundingClientRect().height * 0.65;
+    const relativeY = e.clientY - e.currentTarget.getBoundingClientRect().top;
+    const entering = relativeY > threshold;
+    if (entering) {
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+      setShowInfo(true);
+    } else {
+      if (!hideTimerRef.current) {
+        hideTimerRef.current = setTimeout(() => {
+          setShowInfo(false);
+          hideTimerRef.current = null;
+        }, 300);
+      }
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => {
+      setShowInfo(false);
+      hideTimerRef.current = null;
+    }, 200);
+  };
+
+  const cancelHide = () => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  };
+
   return (
     <div
       style={{
@@ -68,45 +110,22 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
         inset: 0,
         zIndex: 500,
         background: "rgba(8,8,8,0.97)",
-        display: "flex",
-        flexDirection: "column",
       }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      {/* Close button */}
-      <button
-        onClick={onClose}
-        style={{
-          position: "absolute",
-          top: "24px",
-          right: "28px",
-          background: "transparent",
-          border: "none",
-          color: "#888",
-          fontSize: "28px",
-          cursor: "pointer",
-          zIndex: 10,
-          lineHeight: 1,
-          padding: "8px",
-          transition: "color 0.2s",
-        }}
-        onMouseEnter={(e) => ((e.target as HTMLElement).style.color = "#f5f5f5")}
-        onMouseLeave={(e) => ((e.target as HTMLElement).style.color = "#888")}
-      >
-        ×
-      </button>
-
-      {/* Main content */}
+      {/* Full-screen image */}
       <div
         style={{
-          flex: 1,
+          position: "absolute",
+          inset: 0,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "80px 80px 0",
-          minHeight: 0,
+          padding: "60px 80px",
         }}
       >
         <img
@@ -121,46 +140,110 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
         />
       </div>
 
-      {/* Bottom info panel */}
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          top: "24px",
+          right: "28px",
+          background: "transparent",
+          border: "none",
+          color: "rgba(255,255,255,0.35)",
+          fontSize: "28px",
+          cursor: "pointer",
+          zIndex: 20,
+          lineHeight: 1,
+          padding: "8px",
+          transition: "color 0.2s",
+        }}
+        onMouseEnter={(e) => ((e.target as HTMLElement).style.color = "#f5f5f5")}
+        onMouseLeave={(e) => ((e.target as HTMLElement).style.color = "rgba(255,255,255,0.35)")}
+      >
+        ×
+      </button>
+
+      {/* Subtle bottom hint — always-visible thin gradient + title */}
       <div
         style={{
-          padding: "28px 60px 32px",
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: "72px",
+          background: "linear-gradient(to top, rgba(8,8,8,0.6) 0%, transparent 100%)",
           display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: "40px",
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-          background: "rgba(8,8,8,0.9)",
-          flexShrink: 0,
+          alignItems: "flex-end",
+          padding: "0 60px 18px",
+          pointerEvents: "none",
+          opacity: showInfo ? 0 : 1,
+          transition: "opacity 0.3s",
         }}
       >
+        <span
+          style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: "13px",
+            letterSpacing: "0.14em",
+            color: "rgba(245,245,245,0.3)",
+            textTransform: "uppercase",
+          }}
+        >
+          {artwork.title}
+        </span>
+      </div>
+
+      {/* Hover-reveal info overlay */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background:
+            "linear-gradient(to top, rgba(8,8,8,0.97) 0%, rgba(8,8,8,0.88) 55%, transparent 100%)",
+          padding: "100px 60px 36px",
+          opacity: showInfo ? 1 : 0,
+          transform: showInfo ? "translateY(0)" : "translateY(12px)",
+          transition: "opacity 0.35s ease, transform 0.35s ease",
+          pointerEvents: showInfo ? "auto" : "none",
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          gap: "40px",
+          zIndex: 10,
+        }}
+        onMouseEnter={cancelHide}
+        onMouseLeave={handleMouseLeave}
+      >
         {/* Left: artwork details */}
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <h2
             style={{
               fontFamily: "'Cormorant Garamond', serif",
-              fontSize: "28px",
-              fontWeight: 400,
+              fontSize: "30px",
+              fontWeight: 300,
               color: "#f5f5f5",
-              margin: "0 0 8px",
-              letterSpacing: "0.02em",
+              margin: "0 0 10px",
+              letterSpacing: "0.03em",
+              lineHeight: 1.1,
             }}
           >
             {artwork.title}
           </h2>
-          <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "8px" }}>
+          <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
             {artwork.year && (
-              <span style={{ fontFamily: "'Inter'", fontSize: "13px", color: "#888" }}>
+              <span style={{ fontFamily: "'Inter'", fontSize: "12px", color: "#666", letterSpacing: "0.06em" }}>
                 {artwork.year}
               </span>
             )}
             {artwork.medium && (
-              <span style={{ fontFamily: "'Inter'", fontSize: "13px", color: "#888" }}>
+              <span style={{ fontFamily: "'Inter'", fontSize: "12px", color: "#666", letterSpacing: "0.04em" }}>
                 {artwork.medium}
               </span>
             )}
             {artwork.dimensions && (
-              <span style={{ fontFamily: "'Inter'", fontSize: "13px", color: "#888" }}>
+              <span style={{ fontFamily: "'Inter'", fontSize: "12px", color: "#555", letterSpacing: "0.04em" }}>
                 {artwork.dimensions}
               </span>
             )}
@@ -169,11 +252,11 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
             <p
               style={{
                 fontFamily: "'Inter'",
-                fontSize: "14px",
-                color: "#666",
-                margin: "0",
-                maxWidth: "500px",
-                lineHeight: 1.6,
+                fontSize: "13px",
+                color: "#555",
+                margin: "10px 0 0",
+                maxWidth: "480px",
+                lineHeight: 1.65,
               }}
             >
               {artwork.description}
@@ -181,25 +264,25 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
           )}
         </div>
 
-        {/* Right: price + buttons */}
+        {/* Right: price + purchase */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "flex-end",
-            gap: "16px",
+            gap: "14px",
             flexShrink: 0,
           }}
         >
-          {/* Status badge */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             {isAvailable && artwork.price && (
               <span
                 style={{
                   fontFamily: "'Cormorant Garamond', serif",
-                  fontSize: "24px",
-                  fontWeight: 400,
+                  fontSize: "26px",
+                  fontWeight: 300,
                   color: "#f5f5f5",
+                  letterSpacing: "0.02em",
                 }}
               >
                 {formatPrice(artwork.price)}
@@ -208,70 +291,73 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
             <span
               style={{
                 display: "inline-block",
-                padding: "4px 12px",
-                borderRadius: "4px",
-                fontSize: "11px",
+                padding: "3px 10px",
+                borderRadius: "3px",
+                fontSize: "10px",
                 fontFamily: "'Inter'",
-                fontWeight: 600,
-                letterSpacing: "0.1em",
+                fontWeight: 500,
+                letterSpacing: "0.12em",
                 textTransform: "uppercase",
-                background: isAvailable ? "rgba(74, 222, 128, 0.15)" : "rgba(82,82,82,0.3)",
-                color: isAvailable ? "#4ade80" : "#888",
-                border: `1px solid ${isAvailable ? "rgba(74,222,128,0.3)" : "rgba(82,82,82,0.4)"}`,
+                background: isAvailable ? "rgba(74, 222, 128, 0.1)" : "rgba(82,82,82,0.2)",
+                color: isAvailable ? "#4ade80" : "#666",
+                border: `1px solid ${isAvailable ? "rgba(74,222,128,0.25)" : "rgba(82,82,82,0.3)"}`,
               }}
             >
               {artwork.status === "sold" ? "Sold" : artwork.status === "available" ? "Available" : "Not for sale"}
             </span>
           </div>
 
-          {/* CTA Buttons */}
-          <div style={{ display: "flex", gap: "12px" }}>
+          <div style={{ display: "flex", gap: "10px" }}>
             {isAvailable && artwork.price && (
               <button
                 onClick={() => handleBuy("original")}
                 disabled={checkoutMutation.isPending}
                 style={{
-                  padding: "12px 24px",
+                  padding: "10px 22px",
                   background: "#f5f5f5",
                   color: "#080808",
                   border: "none",
-                  borderRadius: "4px",
+                  borderRadius: "3px",
                   fontFamily: "'Inter'",
-                  fontSize: "13px",
+                  fontSize: "11px",
                   fontWeight: 600,
-                  letterSpacing: "0.05em",
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
                   cursor: checkoutMutation.isPending ? "not-allowed" : "pointer",
                   opacity: checkoutMutation.isPending ? 0.6 : 1,
                   transition: "opacity 0.2s",
                   whiteSpace: "nowrap",
                 }}
               >
-                {checkoutMutation.isPending ? "Loading..." : "Buy Original"}
+                {checkoutMutation.isPending ? "Loading…" : "Buy Original"}
               </button>
             )}
             <button
               onClick={() => handleBuy("print")}
               disabled={checkoutMutation.isPending}
               style={{
-                padding: "12px 24px",
+                padding: "10px 22px",
                 background: "transparent",
-                color: "#f5f5f5",
-                border: "1px solid rgba(255,255,255,0.2)",
-                borderRadius: "4px",
+                color: "rgba(245,245,245,0.7)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                borderRadius: "3px",
                 fontFamily: "'Inter'",
-                fontSize: "13px",
-                fontWeight: 500,
-                letterSpacing: "0.05em",
+                fontSize: "11px",
+                fontWeight: 400,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
                 cursor: checkoutMutation.isPending ? "not-allowed" : "pointer",
                 opacity: checkoutMutation.isPending ? 0.6 : 1,
                 transition: "all 0.2s",
                 whiteSpace: "nowrap",
               }}
               onMouseEnter={(e) => {
-                (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.5)";
+                (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.4)";
+                (e.target as HTMLElement).style.color = "#f5f5f5";
               }}
               onMouseLeave={(e) => {
-                (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.2)";
+                (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.15)";
+                (e.target as HTMLElement).style.color = "rgba(245,245,245,0.7)";
               }}
             >
               Buy Print — $45
@@ -289,27 +375,21 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
             left: "20px",
             top: "50%",
             transform: "translateY(-50%)",
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            color: "#888",
-            borderRadius: "50%",
+            background: "transparent",
+            border: "none",
+            color: "rgba(255,255,255,0.2)",
             width: "48px",
             height: "48px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
-            fontSize: "20px",
-            transition: "all 0.2s",
+            fontSize: "32px",
+            transition: "color 0.2s",
+            zIndex: 20,
           }}
-          onMouseEnter={(e) => {
-            (e.target as HTMLElement).style.color = "#f5f5f5";
-            (e.target as HTMLElement).style.background = "rgba(255,255,255,0.1)";
-          }}
-          onMouseLeave={(e) => {
-            (e.target as HTMLElement).style.color = "#888";
-            (e.target as HTMLElement).style.background = "rgba(255,255,255,0.05)";
-          }}
+          onMouseEnter={(e) => ((e.target as HTMLElement).style.color = "rgba(255,255,255,0.8)")}
+          onMouseLeave={(e) => ((e.target as HTMLElement).style.color = "rgba(255,255,255,0.2)")}
         >
           ‹
         </button>
@@ -322,27 +402,21 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
             right: "20px",
             top: "50%",
             transform: "translateY(-50%)",
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            color: "#888",
-            borderRadius: "50%",
+            background: "transparent",
+            border: "none",
+            color: "rgba(255,255,255,0.2)",
             width: "48px",
             height: "48px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
-            fontSize: "20px",
-            transition: "all 0.2s",
+            fontSize: "32px",
+            transition: "color 0.2s",
+            zIndex: 20,
           }}
-          onMouseEnter={(e) => {
-            (e.target as HTMLElement).style.color = "#f5f5f5";
-            (e.target as HTMLElement).style.background = "rgba(255,255,255,0.1)";
-          }}
-          onMouseLeave={(e) => {
-            (e.target as HTMLElement).style.color = "#888";
-            (e.target as HTMLElement).style.background = "rgba(255,255,255,0.05)";
-          }}
+          onMouseEnter={(e) => ((e.target as HTMLElement).style.color = "rgba(255,255,255,0.8)")}
+          onMouseLeave={(e) => ((e.target as HTMLElement).style.color = "rgba(255,255,255,0.2)")}
         >
           ›
         </button>
