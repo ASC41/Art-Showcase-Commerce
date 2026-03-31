@@ -18,19 +18,39 @@ export interface PrintifyConfig {
 }
 
 // ── Config loading ────────────────────────────────────────────────────────────
-// Written by the provisioning script; stored alongside this file at runtime.
+// Written by the provisioning script. Resolved via process.cwd() so the path
+// works in both dev (tsx) and production (esbuild dist/index.cjs).
+// Expected location: <api-server-root>/src/config/printify-blueprints.json
+//
+// Startup validation is performed once on first call. Missing config is allowed
+// (prints are simply unavailable), but a clear warning is logged so operators know.
 let _config: PrintifyConfig | null = null;
+let _configLoadAttempted = false;
+let _configPath: string;
+
+try {
+  // Resolve config path relative to the project root (process.cwd()) so it
+  // works in both dev (tsx, cwd = api-server root) and esbuild bundles.
+  _configPath = path.resolve(process.cwd(), "src/config/printify-blueprints.json");
+} catch {
+  _configPath = "";
+}
 
 export function loadPrintifyConfig(): PrintifyConfig | null {
-  if (_config) return _config;
+  if (_configLoadAttempted) return _config;
+  _configLoadAttempted = true;
   try {
-    const configPath = path.join(__dirname, "../config/printify-blueprints.json");
-    const raw = fs.readFileSync(configPath, "utf-8");
+    const raw = fs.readFileSync(_configPath, "utf-8");
     _config = JSON.parse(raw) as PrintifyConfig;
-    return _config;
+    console.log(`[printify] Blueprint config loaded from ${_configPath}`);
   } catch {
-    return null;
+    console.warn(
+      `[printify] Blueprint config not found at ${_configPath}. ` +
+        `Run 'pnpm --filter @workspace/api-server run provision-printify' to create it. ` +
+        `Print purchases will return 400 until provisioned.`
+    );
   }
+  return _config;
 }
 
 export function getVariantId(type: PrintType, size: PrintSize): number | null {

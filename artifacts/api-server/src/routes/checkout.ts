@@ -364,17 +364,19 @@ router.post("/checkout/session", async (req, res) => {
 
       printifyVariantId = getVariantId(printType, printSize);
 
-      if (!printifyProductId) {
+      if (!printifyProductId || !printifyVariantId) {
+        const missing: string[] = [];
+        if (!printifyProductId) missing.push(`${printType} product`);
+        if (!printifyVariantId) missing.push(`${printType}/${printSize} variant`);
         console.warn(
-          `No Printify product ID for artwork ${artworkSlug} (${printType}). ` +
-            `Run provision-printify script to set up print products.`
+          `[checkout] Print order blocked — missing Printify mapping [${missing.join(", ")}] ` +
+            `for artwork "${artworkSlug}". Run provision-printify to enable.`
         );
-      }
-      if (!printifyVariantId) {
-        console.warn(
-          `No variant ID for ${printType}/${printSize}. ` +
-            `Run provision-printify script to discover variant IDs.`
-        );
+        res.status(400).json({
+          error:
+            "This print option is not yet available. Please contact the artist or try again soon.",
+        });
+        return;
       }
     }
 

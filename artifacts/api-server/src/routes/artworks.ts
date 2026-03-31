@@ -17,6 +17,8 @@ function mapArtwork(a: typeof artworksTable.$inferSelect) {
     imageUrl: a.imageUrl,
     isFeatured: a.isFeatured,
     year: a.year ?? null,
+    hasMattePrint: a.printifyMatteProductId !== null,
+    hasFramedPrint: a.printifyFramedProductId !== null,
     createdAt: a.createdAt.toISOString(),
   };
 }

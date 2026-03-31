@@ -31,6 +31,8 @@ export const ListArtworksResponseItem = zod.object({
   imageUrl: zod.string(),
   isFeatured: zod.boolean(),
   year: zod.number().nullish(),
+  hasMattePrint: zod.boolean(),
+  hasFramedPrint: zod.boolean(),
   createdAt: zod.date(),
 });
 export const ListArtworksResponse = zod.array(ListArtworksResponseItem);
@@ -54,6 +56,8 @@ export const GetArtworkResponse = zod.object({
   imageUrl: zod.string(),
   isFeatured: zod.boolean(),
   year: zod.number().nullish(),
+  hasMattePrint: zod.boolean(),
+  hasFramedPrint: zod.boolean(),
   createdAt: zod.date(),
 });
 

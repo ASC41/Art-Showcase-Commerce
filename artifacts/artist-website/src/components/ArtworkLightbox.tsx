@@ -108,6 +108,19 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
   };
 
   const isAvailable = artwork.status === "available";
+  const hasPrints = artwork.hasMattePrint || artwork.hasFramedPrint;
+
+  // When picker opens, default to the first available print type
+  const handleOpenPicker = () => {
+    cancelHide();
+    if (!artwork.hasMattePrint && artwork.hasFramedPrint) {
+      setSelectedPrintType("framed");
+    } else {
+      setSelectedPrintType("matte");
+    }
+    setShowPrintPicker(true);
+    setShowInfo(true);
+  };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (showPrintPicker) return;
@@ -380,40 +393,38 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                     {checkoutMutation.isPending ? "Loading…" : "Buy Original"}
                   </button>
                 )}
-                <button
-                  onClick={() => {
-                    cancelHide();
-                    setShowPrintPicker(true);
-                    setShowInfo(true);
-                  }}
-                  disabled={checkoutMutation.isPending}
-                  style={{
-                    padding: "10px 22px",
-                    background: "transparent",
-                    color: "rgba(245,245,245,0.7)",
-                    border: "1px solid rgba(255,255,255,0.15)",
-                    borderRadius: "3px",
-                    fontFamily: "'Inter'",
-                    fontSize: "11px",
-                    fontWeight: 400,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    cursor: checkoutMutation.isPending ? "not-allowed" : "pointer",
-                    opacity: checkoutMutation.isPending ? 0.6 : 1,
-                    transition: "all 0.2s",
-                    whiteSpace: "nowrap",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.4)";
-                    (e.target as HTMLElement).style.color = "#f5f5f5";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.15)";
-                    (e.target as HTMLElement).style.color = "rgba(245,245,245,0.7)";
-                  }}
-                >
-                  Buy Print
-                </button>
+                {hasPrints && (
+                  <button
+                    onClick={handleOpenPicker}
+                    disabled={checkoutMutation.isPending}
+                    style={{
+                      padding: "10px 22px",
+                      background: "transparent",
+                      color: "rgba(245,245,245,0.7)",
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      borderRadius: "3px",
+                      fontFamily: "'Inter'",
+                      fontSize: "11px",
+                      fontWeight: 400,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      cursor: checkoutMutation.isPending ? "not-allowed" : "pointer",
+                      opacity: checkoutMutation.isPending ? 0.6 : 1,
+                      transition: "all 0.2s",
+                      whiteSpace: "nowrap",
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.4)";
+                      (e.target as HTMLElement).style.color = "#f5f5f5";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.15)";
+                      (e.target as HTMLElement).style.color = "rgba(245,245,245,0.7)";
+                    }}
+                  >
+                    Buy Print
+                  </button>
+                )}
               </div>
             </>
           ) : (
@@ -442,29 +453,42 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                   Print Type
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-                  {(["matte", "framed"] as PrintType[]).map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => setSelectedPrintType(type)}
-                      style={{
-                        padding: "8px 12px",
-                        background: selectedPrintType === type ? "rgba(245,245,245,0.08)" : "transparent",
-                        border: `1px solid ${selectedPrintType === type ? "rgba(245,245,245,0.35)" : "rgba(255,255,255,0.1)"}`,
-                        borderRadius: "3px",
-                        color: selectedPrintType === type ? "#f5f5f5" : "#666",
-                        fontFamily: "'Inter'",
-                        fontSize: "10px",
-                        fontWeight: selectedPrintType === type ? 500 : 400,
-                        letterSpacing: "0.08em",
-                        textTransform: "uppercase",
-                        cursor: "pointer",
-                        transition: "all 0.15s",
-                        textAlign: "center",
-                      }}
-                    >
-                      {type === "matte" ? "Matte" : "Framed"}
-                    </button>
-                  ))}
+                  {(["matte", "framed"] as PrintType[]).map((type) => {
+                    const typeAvailable = type === "matte" ? artwork.hasMattePrint : artwork.hasFramedPrint;
+                    const isSelected = selectedPrintType === type;
+                    return (
+                      <button
+                        key={type}
+                        onClick={() => typeAvailable && setSelectedPrintType(type)}
+                        disabled={!typeAvailable}
+                        title={!typeAvailable ? "Not available for this artwork" : undefined}
+                        style={{
+                          padding: "8px 12px",
+                          background: isSelected ? "rgba(245,245,245,0.08)" : "transparent",
+                          border: `1px solid ${isSelected ? "rgba(245,245,245,0.35)" : "rgba(255,255,255,0.1)"}`,
+                          borderRadius: "3px",
+                          color: !typeAvailable ? "#333" : isSelected ? "#f5f5f5" : "#666",
+                          fontFamily: "'Inter'",
+                          fontSize: "10px",
+                          fontWeight: isSelected ? 500 : 400,
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                          cursor: !typeAvailable ? "not-allowed" : "pointer",
+                          opacity: !typeAvailable ? 0.4 : 1,
+                          transition: "all 0.15s",
+                          textAlign: "center",
+                          position: "relative",
+                        }}
+                      >
+                        {type === "matte" ? "Matte" : "Framed"}
+                        {!typeAvailable && (
+                          <span style={{ display: "block", fontSize: "8px", opacity: 0.6, marginTop: "1px" }}>
+                            Unavailable
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
                 {selectedPrintType === "matte" && (
                   <div style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#444", marginTop: "5px", letterSpacing: "0.03em" }}>

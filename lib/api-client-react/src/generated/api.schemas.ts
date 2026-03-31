@@ -34,6 +34,8 @@ export interface Artwork {
   isFeatured: boolean;
   /** @nullable */
   year?: number | null;
+  hasMattePrint: boolean;
+  hasFramedPrint: boolean;
   createdAt: string;
 }
 
