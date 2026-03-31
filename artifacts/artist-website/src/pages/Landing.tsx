@@ -78,7 +78,7 @@ export default function Landing() {
             marginTop: "12px",
           }}
         >
-          Contemporary Artist
+          Contemporary Surrealist Figurative Artist
         </div>
       </div>
 

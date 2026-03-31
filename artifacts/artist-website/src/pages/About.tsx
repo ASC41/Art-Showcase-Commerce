@@ -99,7 +99,7 @@ function ParallaxHero() {
             margin: "0 0 14px",
           }}
         >
-          Contemporary Artist
+          Contemporary Surrealist Figurative Artist
         </p>
         <h1
           style={{
