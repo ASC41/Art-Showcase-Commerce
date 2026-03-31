@@ -66,6 +66,8 @@ export const CreateCheckoutSessionBody = zod.object({
   customerEmail: zod.string().nullish(),
   successUrl: zod.string(),
   cancelUrl: zod.string(),
+  printType: zod.enum(["matte", "framed"]).optional(),
+  printSize: zod.enum(["8x10", "11x14", "18x24", "24x36"]).optional(),
 });
 
 export const CreateCheckoutSessionResponse = zod.object({

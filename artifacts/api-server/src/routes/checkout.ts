@@ -9,13 +9,29 @@ import {
   VerifyCheckoutResponse,
 } from "@workspace/api-zod";
 import { sendOrderNotification } from "../lib/mailer";
-import { createPrintOrder } from "../lib/printify";
+import {
+  createPrintOrder,
+  getVariantId,
+  type PrintType,
+  type PrintSize,
+} from "../lib/printify";
 
 const router: IRouter = Router();
 
-const PRINT_PRICE_CENTS = 4500; // $45
 const TERMINAL_STATUSES = ["paid", "fulfilled", "failed"] as const;
-type TerminalStatus = (typeof TERMINAL_STATUSES)[number];
+
+// ── Per-size, per-type print pricing (cents) ──────────────────────────────────
+const PRINT_PRICES: Record<PrintType, Record<PrintSize, number>> = {
+  matte:  { "8x10": 3500, "11x14": 4500, "18x24": 6500, "24x36": 9500 },
+  framed: { "8x10": 6500, "11x14": 8500, "18x24": 11500, "24x36": 16500 },
+};
+
+const PRINT_SIZE_LABELS: Record<PrintSize, string> = {
+  "8x10":  '8" × 10"',
+  "11x14": '11" × 14"',
+  "18x24": '18" × 24"',
+  "24x36": '24" × 36"',
+};
 
 function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -50,6 +66,8 @@ async function fulfillOrder(
     artworkId: string;
     purchaseType: "original" | "print";
     artworkTitle: string;
+    printifyProductId?: string;
+    printifyVariantId?: string;
   };
 
   if (!meta?.artworkSlug || !meta?.purchaseType) {
@@ -78,8 +96,6 @@ async function fulfillOrder(
   let didTransition = false;
 
   if (!existing) {
-    // Use onConflictDoNothing so concurrent webhooks for the same session
-    // don't both insert. The one that actually inserts gets a returning row.
     const inserted = await db
       .insert(ordersTable)
       .values({
@@ -93,8 +109,6 @@ async function fulfillOrder(
       .returning({ id: ordersTable.id });
     didTransition = inserted.length > 0;
   } else {
-    // Only update if the row is still in a non-terminal state (pending).
-    // A concurrent webhook may have already moved it to paid/fulfilled/failed.
     const updated = await db
       .update(ordersTable)
       .set({ status: "paid" })
@@ -138,7 +152,6 @@ async function fulfillOrder(
 
   // Printify fulfillment for prints
   if (purchaseType === "print") {
-    // In Stripe SDK v21+, shipping details are under collected_information.shipping_details
     const shippingDetails = session.collected_information?.shipping_details;
     const addr = shippingDetails?.address ?? session.customer_details?.address;
     const customerName =
@@ -163,13 +176,31 @@ async function fulfillOrder(
       return;
     }
 
+    const printifyProductId = meta.printifyProductId;
+    const printifyVariantId = meta.printifyVariantId
+      ? parseInt(meta.printifyVariantId, 10)
+      : null;
+
+    if (!printifyProductId || !printifyVariantId) {
+      console.warn(
+        `Print fulfillment: no Printify product/variant in metadata for session ${sessionId}. ` +
+          `Run provision-printify script first.`
+      );
+      await db
+        .update(ordersTable)
+        .set({ status: "failed" })
+        .where(eq(ordersTable.stripeSessionId, sessionId));
+      return;
+    }
+
     const nameParts = customerName.split(" ");
     const firstName = nameParts[0] ?? "Customer";
     const lastName = nameParts.slice(1).join(" ") || "Buyer";
 
     createPrintOrder({
       artworkTitle,
-      artworkImageUrl: "",
+      productId: printifyProductId,
+      variantId: printifyVariantId,
       customerEmail,
       shippingAddress: {
         first_name: firstName,
@@ -183,25 +214,11 @@ async function fulfillOrder(
       },
     })
       .then(async (printifyOrderId) => {
-        if (printifyOrderId) {
-          await db
-            .update(ordersTable)
-            .set({ printifyOrderId, status: "fulfilled" })
-            .where(eq(ordersTable.stripeSessionId, sessionId));
-          console.log(`Print order fulfilled via Printify: ${printifyOrderId}`);
-        } else {
-          // createPrintOrder returned null — PRINTIFY_PRODUCT_ID or PRINTIFY_VARIANT_ID
-          // is not configured. Mark as failed so the artist knows manual fulfilment is needed.
-          await db
-            .update(ordersTable)
-            .set({ status: "failed" })
-            .where(eq(ordersTable.stripeSessionId, sessionId));
-          console.warn(
-            `Print order NOT auto-fulfilled for session ${sessionId}: ` +
-              `PRINTIFY_PRODUCT_ID or PRINTIFY_VARIANT_ID is not configured. ` +
-              `Manual fulfilment required — artist has been notified via email.`
-          );
-        }
+        await db
+          .update(ordersTable)
+          .set({ printifyOrderId, status: "fulfilled" })
+          .where(eq(ordersTable.stripeSessionId, sessionId));
+        console.log(`Print order fulfilled via Printify: ${printifyOrderId}`);
       })
       .catch(async (e) => {
         console.error(
@@ -223,8 +240,6 @@ async function fulfillOrder(
 }
 
 // ── POST /api/checkout/webhook — Stripe webhook receiver ─────────────────────
-// Must be registered with express.raw({ type: 'application/json' }) in app.ts
-// BEFORE the global express.json() middleware so the raw body is preserved.
 export async function handleStripeWebhook(
   req: Request,
   res: Response
@@ -270,12 +285,6 @@ export async function handleStripeWebhook(
       try {
         await fulfillOrder(session);
       } catch (err) {
-        // fulfillOrder only throws for transient infrastructure failures
-        // (DB unavailable, Printify/Gmail network errors, etc.).
-        // Business-logic non-events (missing metadata, already-terminal orders,
-        // concurrent-webhook no-ops) return early without throwing.
-        // Returning 500 here tells Stripe to retry the webhook — the
-        // idempotency guard in fulfillOrder ensures retries are safe.
         console.error(
           "fulfillOrder infrastructure error — returning 500 for Stripe retry:",
           err instanceof Error ? err.message : String(err)
@@ -293,8 +302,15 @@ export async function handleStripeWebhook(
 router.post("/checkout/session", async (req, res) => {
   try {
     const body = CreateCheckoutSessionBody.parse(req.body);
-    const { artworkSlug, purchaseType, customerEmail, successUrl, cancelUrl } =
-      body;
+    const {
+      artworkSlug,
+      purchaseType,
+      customerEmail,
+      successUrl,
+      cancelUrl,
+      printType,
+      printSize,
+    } = body;
 
     const stripe = getStripe();
     if (!stripe) {
@@ -326,16 +342,82 @@ router.post("/checkout/session", async (req, res) => {
       }
     }
 
+    // Validate print options
+    if (purchaseType === "print") {
+      if (!printType || !printSize) {
+        res
+          .status(400)
+          .json({ error: "printType and printSize are required for print purchases" });
+        return;
+      }
+    }
+
+    // Resolve Printify product/variant for prints
+    let printifyProductId: string | null = null;
+    let printifyVariantId: number | null = null;
+
+    if (purchaseType === "print" && printType && printSize) {
+      printifyProductId =
+        printType === "matte"
+          ? artwork.printifyMatteProductId
+          : artwork.printifyFramedProductId;
+
+      printifyVariantId = getVariantId(printType, printSize);
+
+      if (!printifyProductId) {
+        console.warn(
+          `No Printify product ID for artwork ${artworkSlug} (${printType}). ` +
+            `Run provision-printify script to set up print products.`
+        );
+      }
+      if (!printifyVariantId) {
+        console.warn(
+          `No variant ID for ${printType}/${printSize}. ` +
+            `Run provision-printify script to discover variant IDs.`
+        );
+      }
+    }
+
+    // Pricing
     const unitAmount =
-      purchaseType === "original" ? artwork.price! : PRINT_PRICE_CENTS;
+      purchaseType === "original"
+        ? artwork.price!
+        : PRINT_PRICES[printType as PrintType][printSize as PrintSize];
+
+    const sizeLabel =
+      purchaseType === "print" && printSize
+        ? ` — ${PRINT_SIZE_LABELS[printSize as PrintSize]}`
+        : "";
+    const typeLabel =
+      purchaseType === "print" && printType
+        ? printType === "matte"
+          ? "Enhanced Matte Print"
+          : "Framed Print"
+        : "Fine Art Print";
+
     const productName =
       purchaseType === "original"
         ? `${artwork.title} — Original`
-        : `${artwork.title} — Fine Art Print`;
+        : `${artwork.title} — ${typeLabel}${sizeLabel}`;
     const description =
       purchaseType === "original"
         ? `Original artwork by Ryan Cellar${artwork.medium ? ` · ${artwork.medium}` : ""}${artwork.dimensions ? ` · ${artwork.dimensions}` : ""}`
-        : `Fine art giclee print by Ryan Cellar — archival quality`;
+        : `Fine art ${typeLabel.toLowerCase()} by Ryan Cellar — archival quality`;
+
+    const metadata: Record<string, string> = {
+      artworkSlug: artwork.slug,
+      artworkId: String(artwork.id),
+      purchaseType,
+      artworkTitle: artwork.title,
+    };
+
+    if (purchaseType === "print") {
+      if (printType) metadata.printType = printType;
+      if (printSize) metadata.printSize = printSize;
+      if (printifyProductId) metadata.printifyProductId = printifyProductId;
+      if (printifyVariantId)
+        metadata.printifyVariantId = String(printifyVariantId);
+    }
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
@@ -355,17 +437,11 @@ router.post("/checkout/session", async (req, res) => {
           },
         },
       ],
-      metadata: {
-        artworkSlug: artwork.slug,
-        artworkId: String(artwork.id),
-        purchaseType,
-        artworkTitle: artwork.title,
-      },
+      metadata,
       success_url: successUrl,
       cancel_url: cancelUrl,
     };
 
-    // For prints, collect shipping address via Stripe Checkout
     if (purchaseType === "print") {
       sessionParams.shipping_address_collection = {
         allowed_countries: [
@@ -394,14 +470,10 @@ router.post("/checkout/session", async (req, res) => {
 });
 
 // ── POST /api/checkout/verify — read-only order status polling ───────────────
-// Safe to call repeatedly. No fulfillment side effects — those are handled by
-// the Stripe webhook. Returns the latest order status from the database, falling
-// back to a Stripe session check when the webhook hasn't fired yet.
 router.post("/checkout/verify", async (req, res) => {
   try {
     const { sessionId } = VerifyCheckoutBody.parse(req.body);
 
-    // Check DB for existing order record (webhook may have already processed it)
     const [order] = await db
       .select()
       .from(ordersTable)
@@ -429,7 +501,6 @@ router.post("/checkout/verify", async (req, res) => {
       return;
     }
 
-    // Order not yet in DB — check Stripe to confirm payment was completed
     const stripe = getStripe();
     if (!stripe) {
       res.status(503).json({ error: "Payment processing not configured" });
@@ -443,8 +514,6 @@ router.post("/checkout/verify", async (req, res) => {
       return;
     }
 
-    // Payment confirmed by Stripe but webhook hasn't fired yet
-    // Return an optimistic success — webhook will complete fulfillment server-side
     const meta = session.metadata as {
       purchaseType: "original" | "print";
       artworkTitle: string;

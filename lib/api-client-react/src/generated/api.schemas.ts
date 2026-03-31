@@ -45,6 +45,9 @@ export const CreateCheckoutSessionBodyPurchaseType = {
   print: "print",
 } as const;
 
+export type PrintType = "matte" | "framed";
+export type PrintSize = "8x10" | "11x14" | "18x24" | "24x36";
+
 export interface CreateCheckoutSessionBody {
   artworkSlug: string;
   purchaseType: CreateCheckoutSessionBodyPurchaseType;
@@ -52,6 +55,8 @@ export interface CreateCheckoutSessionBody {
   customerEmail?: string | null;
   successUrl: string;
   cancelUrl: string;
+  printType?: PrintType;
+  printSize?: PrintSize;
 }
 
 export interface CheckoutSessionResponse {
@@ -78,12 +83,12 @@ export interface VerifyCheckoutResponse {
   message: string;
 }
 
-export interface WebhookAck {
-  received: boolean;
-}
-
 export interface ErrorResponse {
   error: string;
 }
 
-export type StripeWebhookBody = { [key: string]: unknown };
+export type StripeWebhookBody = Record<string, unknown>;
+
+export interface WebhookAck {
+  received: boolean;
+}

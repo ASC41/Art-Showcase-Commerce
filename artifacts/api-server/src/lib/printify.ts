@@ -1,22 +1,53 @@
-const PRINTIFY_API_KEY = process.env.PRINTIFY_API_KEY;
+import fs from "fs";
+import path from "path";
+
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 
-// ── Print product configuration ──────────────────────────────────────────────
-// Replace these placeholder values with your actual Printify product and variant
-// IDs after creating your print product in the Printify dashboard.
-// You may also override them at runtime via PRINTIFY_PRODUCT_ID / PRINTIFY_VARIANT_ID
-// environment variables.
-const PRINTIFY_PRODUCT_ID_DEFAULT = "REPLACE_WITH_PRINTIFY_PRODUCT_ID";
-const PRINTIFY_VARIANT_ID_DEFAULT = 0; // REPLACE_WITH_PRINTIFY_VARIANT_ID (numeric)
+export type PrintSize = "8x10" | "11x14" | "18x24" | "24x36";
+export type PrintType = "matte" | "framed";
 
-async function printifyRequest(path: string, options: RequestInit = {}) {
-  if (!PRINTIFY_API_KEY) {
+export interface PrintifyBlueprintConfig {
+  blueprintId: number;
+  printProviderId: number;
+  variantIds: Record<PrintSize, number>;
+}
+
+export interface PrintifyConfig {
+  matte: PrintifyBlueprintConfig;
+  framed: PrintifyBlueprintConfig;
+}
+
+// ── Config loading ────────────────────────────────────────────────────────────
+// Written by the provisioning script; stored alongside this file at runtime.
+let _config: PrintifyConfig | null = null;
+
+export function loadPrintifyConfig(): PrintifyConfig | null {
+  if (_config) return _config;
+  try {
+    const configPath = path.join(__dirname, "../config/printify-blueprints.json");
+    const raw = fs.readFileSync(configPath, "utf-8");
+    _config = JSON.parse(raw) as PrintifyConfig;
+    return _config;
+  } catch {
+    return null;
+  }
+}
+
+export function getVariantId(type: PrintType, size: PrintSize): number | null {
+  const cfg = loadPrintifyConfig();
+  return cfg?.[type]?.variantIds?.[size] ?? null;
+}
+
+// ── HTTP helper ───────────────────────────────────────────────────────────────
+export async function printifyRequest(path: string, options: RequestInit = {}) {
+  const apiKey = process.env.PRINTIFY_API_KEY;
+  if (!apiKey) {
     throw new Error("PRINTIFY_API_KEY not configured");
   }
   const res = await fetch(`${PRINTIFY_BASE}${path}`, {
     ...options,
     headers: {
-      Authorization: `Bearer ${PRINTIFY_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
       ...(options.headers ?? {}),
     },
@@ -28,18 +59,13 @@ async function printifyRequest(path: string, options: RequestInit = {}) {
   return res.json();
 }
 
-async function getShopId(): Promise<string> {
+export async function getShopId(): Promise<string> {
   const envShopId = process.env.PRINTIFY_SHOP_ID;
-  if (envShopId) {
-    return envShopId;
-  }
-  // Dynamic fallback when PRINTIFY_SHOP_ID is not set
+  if (envShopId) return envShopId;
   const shops = (await printifyRequest("/shops.json")) as Array<{
     id: string | number;
   }>;
-  if (!shops || shops.length === 0) {
-    throw new Error("No Printify shops found");
-  }
+  if (!shops || shops.length === 0) throw new Error("No Printify shops found");
   const shopId = String(shops[0].id);
   console.warn(
     `PRINTIFY_SHOP_ID not set — using first shop: ${shopId}. ` +
@@ -48,9 +74,11 @@ async function getShopId(): Promise<string> {
   return shopId;
 }
 
+// ── Order creation ────────────────────────────────────────────────────────────
 export interface PrintifyOrderOpts {
   artworkTitle: string;
-  artworkImageUrl: string;
+  productId: string;
+  variantId: number;
   customerEmail: string;
   shippingAddress: {
     first_name: string;
@@ -65,50 +93,38 @@ export interface PrintifyOrderOpts {
   };
 }
 
-export async function createPrintOrder(opts: PrintifyOrderOpts): Promise<string | null> {
-  if (!PRINTIFY_API_KEY) {
-    console.warn("PRINTIFY_API_KEY not set — skipping Printify order");
-    return null;
-  }
+export async function createPrintOrder(
+  opts: PrintifyOrderOpts
+): Promise<string> {
+  const apiKey = process.env.PRINTIFY_API_KEY;
+  if (!apiKey) throw new Error("PRINTIFY_API_KEY not configured");
 
-  // Prefer env var overrides, fall back to in-code placeholder constants
-  const productId = process.env.PRINTIFY_PRODUCT_ID ?? PRINTIFY_PRODUCT_ID_DEFAULT;
-  const variantId = process.env.PRINTIFY_VARIANT_ID
-    ? parseInt(process.env.PRINTIFY_VARIANT_ID, 10)
-    : PRINTIFY_VARIANT_ID_DEFAULT;
+  const shopId = await getShopId();
 
-  try {
-    const shopId = await getShopId();
+  const order = (await printifyRequest(`/shops/${shopId}/orders.json`, {
+    method: "POST",
+    body: JSON.stringify({
+      external_id: `rc-${Date.now()}`,
+      label: `Print: ${opts.artworkTitle}`,
+      line_items: [
+        {
+          product_id: opts.productId,
+          variant_id: opts.variantId,
+          quantity: 1,
+        },
+      ],
+      shipping_method: 1,
+      is_printify_express: false,
+      send_shipping_notification: true,
+      address_to: opts.shippingAddress,
+    }),
+  })) as { id: string };
 
-    const order = await printifyRequest(`/shops/${shopId}/orders.json`, {
-      method: "POST",
-      body: JSON.stringify({
-        external_id: `rc-${Date.now()}`,
-        label: `Print: ${opts.artworkTitle}`,
-        line_items: [
-          {
-            product_id: productId,
-            variant_id: variantId,
-            quantity: 1,
-          },
-        ],
-        shipping_method: 1,
-        is_printify_express: false,
-        send_shipping_notification: true,
-        address_to: opts.shippingAddress,
-      }),
-    }) as { id: string };
+  await printifyRequest(
+    `/shops/${shopId}/orders/${order.id}/send_to_production.json`,
+    { method: "POST" }
+  );
 
-    // Publish (submit to production)
-    await printifyRequest(
-      `/shops/${shopId}/orders/${order.id}/send_to_production.json`,
-      { method: "POST" }
-    );
-
-    console.log(`Printify order created: ${order.id}`);
-    return order.id;
-  } catch (err) {
-    console.error("Printify order error:", err);
-    throw err;
-  }
+  console.log(`Printify order created: ${order.id}`);
+  return order.id;
 }
