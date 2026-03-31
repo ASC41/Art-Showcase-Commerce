@@ -4,14 +4,10 @@
  * Creates Enhanced Matte Paper Poster and Framed Poster products in Printify
  * for every artwork in the database, then stores the product IDs back in the DB.
  *
- * Products are intentionally NOT published to a sales channel.
- * We fulfil orders via the Printify REST API (not Shopify/Etsy/etc.), which means:
- *   - Products are created and stored in Printify's system by ID.
- *   - Orders are created by POSTing to /orders.json with explicit product_id + variant_id.
- *   - Products do not need to be "published" to a channel to be orderable this way.
- *   - The Printify publish endpoint (/products/{id}/publish.json) is intended for
- *     OAuth integration partners linking to a connected storefront — it is not used
- *     in a direct API-key workflow and would 422/404 without a connected sales channel.
+ * Products are created and then published via the Printify API.
+ * Publishing marks the product as live in Printify's system.
+ * If the account has no connected sales channel (e.g., Shopify/Etsy), the publish
+ * call may return an error — this is handled gracefully (logged, not fatal).
  *
  * Run once (idempotent — skips artworks that already have product IDs):
  *   pnpm --filter @workspace/api-server run provision-printify
@@ -202,6 +198,32 @@ async function createProduct(
   })) as { id: string };
 
   console.log(`  Created "${artworkTitle}" ${typeLabel} → product ID: ${product.id}`);
+
+  // Publish the product so it is visible/active in Printify's system.
+  // Best-effort: accounts without a connected sales channel may receive an error here,
+  // but the product is still orderable via the API by ID.
+  try {
+    await printifyRequest(`/shops/${shopId}/products/${product.id}/publish.json`, {
+      method: "POST",
+      body: JSON.stringify({
+        title: true,
+        description: true,
+        images: true,
+        variants: true,
+        tags: true,
+        keyFeatures: true,
+        shipping_template: true,
+      }),
+    });
+    console.log(`  Published product ${product.id} ✓`);
+  } catch (err) {
+    console.warn(
+      `  Publish attempt for product ${product.id} failed (non-fatal): ` +
+        `${err instanceof Error ? err.message : String(err)}. ` +
+        `Product is still orderable via the Printify API by ID.`
+    );
+  }
+
   return product.id;
 }
 

@@ -26,6 +26,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
   const checkoutMutation = useCreateCheckoutSession();
   const [showInfo, setShowInfo] = useState(false);
   const [showPrintPicker, setShowPrintPicker] = useState(false);
+  const [pickerStep, setPickerStep] = useState<1 | 2>(1);
   const [selectedPrintType, setSelectedPrintType] = useState<PrintType>("matte");
   const [selectedPrintSize, setSelectedPrintSize] = useState<PrintSize>("18x24");
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -33,8 +34,11 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (showPrintPicker) {
+        if (showPrintPicker && pickerStep === 2) {
+          setPickerStep(1);
+        } else if (showPrintPicker) {
           setShowPrintPicker(false);
+          setPickerStep(1);
         } else {
           onClose();
         }
@@ -45,7 +49,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
           onNavigate(currentIndex + 1);
       }
     },
-    [currentIndex, artworks.length, onClose, onNavigate, showPrintPicker]
+    [currentIndex, artworks.length, onClose, onNavigate, showPrintPicker, pickerStep]
   );
 
   useEffect(() => {
@@ -118,6 +122,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
     } else {
       setSelectedPrintType("matte");
     }
+    setPickerStep(1);
     setShowPrintPicker(true);
     setShowInfo(true);
   };
@@ -427,29 +432,25 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                 )}
               </div>
             </>
-          ) : (
-            /* Print picker */
+          ) : pickerStep === 1 ? (
+            /* Step 1 — Select type + size */
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "flex-end",
                 gap: "16px",
-                minWidth: "280px",
+                minWidth: "290px",
               }}
             >
+              {/* Step indicator */}
+              <div style={{ fontFamily: "'Inter'", fontSize: "9px", color: "#444", letterSpacing: "0.14em", textTransform: "uppercase" }}>
+                Step 1 of 2 — Choose options
+              </div>
+
               {/* Type selector */}
               <div style={{ width: "100%" }}>
-                <div
-                  style={{
-                    fontFamily: "'Inter'",
-                    fontSize: "9px",
-                    letterSpacing: "0.16em",
-                    color: "#555",
-                    textTransform: "uppercase",
-                    marginBottom: "8px",
-                  }}
-                >
+                <div style={{ fontFamily: "'Inter'", fontSize: "9px", letterSpacing: "0.16em", color: "#555", textTransform: "uppercase", marginBottom: "8px" }}>
                   Print Type
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
@@ -477,43 +478,24 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                           opacity: !typeAvailable ? 0.4 : 1,
                           transition: "all 0.15s",
                           textAlign: "center",
-                          position: "relative",
                         }}
                       >
                         {type === "matte" ? "Matte" : "Framed"}
                         {!typeAvailable && (
-                          <span style={{ display: "block", fontSize: "8px", opacity: 0.6, marginTop: "1px" }}>
-                            Unavailable
-                          </span>
+                          <span style={{ display: "block", fontSize: "8px", opacity: 0.6, marginTop: "1px" }}>Unavailable</span>
                         )}
                       </button>
                     );
                   })}
                 </div>
-                {selectedPrintType === "matte" && (
-                  <div style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#444", marginTop: "5px", letterSpacing: "0.03em" }}>
-                    Enhanced matte paper, 210gsm
-                  </div>
-                )}
-                {selectedPrintType === "framed" && (
-                  <div style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#444", marginTop: "5px", letterSpacing: "0.03em" }}>
-                    Black frame, white mat, museum glass
-                  </div>
-                )}
+                <div style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#444", marginTop: "5px", letterSpacing: "0.03em" }}>
+                  {selectedPrintType === "matte" ? "Enhanced matte paper, 210gsm" : "Black frame, white mat, museum glass"}
+                </div>
               </div>
 
               {/* Size selector */}
               <div style={{ width: "100%" }}>
-                <div
-                  style={{
-                    fontFamily: "'Inter'",
-                    fontSize: "9px",
-                    letterSpacing: "0.16em",
-                    color: "#555",
-                    textTransform: "uppercase",
-                    marginBottom: "8px",
-                  }}
-                >
+                <div style={{ fontFamily: "'Inter'", fontSize: "9px", letterSpacing: "0.16em", color: "#555", textTransform: "uppercase", marginBottom: "8px" }}>
                   Size
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
@@ -540,18 +522,16 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                       }}
                     >
                       <span>{SIZE_LABELS[size]}</span>
-                      <span style={{ fontSize: "9px", opacity: 0.6 }}>
-                        ${PRINT_PRICES[selectedPrintType][size]}
-                      </span>
+                      <span style={{ fontSize: "9px", opacity: 0.6 }}>${PRINT_PRICES[selectedPrintType][size]}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Checkout row */}
-              <div style={{ display: "flex", gap: "8px", alignItems: "center", width: "100%", justifyContent: "flex-end" }}>
+              {/* Step 1 action row */}
+              <div style={{ display: "flex", gap: "8px", width: "100%", justifyContent: "flex-end" }}>
                 <button
-                  onClick={() => setShowPrintPicker(false)}
+                  onClick={() => { setShowPrintPicker(false); setPickerStep(1); }}
                   style={{
                     padding: "9px 16px",
                     background: "transparent",
@@ -565,16 +545,116 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                     cursor: "pointer",
                     transition: "all 0.15s",
                   }}
-                  onMouseEnter={(e) => {
-                    (e.target as HTMLElement).style.color = "#888";
-                    (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.15)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.target as HTMLElement).style.color = "#555";
-                    (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
-                  }}
+                  onMouseEnter={(e) => { (e.target as HTMLElement).style.color = "#888"; }}
+                  onMouseLeave={(e) => { (e.target as HTMLElement).style.color = "#555"; }}
                 >
                   Cancel
+                </button>
+                <button
+                  onClick={() => setPickerStep(2)}
+                  style={{
+                    padding: "9px 22px",
+                    background: "rgba(245,245,245,0.08)",
+                    color: "#f5f5f5",
+                    border: "1px solid rgba(245,245,245,0.2)",
+                    borderRadius: "3px",
+                    fontFamily: "'Inter'",
+                    fontSize: "11px",
+                    fontWeight: 500,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    whiteSpace: "nowrap",
+                    flex: 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.target as HTMLElement).style.background = "rgba(245,245,245,0.14)";
+                    (e.target as HTMLElement).style.borderColor = "rgba(245,245,245,0.35)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.target as HTMLElement).style.background = "rgba(245,245,245,0.08)";
+                    (e.target as HTMLElement).style.borderColor = "rgba(245,245,245,0.2)";
+                  }}
+                >
+                  Review Order →
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Step 2 — Order summary + confirm */
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-end",
+                gap: "18px",
+                minWidth: "290px",
+              }}
+            >
+              {/* Step indicator */}
+              <div style={{ fontFamily: "'Inter'", fontSize: "9px", color: "#444", letterSpacing: "0.14em", textTransform: "uppercase" }}>
+                Step 2 of 2 — Confirm &amp; purchase
+              </div>
+
+              {/* Order summary card */}
+              <div
+                style={{
+                  width: "100%",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "4px",
+                  padding: "16px",
+                  background: "rgba(245,245,245,0.03)",
+                }}
+              >
+                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "17px", color: "#f5f5f5", marginBottom: "14px", fontWeight: 300, letterSpacing: "0.02em" }}>
+                  {artwork.title}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#555", letterSpacing: "0.06em", textTransform: "uppercase" }}>Type</span>
+                    <span style={{ fontFamily: "'Inter'", fontSize: "11px", color: "#ccc" }}>
+                      {selectedPrintType === "matte" ? "Enhanced Matte Print" : "Framed Print"}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#555", letterSpacing: "0.06em", textTransform: "uppercase" }}>Size</span>
+                    <span style={{ fontFamily: "'Inter'", fontSize: "11px", color: "#ccc" }}>{SIZE_LABELS[selectedPrintSize]}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "6px", paddingTop: "10px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                    <span style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#555", letterSpacing: "0.06em", textTransform: "uppercase" }}>Total</span>
+                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", color: "#f5f5f5", fontWeight: 300 }}>
+                      ${selectedPrice}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#444", letterSpacing: "0.03em", textAlign: "right" }}>
+                Free shipping · Printed to order · Ships in 5–7 days
+              </div>
+
+              {/* Step 2 action row */}
+              <div style={{ display: "flex", gap: "8px", width: "100%", justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => setPickerStep(1)}
+                  style={{
+                    padding: "9px 16px",
+                    background: "transparent",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "3px",
+                    color: "#555",
+                    fontFamily: "'Inter'",
+                    fontSize: "10px",
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => { (e.target as HTMLElement).style.color = "#888"; }}
+                  onMouseLeave={(e) => { (e.target as HTMLElement).style.color = "#555"; }}
+                >
+                  ← Back
                 </button>
                 <button
                   onClick={handleBuyPrint}
@@ -597,9 +677,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                     flex: 1,
                   }}
                 >
-                  {checkoutMutation.isPending
-                    ? "Loading…"
-                    : `Checkout — $${selectedPrice}`}
+                  {checkoutMutation.isPending ? "Loading…" : "Proceed to Checkout"}
                 </button>
               </div>
             </div>

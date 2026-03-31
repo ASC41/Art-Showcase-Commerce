@@ -30,36 +30,53 @@ export interface PrintifyConfig {
 }
 
 // ── Config loading ────────────────────────────────────────────────────────────
-// Written by the provisioning script. Resolved via process.cwd() so the path
-// works in both dev (tsx) and production (esbuild dist/index.cjs).
-// Expected location: <api-server-root>/src/config/printify-blueprints.json
+// Variant IDs are discovered by the provisioning script and stored in two places,
+// with the following precedence (most-stable to least-stable):
 //
-// Startup validation is performed once on first call. Missing config is allowed
-// (prints are simply unavailable), but a clear warning is logged so operators know.
+//   1. PRINTIFY_BLUEPRINT_CONFIG env var — JSON string set in Replit Secrets after
+//      provisioning. Most reliable: survives clean deploys and CI environments.
+//      Example: PRINTIFY_BLUEPRINT_CONFIG='{"matte":{...},"framed":{...}}'
+//
+//   2. src/config/printify-blueprints.json — written by the provisioning script.
+//      Convenient during local development; absent after a fresh clone until
+//      provision-printify is run.
+//
+// Operators should copy the JSON from the config file into PRINTIFY_BLUEPRINT_CONFIG
+// after running the provisioning script to make it environment-independent.
 let _config: PrintifyConfig | null = null;
 let _configLoadAttempted = false;
-let _configPath: string;
-
-try {
-  // Resolve config path relative to the project root (process.cwd()) so it
-  // works in both dev (tsx, cwd = api-server root) and esbuild bundles.
-  _configPath = path.resolve(process.cwd(), "src/config/printify-blueprints.json");
-} catch {
-  _configPath = "";
-}
 
 export function loadPrintifyConfig(): PrintifyConfig | null {
   if (_configLoadAttempted) return _config;
   _configLoadAttempted = true;
+
+  // 1. Try env var first (most reliable across deploys)
+  const envJson = process.env.PRINTIFY_BLUEPRINT_CONFIG;
+  if (envJson) {
+    try {
+      _config = JSON.parse(envJson) as PrintifyConfig;
+      console.log("[printify] Blueprint config loaded from PRINTIFY_BLUEPRINT_CONFIG env var");
+      return _config;
+    } catch {
+      console.warn("[printify] PRINTIFY_BLUEPRINT_CONFIG is set but invalid JSON — falling back to file");
+    }
+  }
+
+  // 2. Fall back to local file (written by provisioning script)
+  const configPath = path.resolve(process.cwd(), "src/config/printify-blueprints.json");
   try {
-    const raw = fs.readFileSync(_configPath, "utf-8");
+    const raw = fs.readFileSync(configPath, "utf-8");
     _config = JSON.parse(raw) as PrintifyConfig;
-    console.log(`[printify] Blueprint config loaded from ${_configPath}`);
+    console.log(`[printify] Blueprint config loaded from ${configPath}`);
+    console.warn(
+      "[printify] TIP: copy the JSON from printify-blueprints.json into the " +
+        "PRINTIFY_BLUEPRINT_CONFIG secret so it survives clean deploys."
+    );
   } catch {
     console.warn(
-      `[printify] Blueprint config not found at ${_configPath}. ` +
-        `Run 'pnpm --filter @workspace/api-server run provision-printify' to create it. ` +
-        `Print purchases will return 400 until provisioned.`
+      `[printify] Blueprint config not found (checked env PRINTIFY_BLUEPRINT_CONFIG and ${configPath}). ` +
+        `Run 'pnpm --filter @workspace/api-server run provision-printify' and set ` +
+        `PRINTIFY_BLUEPRINT_CONFIG. Print purchases will return 400 until configured.`
     );
   }
   return _config;
