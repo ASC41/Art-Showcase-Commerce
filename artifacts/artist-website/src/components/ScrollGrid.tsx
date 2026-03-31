@@ -23,7 +23,7 @@ function GridItem({ artwork, type, index, columns, onClick }: GridItemProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: ref,
-    offset: ["start end", "center center"],
+    offset: ["start end", "end end"],
   });
 
   const opacity = useTransform(scrollYProgress, [0, 1], [0, 1]);
