@@ -23,12 +23,11 @@ const TERMINAL_STATUSES = ["paid", "fulfilled", "failed"] as const;
 
 // ── Per-size, per-type print pricing (cents) ──────────────────────────────────
 const PRINT_PRICES: Record<PrintType, Record<PrintSize, number>> = {
-  matte:  { "8x10": 3500, "11x14": 4500, "18x24": 6500, "24x36": 9500 },
-  framed: { "8x10": 6500, "11x14": 8500, "18x24": 11500, "24x36": 16500 },
+  matte:  { "11x14": 4500, "18x24": 6500, "24x36": 9500 },
+  framed: { "11x14": 8500, "18x24": 11500, "24x36": 16500 },
 };
 
 const PRINT_SIZE_LABELS: Record<PrintSize, string> = {
-  "8x10":  '8" × 10"',
   "11x14": '11" × 14"',
   "18x24": '18" × 24"',
   "24x36": '24" × 36"',

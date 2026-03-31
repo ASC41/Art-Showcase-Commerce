@@ -48,7 +48,7 @@ export const CreateCheckoutSessionBodyPurchaseType = {
 } as const;
 
 export type PrintType = "matte" | "framed";
-export type PrintSize = "8x10" | "11x14" | "18x24" | "24x36";
+export type PrintSize = "11x14" | "18x24" | "24x36";
 
 export interface CreateCheckoutSessionBody {
   artworkSlug: string;

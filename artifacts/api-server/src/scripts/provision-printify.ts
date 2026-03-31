@@ -1,147 +1,46 @@
 /**
  * Printify Provisioning Script
  *
- * Creates Enhanced Matte Paper Poster and Framed Poster products in Printify
- * for every artwork in the database, then stores the product IDs back in the DB.
+ * Creates Matte Poster and Framed Paper Poster products in Printify for every
+ * artwork in the database, then stores the resulting product IDs back in the DB.
  *
- * Products are created and then published via the Printify API.
- * Publishing marks the product as live in Printify's system.
- * If the account has no connected sales channel (e.g., Shopify/Etsy), the publish
- * call may return an error — this is handled gracefully (logged, not fatal).
+ * Requires src/config/printify-blueprints.json (or PRINTIFY_BLUEPRINT_CONFIG
+ * env var) to be present with blueprint IDs, provider IDs, and variant IDs.
+ * These are already pre-configured for:
+ *   Matte  → Blueprint 983  (Matte Posters)     / Provider 95  (Ideju Druka)
+ *   Framed → Blueprint 1236 (Framed Paper Posters) / Provider 105 (Jondo) / Fine Art
  *
  * Run once (idempotent — skips artworks that already have product IDs):
  *   pnpm --filter @workspace/api-server run provision-printify
  */
 
-import "dotenv/config";
-import fs from "fs";
-import path from "path";
 import { db, artworksTable } from "@workspace/db";
 import { eq, or, isNull } from "drizzle-orm";
 import {
   printifyRequest,
   getShopId,
+  loadPrintifyConfig,
   REQUIRED_PRINT_SIZES,
-  PRINT_SIZE_INCHES,
-  type PrintifyConfig,
   type PrintSize,
 } from "../lib/printify";
 
-const BLUEPRINT_SEARCH = {
-  matte: "enhanced matte paper poster",
-  framed: "framed poster",
-} as const;
-
 const PRINT_TYPE_LABELS = {
-  matte: "Enhanced Matte Paper Poster",
-  framed: "Framed Poster",
+  matte: "Matte Poster",
+  framed: "Framed Fine Art Print",
 } as const;
 
 const SIZE_LABELS: Record<PrintSize, string> = {
-  "8x10":  '8" × 10"',
   "11x14": '11" × 14"',
   "18x24": '18" × 24"',
   "24x36": '24" × 36"',
 };
 
 const PRINT_PRICES_CENTS: Record<"matte" | "framed", Record<PrintSize, number>> = {
-  matte:  { "8x10": 3500, "11x14": 4500, "18x24": 6500, "24x36": 9500 },
-  framed: { "8x10": 6500, "11x14": 8500, "18x24": 11500, "24x36": 16500 },
+  matte:  { "11x14": 4500, "18x24": 6500, "24x36": 9500 },
+  framed: { "11x14": 8500, "18x24": 11500, "24x36": 16500 },
 };
 
-interface PrintifyBlueprint {
-  id: number;
-  title: string;
-}
-
-interface PrintifyProvider {
-  id: number;
-  title: string;
-}
-
-interface PrintifyVariant {
-  id: number;
-  title: string;
-}
-
-// ── Blueprint discovery ────────────────────────────────────────────────────────
-async function discoverBlueprints(): Promise<{ matteId: number; framedId: number }> {
-  console.log("Fetching Printify blueprint catalog...");
-  const blueprints = (await printifyRequest("/catalog/blueprints.json")) as PrintifyBlueprint[];
-
-  const matte = blueprints.find((b) =>
-    b.title.toLowerCase().includes(BLUEPRINT_SEARCH.matte)
-  );
-  const framed = blueprints.find((b) =>
-    b.title.toLowerCase().includes(BLUEPRINT_SEARCH.framed)
-  );
-
-  if (!matte) throw new Error(`Blueprint not found matching "${BLUEPRINT_SEARCH.matte}"`);
-  if (!framed) throw new Error(`Blueprint not found matching "${BLUEPRINT_SEARCH.framed}"`);
-
-  console.log(`  Matte: "${matte.title}" (ID: ${matte.id})`);
-  console.log(`  Framed: "${framed.title}" (ID: ${framed.id})`);
-
-  return { matteId: matte.id, framedId: framed.id };
-}
-
-// ── Provider selection ────────────────────────────────────────────────────────
-async function pickProvider(blueprintId: number): Promise<number> {
-  const providers = (await printifyRequest(
-    `/catalog/blueprints/${blueprintId}/print_providers.json`
-  )) as PrintifyProvider[];
-  if (!providers.length) throw new Error(`No providers for blueprint ${blueprintId}`);
-  console.log(`    Provider: "${providers[0].title}" (ID: ${providers[0].id})`);
-  return providers[0].id;
-}
-
-// ── Variant discovery — strict: throws if any required size is missing ─────────
-async function discoverVariantIds(
-  blueprintId: number,
-  providerId: number,
-  printType: "matte" | "framed"
-): Promise<Record<PrintSize, number>> {
-  const raw = (await printifyRequest(
-    `/catalog/blueprints/${blueprintId}/print_providers/${providerId}/variants.json`
-  )) as { variants?: PrintifyVariant[] } | PrintifyVariant[];
-
-  const variantList: PrintifyVariant[] = Array.isArray(raw) ? raw : (raw.variants ?? []);
-  const result: Partial<Record<PrintSize, number>> = {};
-
-  for (const v of variantList) {
-    const title = (v.title ?? "").toLowerCase();
-    for (const size of REQUIRED_PRINT_SIZES) {
-      if (result[size]) continue; // already matched
-      const { w, h } = PRINT_SIZE_INCHES[size];
-      // Match patterns like "8x10", "8 x 10", "8 by 10", "8in x 10in", etc.
-      const patterns = [
-        `${w}x${h}`,
-        `${w} x ${h}`,
-        `${w}" x ${h}"`,
-        `${w}in x ${h}in`,
-        `${w} by ${h}`,
-      ];
-      if (patterns.some((p) => title.includes(p))) {
-        result[size] = v.id;
-        console.log(`    ${size}: matched "${v.title}" → variant ID ${v.id}`);
-      }
-    }
-  }
-
-  const missing = REQUIRED_PRINT_SIZES.filter((s) => !result[s]);
-  if (missing.length > 0) {
-    const available = variantList.slice(0, 30).map((v) => `"${v.title}"`).join(", ");
-    throw new Error(
-      `Cannot map all required sizes for ${PRINT_TYPE_LABELS[printType]}. ` +
-        `Missing: [${missing.join(", ")}].\n` +
-        `Available variants (first 30): ${available}`
-    );
-  }
-
-  return result as Record<PrintSize, number>;
-}
-
-// ── Image upload ───────────────────────────────────────────────────────────────
+// ── Image upload ──────────────────────────────────────────────────────────────
 async function uploadImage(imageUrl: string, slug: string): Promise<string> {
   console.log(`  Uploading artwork image...`);
   const result = (await printifyRequest("/uploads/images.json", {
@@ -179,7 +78,7 @@ async function createProduct(
       title: `${artworkTitle} — ${typeLabel}`,
       description:
         `Fine art ${typeLabel.toLowerCase()} by Ryan Cellar. ` +
-        `Archival quality, museum-grade materials. Available in four sizes.`,
+        `Archival quality, museum-grade materials. Available in three sizes.`,
       blueprint_id: blueprintId,
       print_provider_id: providerId,
       variants,
@@ -199,9 +98,8 @@ async function createProduct(
 
   console.log(`  Created "${artworkTitle}" ${typeLabel} → product ID: ${product.id}`);
 
-  // Publish the product so it is visible/active in Printify's system.
-  // Best-effort: accounts without a connected sales channel may receive an error here,
-  // but the product is still orderable via the API by ID.
+  // Publish best-effort — accounts without a connected sales channel may get an error,
+  // but products are still orderable via the API by ID.
   try {
     await printifyRequest(`/shops/${shopId}/products/${product.id}/publish.json`, {
       method: "POST",
@@ -235,39 +133,25 @@ async function main() {
     throw new Error("PRINTIFY_API_KEY is not set");
   }
 
+  // Load blueprint config (reads from file or PRINTIFY_BLUEPRINT_CONFIG env var)
+  const config = loadPrintifyConfig();
+  if (!config) {
+    throw new Error(
+      "Blueprint config not found. Ensure src/config/printify-blueprints.json exists " +
+      "or set the PRINTIFY_BLUEPRINT_CONFIG environment variable."
+    );
+  }
+
+  console.log("Blueprint config loaded:");
+  console.log(`  Matte  → blueprint ${config.matte.blueprintId} / provider ${config.matte.printProviderId}`);
+  console.log(`  Framed → blueprint ${config.framed.blueprintId} / provider ${config.framed.printProviderId}`);
+  console.log(`  Sizes: ${REQUIRED_PRINT_SIZES.join(", ")}`);
+
   const shopId = await getShopId();
-  console.log(`Shop ID: ${shopId}\n`);
+  console.log(`\nShop ID: ${shopId}\n`);
 
-  // 1. Discover blueprints
-  const { matteId, framedId } = await discoverBlueprints();
-
-  // 2. Pick providers
-  console.log("\nSelecting print providers...");
-  console.log("  For Matte:");
-  const matteProviderId = await pickProvider(matteId);
-  console.log("  For Framed:");
-  const framedProviderId = await pickProvider(framedId);
-
-  // 3. Discover variants — STRICT: throws if any required size is missing
-  console.log("\nDiscovering size→variant mappings...");
-  console.log("  Matte variants:");
-  const matteVariants = await discoverVariantIds(matteId, matteProviderId, "matte");
-  console.log("  Framed variants:");
-  const framedVariants = await discoverVariantIds(framedId, framedProviderId, "framed");
-
-  // 4. Write blueprint config file
-  const blueprintConfig: PrintifyConfig = {
-    matte: { blueprintId: matteId, printProviderId: matteProviderId, variantIds: matteVariants },
-    framed: { blueprintId: framedId, printProviderId: framedProviderId, variantIds: framedVariants },
-  };
-
-  const configPath = path.resolve(process.cwd(), "src/config/printify-blueprints.json");
-  fs.mkdirSync(path.dirname(configPath), { recursive: true });
-  fs.writeFileSync(configPath, JSON.stringify(blueprintConfig, null, 2));
-  console.log(`\nBlueprint config written to: ${configPath}`);
-
-  // 5. Provision per-artwork products
-  console.log("\nFetching artworks needing Printify products...");
+  // Fetch artworks that are missing one or both Printify product IDs
+  console.log("Fetching artworks needing Printify products...");
   const artworks = await db
     .select()
     .from(artworksTable)
@@ -291,7 +175,13 @@ async function main() {
       let matteProductId = artwork.printifyMatteProductId;
       if (!matteProductId) {
         matteProductId = await createProduct(
-          shopId, matteId, matteProviderId, matteVariants, imageId, artwork.title, "matte"
+          shopId,
+          config.matte.blueprintId,
+          config.matte.printProviderId,
+          config.matte.variantIds,
+          imageId,
+          artwork.title,
+          "matte"
         );
       } else {
         console.log(`  Matte product already exists (${matteProductId}), skipping.`);
@@ -300,7 +190,13 @@ async function main() {
       let framedProductId = artwork.printifyFramedProductId;
       if (!framedProductId) {
         framedProductId = await createProduct(
-          shopId, framedId, framedProviderId, framedVariants, imageId, artwork.title, "framed"
+          shopId,
+          config.framed.blueprintId,
+          config.framed.printProviderId,
+          config.framed.variantIds,
+          imageId,
+          artwork.title,
+          "framed"
         );
       } else {
         console.log(`  Framed product already exists (${framedProductId}), skipping.`);
@@ -325,7 +221,6 @@ async function main() {
     }
   }
 
-  // 6. Summary
   console.log("=== Provisioning complete ===");
   console.log(`Results: ${successCount} succeeded, ${errorCount} failed`);
   console.log("\nPricing summary:");

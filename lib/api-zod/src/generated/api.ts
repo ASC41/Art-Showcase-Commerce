@@ -72,7 +72,7 @@ export const CreateCheckoutSessionBody = zod
     successUrl: zod.string(),
     cancelUrl: zod.string(),
     printType: zod.enum(["matte", "framed"]).optional(),
-    printSize: zod.enum(["8x10", "11x14", "18x24", "24x36"]).optional(),
+    printSize: zod.enum(["11x14", "18x24", "24x36"]).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.purchaseType === "print") {

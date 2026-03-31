@@ -1,0 +1,20 @@
+{
+  "matte": {
+    "blueprintId": 983,
+    "printProviderId": 95,
+    "variantIds": {
+      "11x14": 78544,
+      "18x24": 78547,
+      "24x36": 78549
+    }
+  },
+  "framed": {
+    "blueprintId": 1236,
+    "printProviderId": 105,
+    "variantIds": {
+      "11x14": 93816,
+      "18x24": 93822,
+      "24x36": 93828
+    }
+  }
+}
