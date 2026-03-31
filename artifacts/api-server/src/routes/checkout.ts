@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import { ZodError } from "zod";
 import Stripe from "stripe";
 import { db, artworksTable, ordersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
@@ -463,6 +464,9 @@ router.post("/checkout/session", async (req, res) => {
       })
     );
   } catch (err) {
+    if (err instanceof ZodError) {
+      return res.status(400).json({ error: err.errors[0]?.message ?? "Invalid request" });
+    }
     console.error(
       "createCheckoutSession error:",
       err instanceof Error ? err.message : String(err)
@@ -530,6 +534,9 @@ router.post("/checkout/verify", async (req, res) => {
       })
     );
   } catch (err) {
+    if (err instanceof ZodError) {
+      return res.status(400).json({ error: err.errors[0]?.message ?? "Invalid request" });
+    }
     console.error(
       "verifyCheckout error:",
       err instanceof Error ? err.message : String(err)
