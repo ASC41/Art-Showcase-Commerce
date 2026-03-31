@@ -17,6 +17,46 @@ function createTransport() {
   });
 }
 
+export async function sendInquiry(opts: {
+  type: string;
+  name: string;
+  email: string;
+  message: string;
+}) {
+  const transporter = createTransport();
+  const { type, name, email, message } = opts;
+
+  const subject = `New Inquiry — ${type} — ${name}`;
+  const text = [
+    `Inquiry type: ${type}`,
+    ``,
+    `From: ${name}`,
+    `Email: ${email}`,
+    ``,
+    `Message:`,
+    message,
+  ].join("\n");
+
+  if (!transporter) {
+    console.log(`[inquiry — email disabled]\n${subject}\n${text}`);
+    return;
+  }
+
+  try {
+    await transporter.sendMail({
+      from: `"Ryan Cellar Studio" <${GMAIL_USER}>`,
+      to: GMAIL_USER,
+      replyTo: email,
+      subject,
+      text,
+    });
+    console.log(`Inquiry email sent from ${email}`);
+  } catch (err) {
+    console.error("Failed to send inquiry email:", err);
+    throw err;
+  }
+}
+
 export async function sendOrderNotification(opts: {
   artworkTitle: string;
   purchaseType: "original" | "print";
