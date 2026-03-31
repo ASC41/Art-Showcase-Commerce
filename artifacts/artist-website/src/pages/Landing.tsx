@@ -2,9 +2,11 @@ import { useListArtworks } from "@workspace/api-client-react";
 import DraggableGallery, { DraggableGalleryItem } from "@/framer/draggable-gallery";
 import Navbar from "@/components/Navbar";
 import { ARTWORK_ASPECT } from "@/lib/artworkDimensions";
+import { useLocation } from "wouter";
 
 export default function Landing() {
   const { data: artworks, isLoading } = useListArtworks();
+  const [, navigate] = useLocation();
 
   const SPACER: DraggableGalleryItem = { type: "empty", src: "", alt: "", title: "" };
 
@@ -138,6 +140,11 @@ export default function Landing() {
             captionColor="#f5f5f5"
             introAnimation="topLeft"
             showCellCaptions={false}
+            onViewInPortfolio={(item) => {
+              if (item.slug) {
+                setTimeout(() => navigate(`/portfolio?artwork=${item.slug}`), 480);
+              }
+            }}
             style={{ width: "100%", height: "100%" }}
           />
         </div>
