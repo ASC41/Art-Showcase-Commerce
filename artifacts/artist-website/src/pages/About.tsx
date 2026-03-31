@@ -132,7 +132,7 @@ function TreatmentPhoto() {
       style={{
         position: "relative",
         width: "100%",
-        aspectRatio: "16/9",
+        aspectRatio: "16/10",
         overflow: "hidden",
         background: "#060606",
         margin: "0 0 0",
