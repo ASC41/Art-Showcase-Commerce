@@ -189,6 +189,13 @@ components:
           type: boolean
         year:
           type: ["integer", "null"]
+        hasMattePrint:
+          type: boolean
+        hasFramedPrint:
+          type: boolean
+        imageOrientation:
+          type: string
+          enum: [portrait, landscape, square]
         createdAt:
           type: string
           format: date-time
@@ -199,6 +206,8 @@ components:
         - status
         - imageUrl
         - isFeatured
+        - hasMattePrint
+        - hasFramedPrint
         - createdAt
 
     CreateCheckoutSessionBody:
@@ -215,6 +224,12 @@ components:
           type: string
         cancelUrl:
           type: string
+        printType:
+          type: string
+          enum: [matte, framed]
+        printSize:
+          type: string
+          enum: ["11x14", "18x24", "24x36"]
       required:
         - artworkSlug
         - purchaseType
