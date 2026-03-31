@@ -51,843 +51,848 @@ import { ContextProviders } from "unframer";
 // /:https://framerusercontent.com/modules/uG1zJhivX7WD5GRoZfYF/dX994jzjeO0BRFFN0mwU/GalleryX.js
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, {
-	useRef,
-	useState,
-	useEffect,
-	useCallback,
-	startTransition,
+        useRef,
+        useState,
+        useEffect,
+        useCallback,
+        startTransition,
 } from "react";
 import { addPropertyControls, ControlType } from "unframer";
 var __unframerWindow = typeof window !== "undefined" ? window : void 0;
 function computePinnedOffset(prevSize, nextSize, pivot, prevOffset) {
-	const worldX = (pivot.x - prevOffset.x) / prevSize;
-	const worldY = (pivot.y - prevOffset.y) / prevSize;
-	return {
-		x: pivot.x - worldX * nextSize,
-		y: pivot.y - worldY * nextSize,
-	};
+        const worldX = (pivot.x - prevOffset.x) / prevSize;
+        const worldY = (pivot.y - prevOffset.y) / prevSize;
+        return {
+                x: pivot.x - worldX * nextSize,
+                y: pivot.y - worldY * nextSize,
+        };
 }
 function toRadians(deg) {
-	return (deg * Math.PI) / 180;
+        return (deg * Math.PI) / 180;
 }
 function calcArcTransform(opts) {
-	const {
-		cellCenterX,
-		cellCenterY,
-		viewportW,
-		viewportH,
-		arcAxis,
-		arcMaxAngleDeg,
-		arcAmount,
-	} = opts;
-	const maxAngle =
-		toRadians(arcMaxAngleDeg) * Math.max(0, Math.min(1, arcAmount));
-	if (maxAngle === 0)
-		return {
-			z: 0,
-			yawDeg: 0,
-			pitchDeg: 0,
-			edgeFactor: 0,
-		};
-	if (arcAxis === "horizontal") {
-		const dx = (cellCenterX - viewportW / 2) / (viewportW / 2);
-		const angle = dx * maxAngle;
-		const radius = viewportW / (2 * Math.sin(Math.max(1e-3, maxAngle)));
-		const z = -radius * (Math.cos(angle) - 1);
-		const yawDeg = -(angle * 180) / Math.PI;
-		const edgeFactor = Math.min(1, Math.abs(dx));
-		return {
-			z,
-			yawDeg,
-			pitchDeg: 0,
-			edgeFactor,
-		};
-	} else {
-		const dy = (cellCenterY - viewportH / 2) / (viewportH / 2);
-		const angle = dy * maxAngle;
-		const radius = viewportH / (2 * Math.sin(Math.max(1e-3, maxAngle)));
-		const z = -radius * (Math.cos(angle) - 1);
-		const pitchDeg = (angle * 180) / Math.PI;
-		const edgeFactor = Math.min(1, Math.abs(dy));
-		return {
-			z,
-			yawDeg: 0,
-			pitchDeg,
-			edgeFactor,
-		};
-	}
+        const {
+                cellCenterX,
+                cellCenterY,
+                viewportW,
+                viewportH,
+                arcAxis,
+                arcMaxAngleDeg,
+                arcAmount,
+        } = opts;
+        const maxAngle =
+                toRadians(arcMaxAngleDeg) * Math.max(0, Math.min(1, arcAmount));
+        if (maxAngle === 0)
+                return {
+                        z: 0,
+                        yawDeg: 0,
+                        pitchDeg: 0,
+                        edgeFactor: 0,
+                };
+        if (arcAxis === "horizontal") {
+                const dx = (cellCenterX - viewportW / 2) / (viewportW / 2);
+                const angle = dx * maxAngle;
+                const radius = viewportW / (2 * Math.sin(Math.max(1e-3, maxAngle)));
+                const z = -radius * (Math.cos(angle) - 1);
+                const yawDeg = -(angle * 180) / Math.PI;
+                const edgeFactor = Math.min(1, Math.abs(dx));
+                return {
+                        z,
+                        yawDeg,
+                        pitchDeg: 0,
+                        edgeFactor,
+                };
+        } else {
+                const dy = (cellCenterY - viewportH / 2) / (viewportH / 2);
+                const angle = dy * maxAngle;
+                const radius = viewportH / (2 * Math.sin(Math.max(1e-3, maxAngle)));
+                const z = -radius * (Math.cos(angle) - 1);
+                const pitchDeg = (angle * 180) / Math.PI;
+                const edgeFactor = Math.min(1, Math.abs(dy));
+                return {
+                        z,
+                        yawDeg: 0,
+                        pitchDeg,
+                        edgeFactor,
+                };
+        }
 }
 function GalleryX(props) {
-	const {
-		items = [
-			{
-				title: "Motion Study",
-				image: {
-					src: "https://framerusercontent.com/images/GfGkADagM4KEibNcIiRUWlfrR0.jpg",
-					alt: "Motion Study",
-				},
-				year: 2024,
-				link: "/sample-project",
-				hoverColor: "#FF5588",
-			},
-			{
-				title: "Idle Form",
-				image: {
-					src: "https://framerusercontent.com/images/aNsAT3jCvt4zglbWCUoFe33Q.jpg",
-					alt: "Idle Form",
-				},
-				year: 2023,
-				link: "/sample-project",
-				hoverColor: "#8855FF",
-			},
-			{
-				title: "Blur Signal",
-				image: {
-					src: "https://framerusercontent.com/images/BYnxEV1zjYb9bhWh1IwBZ1ZoS60.jpg",
-					alt: "Blur Signal",
-				},
-				year: 2024,
-				link: "/sample-project",
-				hoverColor: "#FFBB00",
-			},
-			{
-				title: "Still Drift",
-				image: {
-					src: "https://framerusercontent.com/images/2uTNEj5aTl2K3NJaEFWMbnrA.jpg",
-					alt: "Still Drift",
-				},
-				year: 2023,
-				link: "/sample-project",
-				hoverColor: "#22CC66",
-			},
-			{
-				title: "Tidewalk",
-				image: {
-					src: "https://framerusercontent.com/images/f9RiWoNpmlCMqVRIHz8l8wYfeI.jpg",
-					alt: "Tidewalk",
-				},
-				year: 2024,
-				link: "/sample-project",
-				hoverColor: "#0099FF",
-			},
-		],
-		cellSize = 200,
-		backgroundColor = "#000000",
-		textColor = "#808080",
-		borderColor = "#FFFFFF",
-		cellPadding = 10,
-		gap = 12,
-		arcAmount = 0.6,
-		arcMaxAngleDeg = 28,
-		arcAxis = "horizontal",
-		edgeFade = 0.25,
-		border = {
-			width: 1,
-			style: "solid",
-			color: "#FFFFFF",
-			showTop: false,
-			showBottom: true,
-			showLeft: true,
-			showRight: true,
-		},
-		parallaxEnabled = true,
-		parallaxStrength = 0.1,
-		parallaxEase = 0.12,
-		parallaxWhileDragging = false,
-		inertiaEnabled = true,
-		throwFriction = 0.92,
-		throwVelocityScale = 1,
-		throwMinSpeed = 80,
-		throwMaxSpeed = 2500,
-	} = props;
-	const containerRef = useRef(null);
-	const [offset, setOffset] = useState({
-		x: 0,
-		y: 0,
-	});
-	const [targetOffset, setTargetOffset] = useState({
-		x: 0,
-		y: 0,
-	});
-	const [isDragging, setIsDragging] = useState(false);
-	const [currentCellSize, setCurrentCellSize] = useState(cellSize);
-	const [mouseOffset, setMouseOffset] = useState({
-		x: 0,
-		y: 0,
-	});
-	const [targetMouseOffset, setTargetMouseOffset] = useState({
-		x: 0,
-		y: 0,
-	});
-	const [targetCellSize, setTargetCellSize] = useState(cellSize);
-	const [lightboxImage, setLightboxImage] = useState(null);
-	const [lightboxClosing, setLightboxClosing] = useState(false);
-	const DRAG_LERP = 0.5;
-	const [inertia, setInertia] = React.useState({
-		x: 0,
-		y: 0,
-	});
-	const inertiaRef = React.useRef(inertia);
-	React.useEffect(() => {
-		inertiaRef.current = inertia;
-	}, [inertia]);
-	const velocityRef = React.useRef({
-		x: 0,
-		y: 0,
-	});
-	const lastMoveRef = React.useRef({
-		x: 0,
-		y: 0,
-		t: 0,
-	});
-	const inertiaActiveRef = React.useRef(false);
-	const pointerIdRef = React.useRef(null);
-	const isPressingRef = React.useRef(false);
-	const draggingRef = React.useRef(false);
-	React.useEffect(() => {
-		draggingRef.current = isDragging;
-	}, [isDragging]);
-	const hasDraggedRef = React.useRef(false);
-	const dragStartPosRef = React.useRef({
-		x: 0,
-		y: 0,
-	});
-	const offsetRef = React.useRef(offset);
-	React.useEffect(() => {
-		offsetRef.current = offset;
-	}, [offset]);
-	const targetOffsetRef = React.useRef(targetOffset);
-	React.useEffect(() => {
-		targetOffsetRef.current = targetOffset;
-	}, [targetOffset]);
-	const mouseOffsetRef = React.useRef(mouseOffset);
-	React.useEffect(() => {
-		mouseOffsetRef.current = mouseOffset;
-	}, [mouseOffset]);
-	const targetMouseOffsetRef = React.useRef(targetMouseOffset);
-	React.useEffect(() => {
-		targetMouseOffsetRef.current = targetMouseOffset;
-	}, [targetMouseOffset]);
-	const pressPosRef = React.useRef({
-		x: 0,
-		y: 0,
-	});
-	const startOffsetRef = React.useRef({
-		x: 0,
-		y: 0,
-	});
-	const pressTimerRef = React.useRef(null);
-	const lastTimeRef = React.useRef(performance.now());
-	const DRAG_THRESHOLD = 8;
-	const PRESS_ZOOM_DELAY = 120;
-	const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
-	const commitInertiaToBase = React.useCallback(() => {
-		const currentOffset = offsetRef.current;
-		const currentInertia = inertiaRef.current || {
-			x: 0,
-			y: 0,
-		};
-		const committed = {
-			x: currentOffset.x + currentInertia.x,
-			y: currentOffset.y + currentInertia.y,
-		};
-		setOffset(committed);
-		setTargetOffset(committed);
-		setInertia({
-			x: 0,
-			y: 0,
-		});
-		if (inertiaActiveRef) inertiaActiveRef.current = false;
-	}, []);
-	const handleCardClick = useCallback((item, e) => {
-		if (hasDraggedRef.current) {
-			return;
-		}
-		e.preventDefault();
-		e.stopPropagation();
-		setLightboxImage({
-			src:
-				item?.image?.src ||
-				"https://framerusercontent.com/images/GfGkADagM4KEibNcIiRUWlfrR0.jpg",
-			alt: item?.image?.alt || item?.title || "Image",
-			title: item?.title || "Project",
-		});
-	}, []);
-	const closeLightbox = useCallback(() => {
-		setLightboxClosing(true);
-		setTimeout(() => {
-			setLightboxImage(null);
-			setLightboxClosing(false);
-		}, 300);
-	}, []);
-	const [viewport, setViewport] = useState({
-		w: 0,
-		h: 0,
-	});
-	useEffect(() => {
-		const el = containerRef.current;
-		if (!el) return;
-		const ro = new ResizeObserver(([entry]) => {
-			const cr = entry.contentRect;
-			setViewport({
-				w: cr.width,
-				h: cr.height,
-			});
-		});
-		ro.observe(el);
-		return () => ro.disconnect();
-	}, []);
-	useEffect(() => {
-		let raf = 0;
-		let lastFrameTime = performance.now();
-		const lerp = (a, b, t) => a + (b - a) * t;
-		const tick = (currentTime) => {
-			const elapsed = currentTime - lastFrameTime;
-			if (elapsed < 16) {
-				raf = requestAnimationFrame(tick);
-				return;
-			}
-			lastFrameTime = currentTime;
-			const now = performance.now();
-			const dt = Math.min(0.05, (now - lastTimeRef.current) / 1e3);
-			lastTimeRef.current = now;
-			setCurrentCellSize((prev) => {
-				const lerpSpeed = draggingRef.current ? 0.25 : 0.15;
-				const next = prev + (targetCellSize - prev) * lerpSpeed;
-				return Math.abs(next - targetCellSize) < 0.05 ? targetCellSize : next;
-			});
-			setOffset((prev) => {
-				const tx = targetOffsetRef.current.x;
-				const ty = targetOffsetRef.current.y;
-				const lerpFactor = draggingRef.current ? DRAG_LERP : 0.15;
-				const nx = prev.x + (tx - prev.x) * lerpFactor;
-				const ny = prev.y + (ty - prev.y) * lerpFactor;
-				return {
-					x: Math.abs(nx - tx) < 0.1 ? tx : nx,
-					y: Math.abs(ny - ty) < 0.1 ? ty : ny,
-				};
-			});
-			if (inertiaEnabled && inertiaActiveRef.current) {
-				const f = Math.pow(throwFriction, dt * 60);
-				velocityRef.current.x *= f;
-				velocityRef.current.y *= f;
-				const speed = Math.hypot(velocityRef.current.x, velocityRef.current.y);
-				if (speed < 1) {
-					const direction = Math.atan2(
-						velocityRef.current.y,
-						velocityRef.current.x,
-					);
-					velocityRef.current.x = Math.cos(direction) * 1e-4;
-					velocityRef.current.y = Math.sin(direction) * 1e-4;
-				}
-				setInertia((prev) => ({
-					x: prev.x + velocityRef.current.x * dt,
-					y: prev.y + velocityRef.current.y * dt,
-				}));
-			}
-			if (parallaxEnabled && (parallaxWhileDragging || !draggingRef.current)) {
-				setMouseOffset((prev) => {
-					const tx = targetMouseOffsetRef.current.x;
-					const ty = targetMouseOffsetRef.current.y;
-					const nx = prev.x + (tx - prev.x) * parallaxEase;
-					const ny = prev.y + (ty - prev.y) * parallaxEase;
-					return {
-						x: Math.abs(nx - tx) < 0.1 ? tx : nx,
-						y: Math.abs(ny - ty) < 0.1 ? ty : ny,
-					};
-				});
-			} else {
-				setMouseOffset((prev) => {
-					const nx = prev.x + (0 - prev.x) * parallaxEase;
-					const ny = prev.y + (0 - prev.y) * parallaxEase;
-					return {
-						x: Math.abs(nx) < 0.1 ? 0 : nx,
-						y: Math.abs(ny) < 0.1 ? 0 : ny,
-					};
-				});
-			}
-			raf = requestAnimationFrame(tick);
-		};
-		raf = requestAnimationFrame(tick);
-		return () => cancelAnimationFrame(raf);
-	}, [
-		inertiaEnabled,
-		throwFriction,
-		targetCellSize,
-		parallaxEnabled,
-		parallaxWhileDragging,
-		parallaxEase,
-	]);
-	useEffect(() => {
-		const rect = containerRef.current?.getBoundingClientRect();
-		const pivot = rect
-			? {
-					x: rect.width / 2,
-					y: rect.height / 2,
-				}
-			: {
-					x: 0,
-					y: 0,
-				};
-		const visibleOffset = {
-			x: offsetRef.current.x + (inertiaRef.current?.x || 0),
-			y: offsetRef.current.y + (inertiaRef.current?.y || 0),
-		};
-		const newTargetOffset = computePinnedOffset(
-			currentCellSize,
-			cellSize,
-			pivot,
-			visibleOffset,
-		);
-		setTargetCellSize(cellSize);
-		setTargetOffset(newTargetOffset);
-	}, [cellSize]);
-	const handlePointerDown = useCallback(
-		(e) => {
-			if (
-				inertiaActiveRef?.current ||
-				(inertiaRef.current?.x || 0) !== 0 ||
-				(inertiaRef.current?.y || 0) !== 0
-			) {
-				commitInertiaToBase();
-			}
-			pointerIdRef.current = e.pointerId;
-			e.currentTarget.setPointerCapture(e.pointerId);
-			isPressingRef.current = true;
-			setIsDragging(false);
-			hasDraggedRef.current = false;
-			dragStartPosRef.current = {
-				x: e.clientX,
-				y: e.clientY,
-			};
-			lastMoveRef.current = {
-				x: e.clientX,
-				y: e.clientY,
-				t: performance.now(),
-			};
-			velocityRef.current = {
-				x: 0,
-				y: 0,
-			};
-			pressPosRef.current = {
-				x: e.clientX,
-				y: e.clientY,
-			};
-			startOffsetRef.current = offsetRef.current;
-			if (pressTimerRef.current)
-				__unframerWindow.clearTimeout(pressTimerRef.current);
-			pressTimerRef.current = __unframerWindow.setTimeout(() => {
-				if (!draggingRef.current && isPressingRef.current) {
-					const rect = containerRef.current?.getBoundingClientRect();
-					const pivot = rect
-						? {
-								x: rect.width / 2,
-								y: rect.height / 2,
-							}
-						: {
-								x: 0,
-								y: 0,
-							};
-					const newSize = cellSize * props.zoomValue;
-					const visibleOffset = {
-						x: offsetRef.current.x + (inertiaRef.current?.x || 0),
-						y: offsetRef.current.y + (inertiaRef.current?.y || 0),
-					};
-					const pinned = computePinnedOffset(
-						currentCellSize,
-						newSize,
-						pivot,
-						visibleOffset,
-					);
-					setTargetCellSize(newSize);
-					setTargetOffset(pinned);
-				}
-			}, PRESS_ZOOM_DELAY);
-		},
-		[cellSize, props.zoomValue, currentCellSize, commitInertiaToBase],
-	);
-	const handlePointerMove = useCallback(
-		(e) => {
-			if (isPressingRef.current) {
-				const now = performance.now();
-				const dt = Math.max(1e-3, (now - lastMoveRef.current.t) / 1e3);
-				const dx2 = e.clientX - lastMoveRef.current.x;
-				const dy2 = e.clientY - lastMoveRef.current.y;
-				const vx = clamp(
-					(dx2 / dt) * throwVelocityScale,
-					-throwMaxSpeed,
-					throwMaxSpeed,
-				);
-				const vy = clamp(
-					(dy2 / dt) * throwVelocityScale,
-					-throwMaxSpeed,
-					throwMaxSpeed,
-				);
-				velocityRef.current.x = vx * 0.6 + velocityRef.current.x * 0.4;
-				velocityRef.current.y = vy * 0.6 + velocityRef.current.y * 0.4;
-				lastMoveRef.current = {
-					x: e.clientX,
-					y: e.clientY,
-					t: now,
-				};
-			}
-			const suppressParallax = isPressingRef.current || isDragging;
-			if (
-				parallaxEnabled &&
-				(parallaxWhileDragging || !draggingRef.current) &&
-				containerRef.current &&
-				!suppressParallax
-			) {
-				const rect = containerRef.current.getBoundingClientRect();
-				const mouseX = e.clientX - rect.left;
-				const mouseY = e.clientY - rect.top;
-				const centerX = rect.width / 2;
-				const centerY = rect.height / 2;
-				const reverseX = (centerX - mouseX) * parallaxStrength;
-				const reverseY = (centerY - mouseY) * parallaxStrength;
-				setTargetMouseOffset({
-					x: reverseX,
-					y: reverseY,
-				});
-			}
-			if (!isPressingRef.current) return;
-			const dx = e.clientX - dragStartPosRef.current.x;
-			const dy = e.clientY - dragStartPosRef.current.y;
-			const distance = Math.hypot(dx, dy);
-			if (!isDragging && distance > DRAG_THRESHOLD) {
-				hasDraggedRef.current = true;
-				setIsDragging(true);
-				draggingRef.current = true;
-				startOffsetRef.current = offsetRef.current;
-				pressPosRef.current = {
-					x: e.clientX,
-					y: e.clientY,
-				};
-			}
-			if (draggingRef.current) {
-				const dragDx = e.clientX - pressPosRef.current.x;
-				const dragDy = e.clientY - pressPosRef.current.y;
-				const nx = startOffsetRef.current.x + dragDx;
-				const ny = startOffsetRef.current.y + dragDy;
-				setTargetOffset({
-					x: nx,
-					y: ny,
-				});
-			}
-		},
-		[
-			isDragging,
-			parallaxEnabled,
-			parallaxWhileDragging,
-			parallaxStrength,
-			throwVelocityScale,
-			throwMaxSpeed,
-		],
-	);
-	const handlePointerUp = useCallback(() => {
-		isPressingRef.current = false;
-		if (pressTimerRef.current) {
-			__unframerWindow.clearTimeout(pressTimerRef.current);
-			pressTimerRef.current = null;
-		}
-		const speed = Math.hypot(velocityRef.current.x, velocityRef.current.y);
-		if (inertiaEnabled && speed >= throwMinSpeed) {
-			inertiaActiveRef.current = true;
-		} else {
-			inertiaActiveRef.current = false;
-			setInertia({
-				x: 0,
-				y: 0,
-			});
-		}
-		setIsDragging(false);
-		draggingRef.current = false;
-		const rect = containerRef.current?.getBoundingClientRect();
-		const pivot = rect
-			? {
-					x: rect.width / 2,
-					y: rect.height / 2,
-				}
-			: {
-					x: 0,
-					y: 0,
-				};
-		const visibleOffset = {
-			x: offsetRef.current.x + (inertiaRef.current?.x || 0),
-			y: offsetRef.current.y + (inertiaRef.current?.y || 0),
-		};
-		const pinnedBack = computePinnedOffset(
-			currentCellSize,
-			cellSize,
-			pivot,
-			visibleOffset,
-		);
-		setTargetMouseOffset({
-			x: 0,
-			y: 0,
-		});
-		startTransition(() => {
-			setTargetCellSize(cellSize);
-			setTargetOffset(pinnedBack);
-		});
-		setTimeout(() => {
-			hasDraggedRef.current = false;
-		}, 100);
-	}, [cellSize, currentCellSize, inertiaEnabled, throwMinSpeed]);
-	const handlePointerLeave = useCallback(() => {
-		setTargetMouseOffset({
-			x: 0,
-			y: 0,
-		});
-	}, []);
-	const gridCells = [];
-	const gridSize = 20;
-	const cellWithGap = currentCellSize;
-	const startX = Math.floor(-offset.x / cellWithGap) - 5;
-	const startY = Math.floor(-offset.y / cellWithGap) - 5;
-	const visibleStartX =
-		Math.floor((-offset.x - mouseOffset.x - inertia.x) / cellWithGap) - 2;
-	const visibleEndX =
-		visibleStartX + Math.ceil((viewport.w || 1e3) / cellWithGap) + 4;
-	const visibleStartY =
-		Math.floor((-offset.y - mouseOffset.y - inertia.y) / cellWithGap) - 2;
-	const visibleEndY =
-		visibleStartY + Math.ceil((viewport.h || 1e3) / cellWithGap) + 4;
-	for (let y = startY; y < startY + gridSize; y++) {
-		for (let x = startX; x < startX + gridSize; x++) {
-			if (
-				x < visibleStartX ||
-				x > visibleEndX ||
-				y < visibleStartY ||
-				y > visibleEndY
-			) {
-				continue;
-			}
-			const itemIndex = Math.abs((x + y * 3) % items.length);
-			const item = items[itemIndex];
-			const tileLeft = x * cellWithGap + offset.x + mouseOffset.x + inertia.x;
-			const tileTop = y * cellWithGap + offset.y + mouseOffset.y + inertia.y;
-			const tileW = currentCellSize;
-			const tileH = currentCellSize;
-			const cellCenterX = tileLeft + tileW / 2;
-			const cellCenterY = tileTop + tileH / 2;
-			const { z, yawDeg, pitchDeg, edgeFactor } = calcArcTransform({
-				cellCenterX,
-				cellCenterY,
-				viewportW: viewport.w || 1,
-				viewportH: viewport.h || 1,
-				arcAxis,
-				arcMaxAngleDeg,
-				arcAmount,
-			});
-			const scale = 1 - edgeFade * (edgeFactor * edgeFactor);
-			const opacity = 1 - 0.4 * (edgeFactor * arcAmount);
-			gridCells.push(
-				<div
-					style={{
-						position: "absolute",
-						left: 0,
-						top: 0,
-						width: tileW,
-						height: tileH,
-						borderTop: border.showTop
-							? `${border.width}px ${border.style} ${border.color}`
-							: "none",
-						borderLeft: border.showLeft
-							? `${border.width}px ${border.style} ${border.color}`
-							: "none",
-						borderRight: border.showRight
-							? `${border.width}px ${border.style} ${border.color}`
-							: "none",
-						borderBottom: border.showBottom
-							? `${border.width}px ${border.style} ${border.color}`
-							: "none",
-						backgroundColor: void 0,
-						cursor: "pointer",
-						transition: "background-color 0.3s ease",
-						display: "flex",
-						flexDirection: "column",
-						padding: `${cellPadding}px`,
-						boxSizing: "border-box",
-						transformStyle: "preserve-3d",
-						transform: `translate3d(${tileLeft}px, ${tileTop}px, ${z}px) rotateY(${yawDeg}deg) rotateX(${pitchDeg}deg) scale(${scale})`,
-						opacity,
-						willChange: isDragging ? "transform" : "auto",
-						backfaceVisibility: "hidden",
-						WebkitBackfaceVisibility: "hidden",
-					}}
-					onMouseEnter={(e) => {
-						e.currentTarget.style.backgroundColor =
-							item.hoverColor || props.hoverColor;
-					}}
-					onMouseLeave={(e) => {
-						e.currentTarget.style.backgroundColor = "";
-					}}
-					onClick={(e) => handleCardClick(item, e)}
-				>
-					<div
-						style={{
-							flex: 1,
-							backgroundImage: `url(${item?.image?.src || "https://framerusercontent.com/images/GfGkADagM4KEibNcIiRUWlfrR0.jpg"})`,
-							backgroundSize: "cover",
-							backgroundPosition: "center",
-							marginBottom: `${gap}px`,
-							borderRadius: "4px",
-							cursor: item?.link ? "pointer" : "default",
-							userSelect: "none",
-							willChange: isDragging ? "transform" : "auto",
-						}}
-						onClick={(e) => {
-							if (!hasDraggedRef.current && item?.link) {
-								e.preventDefault();
-								e.stopPropagation();
-								try {
-									if (typeof __unframerWindow !== "undefined") {
-										if (
-											item.link.startsWith("http://") ||
-											item.link.startsWith("https://")
-										) {
-											__unframerWindow.open(
-												item.link,
-												"_blank",
-												"noopener,noreferrer",
-											);
-										} else {
-											__unframerWindow.location.href = item.link;
-										}
-									}
-								} catch (error) {
-									console.warn("Navigation failed:", error);
-								}
-							}
-						}}
-					/>
-					<div
-						style={{
-							color: textColor,
-							fontSize: "12px",
-							fontFamily: "monospace",
-							display: "flex",
-							justifyContent: "space-between",
-							alignItems: "center",
-							userSelect: "none",
-							WebkitUserSelect: "none",
-							pointerEvents: "none",
-						}}
-					>
-						<span
-							style={{
-								fontWeight: "bold",
-								textTransform: "uppercase",
-								cursor: item?.link ? "pointer" : "default",
-							}}
-							onClick={(e) => {
-								if (!hasDraggedRef.current && item?.link) {
-									e.preventDefault();
-									e.stopPropagation();
-									try {
-										if (typeof __unframerWindow !== "undefined") {
-											if (
-												item.link.startsWith("http://") ||
-												item.link.startsWith("https://")
-											) {
-												__unframerWindow.open(
-													item.link,
-													"_blank",
-													"noopener,noreferrer",
-												);
-											} else {
-												__unframerWindow.location.href = item.link;
-											}
-										}
-									} catch (error) {
-										console.warn("Navigation failed:", error);
-									}
-								}
-							}}
-						>
-							{item?.title || "Project"}
-						</span>
-						<span>{item?.year || 2024}</span>
-					</div>
-				</div>,
-			);
-		}
-	}
-	return (
-		<div
-			ref={containerRef}
-			style={{
-				width: "100%",
-				height: "100%",
-				backgroundColor,
-				position: "relative",
-				overflow: "hidden",
-				touchAction: "none",
-				cursor: isDragging ? "grabbing" : "grab",
-				userSelect: "none",
-				WebkitUserSelect: "none",
-				MozUserSelect: "none",
-				msUserSelect: "none",
-				WebkitTouchCallout: "none",
-				perspective: "1000px",
-				transformStyle: "preserve-3d",
-				willChange: isDragging ? "transform" : "auto",
-			}}
-			onPointerDown={handlePointerDown}
-			onPointerMove={handlePointerMove}
-			onPointerUp={handlePointerUp}
-			onPointerCancel={handlePointerUp}
-			onPointerLeave={handlePointerLeave}
-		>
-			<div
-				style={{
-					position: "absolute",
-					width: "100%",
-					height: "100%",
-					transformStyle: "preserve-3d",
-					willChange: isDragging ? "transform" : "auto",
-				}}
-			>
-				{gridCells}
-			</div>
-			<div
-				style={{
-					position: "absolute",
-					inset: 0,
-					pointerEvents: "none",
-					background: `radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0.8) 90%, rgba(0,0,0,1) 100%)`,
-				}}
-			/>
-			{lightboxImage && (
-				<div
-					style={{
-						position: "fixed",
-						top: 0,
-						left: 0,
-						right: 0,
-						bottom: 0,
-						backgroundColor: "rgba(0, 0, 0, 0.95)",
-						backdropFilter: "blur(10px)",
-						WebkitBackdropFilter: "blur(10px)",
-						zIndex: 9999,
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						padding: "40px",
-						cursor: "default",
-						animation: lightboxClosing
-							? "fadeOut 0.3s ease-out forwards"
-							: "fadeIn 0.3s ease-out",
-						pointerEvents: lightboxClosing ? "none" : "auto",
-					}}
-					onClick={(e) => {
-						if (e.target === e.currentTarget && !lightboxClosing) {
-							closeLightbox();
-						}
-					}}
-				>
-					<style>{`
+        const {
+                items = [
+                        {
+                                title: "Motion Study",
+                                image: {
+                                        src: "https://framerusercontent.com/images/GfGkADagM4KEibNcIiRUWlfrR0.jpg",
+                                        alt: "Motion Study",
+                                },
+                                year: 2024,
+                                link: "/sample-project",
+                                hoverColor: "#FF5588",
+                        },
+                        {
+                                title: "Idle Form",
+                                image: {
+                                        src: "https://framerusercontent.com/images/aNsAT3jCvt4zglbWCUoFe33Q.jpg",
+                                        alt: "Idle Form",
+                                },
+                                year: 2023,
+                                link: "/sample-project",
+                                hoverColor: "#8855FF",
+                        },
+                        {
+                                title: "Blur Signal",
+                                image: {
+                                        src: "https://framerusercontent.com/images/BYnxEV1zjYb9bhWh1IwBZ1ZoS60.jpg",
+                                        alt: "Blur Signal",
+                                },
+                                year: 2024,
+                                link: "/sample-project",
+                                hoverColor: "#FFBB00",
+                        },
+                        {
+                                title: "Still Drift",
+                                image: {
+                                        src: "https://framerusercontent.com/images/2uTNEj5aTl2K3NJaEFWMbnrA.jpg",
+                                        alt: "Still Drift",
+                                },
+                                year: 2023,
+                                link: "/sample-project",
+                                hoverColor: "#22CC66",
+                        },
+                        {
+                                title: "Tidewalk",
+                                image: {
+                                        src: "https://framerusercontent.com/images/f9RiWoNpmlCMqVRIHz8l8wYfeI.jpg",
+                                        alt: "Tidewalk",
+                                },
+                                year: 2024,
+                                link: "/sample-project",
+                                hoverColor: "#0099FF",
+                        },
+                ],
+                cellSize = 200,
+                backgroundColor = "#000000",
+                textColor = "#808080",
+                borderColor = "#FFFFFF",
+                cellPadding = 10,
+                gap = 12,
+                arcAmount = 0.6,
+                arcMaxAngleDeg = 28,
+                arcAxis = "horizontal",
+                edgeFade = 0.25,
+                border = {
+                        width: 1,
+                        style: "solid",
+                        color: "#FFFFFF",
+                        showTop: false,
+                        showBottom: true,
+                        showLeft: true,
+                        showRight: true,
+                },
+                parallaxEnabled = true,
+                parallaxStrength = 0.1,
+                parallaxEase = 0.12,
+                parallaxWhileDragging = false,
+                inertiaEnabled = true,
+                throwFriction = 0.92,
+                throwVelocityScale = 1,
+                throwMinSpeed = 80,
+                throwMaxSpeed = 2500,
+                onItemClick = null,
+        } = props;
+        const containerRef = useRef(null);
+        const [offset, setOffset] = useState({
+                x: 0,
+                y: 0,
+        });
+        const [targetOffset, setTargetOffset] = useState({
+                x: 0,
+                y: 0,
+        });
+        const [isDragging, setIsDragging] = useState(false);
+        const [currentCellSize, setCurrentCellSize] = useState(cellSize);
+        const [mouseOffset, setMouseOffset] = useState({
+                x: 0,
+                y: 0,
+        });
+        const [targetMouseOffset, setTargetMouseOffset] = useState({
+                x: 0,
+                y: 0,
+        });
+        const [targetCellSize, setTargetCellSize] = useState(cellSize);
+        const [lightboxImage, setLightboxImage] = useState(null);
+        const [lightboxClosing, setLightboxClosing] = useState(false);
+        const DRAG_LERP = 0.5;
+        const [inertia, setInertia] = React.useState({
+                x: 0,
+                y: 0,
+        });
+        const inertiaRef = React.useRef(inertia);
+        React.useEffect(() => {
+                inertiaRef.current = inertia;
+        }, [inertia]);
+        const velocityRef = React.useRef({
+                x: 0,
+                y: 0,
+        });
+        const lastMoveRef = React.useRef({
+                x: 0,
+                y: 0,
+                t: 0,
+        });
+        const inertiaActiveRef = React.useRef(false);
+        const pointerIdRef = React.useRef(null);
+        const isPressingRef = React.useRef(false);
+        const draggingRef = React.useRef(false);
+        React.useEffect(() => {
+                draggingRef.current = isDragging;
+        }, [isDragging]);
+        const hasDraggedRef = React.useRef(false);
+        const dragStartPosRef = React.useRef({
+                x: 0,
+                y: 0,
+        });
+        const offsetRef = React.useRef(offset);
+        React.useEffect(() => {
+                offsetRef.current = offset;
+        }, [offset]);
+        const targetOffsetRef = React.useRef(targetOffset);
+        React.useEffect(() => {
+                targetOffsetRef.current = targetOffset;
+        }, [targetOffset]);
+        const mouseOffsetRef = React.useRef(mouseOffset);
+        React.useEffect(() => {
+                mouseOffsetRef.current = mouseOffset;
+        }, [mouseOffset]);
+        const targetMouseOffsetRef = React.useRef(targetMouseOffset);
+        React.useEffect(() => {
+                targetMouseOffsetRef.current = targetMouseOffset;
+        }, [targetMouseOffset]);
+        const pressPosRef = React.useRef({
+                x: 0,
+                y: 0,
+        });
+        const startOffsetRef = React.useRef({
+                x: 0,
+                y: 0,
+        });
+        const pressTimerRef = React.useRef(null);
+        const lastTimeRef = React.useRef(performance.now());
+        const DRAG_THRESHOLD = 8;
+        const PRESS_ZOOM_DELAY = 120;
+        const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+        const commitInertiaToBase = React.useCallback(() => {
+                const currentOffset = offsetRef.current;
+                const currentInertia = inertiaRef.current || {
+                        x: 0,
+                        y: 0,
+                };
+                const committed = {
+                        x: currentOffset.x + currentInertia.x,
+                        y: currentOffset.y + currentInertia.y,
+                };
+                setOffset(committed);
+                setTargetOffset(committed);
+                setInertia({
+                        x: 0,
+                        y: 0,
+                });
+                if (inertiaActiveRef) inertiaActiveRef.current = false;
+        }, []);
+        const handleCardClick = useCallback((item, e) => {
+                if (hasDraggedRef.current) {
+                        return;
+                }
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof onItemClick === "function") {
+                        onItemClick(item);
+                        return;
+                }
+                setLightboxImage({
+                        src:
+                                item?.image?.src ||
+                                "https://framerusercontent.com/images/GfGkADagM4KEibNcIiRUWlfrR0.jpg",
+                        alt: item?.image?.alt || item?.title || "Image",
+                        title: item?.title || "Project",
+                });
+        }, []);
+        const closeLightbox = useCallback(() => {
+                setLightboxClosing(true);
+                setTimeout(() => {
+                        setLightboxImage(null);
+                        setLightboxClosing(false);
+                }, 300);
+        }, []);
+        const [viewport, setViewport] = useState({
+                w: 0,
+                h: 0,
+        });
+        useEffect(() => {
+                const el = containerRef.current;
+                if (!el) return;
+                const ro = new ResizeObserver(([entry]) => {
+                        const cr = entry.contentRect;
+                        setViewport({
+                                w: cr.width,
+                                h: cr.height,
+                        });
+                });
+                ro.observe(el);
+                return () => ro.disconnect();
+        }, []);
+        useEffect(() => {
+                let raf = 0;
+                let lastFrameTime = performance.now();
+                const lerp = (a, b, t) => a + (b - a) * t;
+                const tick = (currentTime) => {
+                        const elapsed = currentTime - lastFrameTime;
+                        if (elapsed < 16) {
+                                raf = requestAnimationFrame(tick);
+                                return;
+                        }
+                        lastFrameTime = currentTime;
+                        const now = performance.now();
+                        const dt = Math.min(0.05, (now - lastTimeRef.current) / 1e3);
+                        lastTimeRef.current = now;
+                        setCurrentCellSize((prev) => {
+                                const lerpSpeed = draggingRef.current ? 0.25 : 0.15;
+                                const next = prev + (targetCellSize - prev) * lerpSpeed;
+                                return Math.abs(next - targetCellSize) < 0.05 ? targetCellSize : next;
+                        });
+                        setOffset((prev) => {
+                                const tx = targetOffsetRef.current.x;
+                                const ty = targetOffsetRef.current.y;
+                                const lerpFactor = draggingRef.current ? DRAG_LERP : 0.15;
+                                const nx = prev.x + (tx - prev.x) * lerpFactor;
+                                const ny = prev.y + (ty - prev.y) * lerpFactor;
+                                return {
+                                        x: Math.abs(nx - tx) < 0.1 ? tx : nx,
+                                        y: Math.abs(ny - ty) < 0.1 ? ty : ny,
+                                };
+                        });
+                        if (inertiaEnabled && inertiaActiveRef.current) {
+                                const f = Math.pow(throwFriction, dt * 60);
+                                velocityRef.current.x *= f;
+                                velocityRef.current.y *= f;
+                                const speed = Math.hypot(velocityRef.current.x, velocityRef.current.y);
+                                if (speed < 1) {
+                                        const direction = Math.atan2(
+                                                velocityRef.current.y,
+                                                velocityRef.current.x,
+                                        );
+                                        velocityRef.current.x = Math.cos(direction) * 1e-4;
+                                        velocityRef.current.y = Math.sin(direction) * 1e-4;
+                                }
+                                setInertia((prev) => ({
+                                        x: prev.x + velocityRef.current.x * dt,
+                                        y: prev.y + velocityRef.current.y * dt,
+                                }));
+                        }
+                        if (parallaxEnabled && (parallaxWhileDragging || !draggingRef.current)) {
+                                setMouseOffset((prev) => {
+                                        const tx = targetMouseOffsetRef.current.x;
+                                        const ty = targetMouseOffsetRef.current.y;
+                                        const nx = prev.x + (tx - prev.x) * parallaxEase;
+                                        const ny = prev.y + (ty - prev.y) * parallaxEase;
+                                        return {
+                                                x: Math.abs(nx - tx) < 0.1 ? tx : nx,
+                                                y: Math.abs(ny - ty) < 0.1 ? ty : ny,
+                                        };
+                                });
+                        } else {
+                                setMouseOffset((prev) => {
+                                        const nx = prev.x + (0 - prev.x) * parallaxEase;
+                                        const ny = prev.y + (0 - prev.y) * parallaxEase;
+                                        return {
+                                                x: Math.abs(nx) < 0.1 ? 0 : nx,
+                                                y: Math.abs(ny) < 0.1 ? 0 : ny,
+                                        };
+                                });
+                        }
+                        raf = requestAnimationFrame(tick);
+                };
+                raf = requestAnimationFrame(tick);
+                return () => cancelAnimationFrame(raf);
+        }, [
+                inertiaEnabled,
+                throwFriction,
+                targetCellSize,
+                parallaxEnabled,
+                parallaxWhileDragging,
+                parallaxEase,
+        ]);
+        useEffect(() => {
+                const rect = containerRef.current?.getBoundingClientRect();
+                const pivot = rect
+                        ? {
+                                        x: rect.width / 2,
+                                        y: rect.height / 2,
+                                }
+                        : {
+                                        x: 0,
+                                        y: 0,
+                                };
+                const visibleOffset = {
+                        x: offsetRef.current.x + (inertiaRef.current?.x || 0),
+                        y: offsetRef.current.y + (inertiaRef.current?.y || 0),
+                };
+                const newTargetOffset = computePinnedOffset(
+                        currentCellSize,
+                        cellSize,
+                        pivot,
+                        visibleOffset,
+                );
+                setTargetCellSize(cellSize);
+                setTargetOffset(newTargetOffset);
+        }, [cellSize]);
+        const handlePointerDown = useCallback(
+                (e) => {
+                        if (
+                                inertiaActiveRef?.current ||
+                                (inertiaRef.current?.x || 0) !== 0 ||
+                                (inertiaRef.current?.y || 0) !== 0
+                        ) {
+                                commitInertiaToBase();
+                        }
+                        pointerIdRef.current = e.pointerId;
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                        isPressingRef.current = true;
+                        setIsDragging(false);
+                        hasDraggedRef.current = false;
+                        dragStartPosRef.current = {
+                                x: e.clientX,
+                                y: e.clientY,
+                        };
+                        lastMoveRef.current = {
+                                x: e.clientX,
+                                y: e.clientY,
+                                t: performance.now(),
+                        };
+                        velocityRef.current = {
+                                x: 0,
+                                y: 0,
+                        };
+                        pressPosRef.current = {
+                                x: e.clientX,
+                                y: e.clientY,
+                        };
+                        startOffsetRef.current = offsetRef.current;
+                        if (pressTimerRef.current)
+                                __unframerWindow.clearTimeout(pressTimerRef.current);
+                        pressTimerRef.current = __unframerWindow.setTimeout(() => {
+                                if (!draggingRef.current && isPressingRef.current) {
+                                        const rect = containerRef.current?.getBoundingClientRect();
+                                        const pivot = rect
+                                                ? {
+                                                                x: rect.width / 2,
+                                                                y: rect.height / 2,
+                                                        }
+                                                : {
+                                                                x: 0,
+                                                                y: 0,
+                                                        };
+                                        const newSize = cellSize * props.zoomValue;
+                                        const visibleOffset = {
+                                                x: offsetRef.current.x + (inertiaRef.current?.x || 0),
+                                                y: offsetRef.current.y + (inertiaRef.current?.y || 0),
+                                        };
+                                        const pinned = computePinnedOffset(
+                                                currentCellSize,
+                                                newSize,
+                                                pivot,
+                                                visibleOffset,
+                                        );
+                                        setTargetCellSize(newSize);
+                                        setTargetOffset(pinned);
+                                }
+                        }, PRESS_ZOOM_DELAY);
+                },
+                [cellSize, props.zoomValue, currentCellSize, commitInertiaToBase],
+        );
+        const handlePointerMove = useCallback(
+                (e) => {
+                        if (isPressingRef.current) {
+                                const now = performance.now();
+                                const dt = Math.max(1e-3, (now - lastMoveRef.current.t) / 1e3);
+                                const dx2 = e.clientX - lastMoveRef.current.x;
+                                const dy2 = e.clientY - lastMoveRef.current.y;
+                                const vx = clamp(
+                                        (dx2 / dt) * throwVelocityScale,
+                                        -throwMaxSpeed,
+                                        throwMaxSpeed,
+                                );
+                                const vy = clamp(
+                                        (dy2 / dt) * throwVelocityScale,
+                                        -throwMaxSpeed,
+                                        throwMaxSpeed,
+                                );
+                                velocityRef.current.x = vx * 0.6 + velocityRef.current.x * 0.4;
+                                velocityRef.current.y = vy * 0.6 + velocityRef.current.y * 0.4;
+                                lastMoveRef.current = {
+                                        x: e.clientX,
+                                        y: e.clientY,
+                                        t: now,
+                                };
+                        }
+                        const suppressParallax = isPressingRef.current || isDragging;
+                        if (
+                                parallaxEnabled &&
+                                (parallaxWhileDragging || !draggingRef.current) &&
+                                containerRef.current &&
+                                !suppressParallax
+                        ) {
+                                const rect = containerRef.current.getBoundingClientRect();
+                                const mouseX = e.clientX - rect.left;
+                                const mouseY = e.clientY - rect.top;
+                                const centerX = rect.width / 2;
+                                const centerY = rect.height / 2;
+                                const reverseX = (centerX - mouseX) * parallaxStrength;
+                                const reverseY = (centerY - mouseY) * parallaxStrength;
+                                setTargetMouseOffset({
+                                        x: reverseX,
+                                        y: reverseY,
+                                });
+                        }
+                        if (!isPressingRef.current) return;
+                        const dx = e.clientX - dragStartPosRef.current.x;
+                        const dy = e.clientY - dragStartPosRef.current.y;
+                        const distance = Math.hypot(dx, dy);
+                        if (!isDragging && distance > DRAG_THRESHOLD) {
+                                hasDraggedRef.current = true;
+                                setIsDragging(true);
+                                draggingRef.current = true;
+                                startOffsetRef.current = offsetRef.current;
+                                pressPosRef.current = {
+                                        x: e.clientX,
+                                        y: e.clientY,
+                                };
+                        }
+                        if (draggingRef.current) {
+                                const dragDx = e.clientX - pressPosRef.current.x;
+                                const dragDy = e.clientY - pressPosRef.current.y;
+                                const nx = startOffsetRef.current.x + dragDx;
+                                const ny = startOffsetRef.current.y + dragDy;
+                                setTargetOffset({
+                                        x: nx,
+                                        y: ny,
+                                });
+                        }
+                },
+                [
+                        isDragging,
+                        parallaxEnabled,
+                        parallaxWhileDragging,
+                        parallaxStrength,
+                        throwVelocityScale,
+                        throwMaxSpeed,
+                ],
+        );
+        const handlePointerUp = useCallback(() => {
+                isPressingRef.current = false;
+                if (pressTimerRef.current) {
+                        __unframerWindow.clearTimeout(pressTimerRef.current);
+                        pressTimerRef.current = null;
+                }
+                const speed = Math.hypot(velocityRef.current.x, velocityRef.current.y);
+                if (inertiaEnabled && speed >= throwMinSpeed) {
+                        inertiaActiveRef.current = true;
+                } else {
+                        inertiaActiveRef.current = false;
+                        setInertia({
+                                x: 0,
+                                y: 0,
+                        });
+                }
+                setIsDragging(false);
+                draggingRef.current = false;
+                const rect = containerRef.current?.getBoundingClientRect();
+                const pivot = rect
+                        ? {
+                                        x: rect.width / 2,
+                                        y: rect.height / 2,
+                                }
+                        : {
+                                        x: 0,
+                                        y: 0,
+                                };
+                const visibleOffset = {
+                        x: offsetRef.current.x + (inertiaRef.current?.x || 0),
+                        y: offsetRef.current.y + (inertiaRef.current?.y || 0),
+                };
+                const pinnedBack = computePinnedOffset(
+                        currentCellSize,
+                        cellSize,
+                        pivot,
+                        visibleOffset,
+                );
+                setTargetMouseOffset({
+                        x: 0,
+                        y: 0,
+                });
+                startTransition(() => {
+                        setTargetCellSize(cellSize);
+                        setTargetOffset(pinnedBack);
+                });
+                setTimeout(() => {
+                        hasDraggedRef.current = false;
+                }, 100);
+        }, [cellSize, currentCellSize, inertiaEnabled, throwMinSpeed]);
+        const handlePointerLeave = useCallback(() => {
+                setTargetMouseOffset({
+                        x: 0,
+                        y: 0,
+                });
+        }, []);
+        const gridCells = [];
+        const gridSize = 20;
+        const cellWithGap = currentCellSize;
+        const startX = Math.floor(-offset.x / cellWithGap) - 5;
+        const startY = Math.floor(-offset.y / cellWithGap) - 5;
+        const visibleStartX =
+                Math.floor((-offset.x - mouseOffset.x - inertia.x) / cellWithGap) - 2;
+        const visibleEndX =
+                visibleStartX + Math.ceil((viewport.w || 1e3) / cellWithGap) + 4;
+        const visibleStartY =
+                Math.floor((-offset.y - mouseOffset.y - inertia.y) / cellWithGap) - 2;
+        const visibleEndY =
+                visibleStartY + Math.ceil((viewport.h || 1e3) / cellWithGap) + 4;
+        for (let y = startY; y < startY + gridSize; y++) {
+                for (let x = startX; x < startX + gridSize; x++) {
+                        if (
+                                x < visibleStartX ||
+                                x > visibleEndX ||
+                                y < visibleStartY ||
+                                y > visibleEndY
+                        ) {
+                                continue;
+                        }
+                        const itemIndex = Math.abs((x + y * 3) % items.length);
+                        const item = items[itemIndex];
+                        const tileLeft = x * cellWithGap + offset.x + mouseOffset.x + inertia.x;
+                        const tileTop = y * cellWithGap + offset.y + mouseOffset.y + inertia.y;
+                        const tileW = currentCellSize;
+                        const tileH = currentCellSize;
+                        const cellCenterX = tileLeft + tileW / 2;
+                        const cellCenterY = tileTop + tileH / 2;
+                        const { z, yawDeg, pitchDeg, edgeFactor } = calcArcTransform({
+                                cellCenterX,
+                                cellCenterY,
+                                viewportW: viewport.w || 1,
+                                viewportH: viewport.h || 1,
+                                arcAxis,
+                                arcMaxAngleDeg,
+                                arcAmount,
+                        });
+                        const scale = 1 - edgeFade * (edgeFactor * edgeFactor);
+                        const opacity = 1 - 0.4 * (edgeFactor * arcAmount);
+                        gridCells.push(
+                                <div
+                                        style={{
+                                                position: "absolute",
+                                                left: 0,
+                                                top: 0,
+                                                width: tileW,
+                                                height: tileH,
+                                                borderTop: border.showTop
+                                                        ? `${border.width}px ${border.style} ${border.color}`
+                                                        : "none",
+                                                borderLeft: border.showLeft
+                                                        ? `${border.width}px ${border.style} ${border.color}`
+                                                        : "none",
+                                                borderRight: border.showRight
+                                                        ? `${border.width}px ${border.style} ${border.color}`
+                                                        : "none",
+                                                borderBottom: border.showBottom
+                                                        ? `${border.width}px ${border.style} ${border.color}`
+                                                        : "none",
+                                                backgroundColor: void 0,
+                                                cursor: "pointer",
+                                                transition: "background-color 0.3s ease",
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                padding: `${cellPadding}px`,
+                                                boxSizing: "border-box",
+                                                transformStyle: "preserve-3d",
+                                                transform: `translate3d(${tileLeft}px, ${tileTop}px, ${z}px) rotateY(${yawDeg}deg) rotateX(${pitchDeg}deg) scale(${scale})`,
+                                                opacity,
+                                                willChange: isDragging ? "transform" : "auto",
+                                                backfaceVisibility: "hidden",
+                                                WebkitBackfaceVisibility: "hidden",
+                                        }}
+                                        onMouseEnter={(e) => {
+                                                e.currentTarget.style.backgroundColor =
+                                                        item.hoverColor || props.hoverColor;
+                                        }}
+                                        onMouseLeave={(e) => {
+                                                e.currentTarget.style.backgroundColor = "";
+                                        }}
+                                        onClick={(e) => handleCardClick(item, e)}
+                                >
+                                        <div
+                                                style={{
+                                                        flex: 1,
+                                                        backgroundImage: `url(${item?.image?.src || "https://framerusercontent.com/images/GfGkADagM4KEibNcIiRUWlfrR0.jpg"})`,
+                                                        backgroundSize: "cover",
+                                                        backgroundPosition: "center",
+                                                        marginBottom: `${gap}px`,
+                                                        borderRadius: "4px",
+                                                        cursor: item?.link ? "pointer" : "default",
+                                                        userSelect: "none",
+                                                        willChange: isDragging ? "transform" : "auto",
+                                                }}
+                                                onClick={(e) => {
+                                                        if (!hasDraggedRef.current && item?.link) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                try {
+                                                                        if (typeof __unframerWindow !== "undefined") {
+                                                                                if (
+                                                                                        item.link.startsWith("http://") ||
+                                                                                        item.link.startsWith("https://")
+                                                                                ) {
+                                                                                        __unframerWindow.open(
+                                                                                                item.link,
+                                                                                                "_blank",
+                                                                                                "noopener,noreferrer",
+                                                                                        );
+                                                                                } else {
+                                                                                        __unframerWindow.location.href = item.link;
+                                                                                }
+                                                                        }
+                                                                } catch (error) {
+                                                                        console.warn("Navigation failed:", error);
+                                                                }
+                                                        }
+                                                }}
+                                        />
+                                        <div
+                                                style={{
+                                                        color: textColor,
+                                                        fontSize: "12px",
+                                                        fontFamily: "monospace",
+                                                        display: "flex",
+                                                        justifyContent: "space-between",
+                                                        alignItems: "center",
+                                                        userSelect: "none",
+                                                        WebkitUserSelect: "none",
+                                                        pointerEvents: "none",
+                                                }}
+                                        >
+                                                <span
+                                                        style={{
+                                                                fontWeight: "bold",
+                                                                textTransform: "uppercase",
+                                                                cursor: item?.link ? "pointer" : "default",
+                                                        }}
+                                                        onClick={(e) => {
+                                                                if (!hasDraggedRef.current && item?.link) {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        try {
+                                                                                if (typeof __unframerWindow !== "undefined") {
+                                                                                        if (
+                                                                                                item.link.startsWith("http://") ||
+                                                                                                item.link.startsWith("https://")
+                                                                                        ) {
+                                                                                                __unframerWindow.open(
+                                                                                                        item.link,
+                                                                                                        "_blank",
+                                                                                                        "noopener,noreferrer",
+                                                                                                );
+                                                                                        } else {
+                                                                                                __unframerWindow.location.href = item.link;
+                                                                                        }
+                                                                                }
+                                                                        } catch (error) {
+                                                                                console.warn("Navigation failed:", error);
+                                                                        }
+                                                                }
+                                                        }}
+                                                >
+                                                        {item?.title || "Project"}
+                                                </span>
+                                                <span>{item?.year || 2024}</span>
+                                        </div>
+                                </div>,
+                        );
+                }
+        }
+        return (
+                <div
+                        ref={containerRef}
+                        style={{
+                                width: "100%",
+                                height: "100%",
+                                backgroundColor,
+                                position: "relative",
+                                overflow: "hidden",
+                                touchAction: "none",
+                                cursor: isDragging ? "grabbing" : "grab",
+                                userSelect: "none",
+                                WebkitUserSelect: "none",
+                                MozUserSelect: "none",
+                                msUserSelect: "none",
+                                WebkitTouchCallout: "none",
+                                perspective: "1000px",
+                                transformStyle: "preserve-3d",
+                                willChange: isDragging ? "transform" : "auto",
+                        }}
+                        onPointerDown={handlePointerDown}
+                        onPointerMove={handlePointerMove}
+                        onPointerUp={handlePointerUp}
+                        onPointerCancel={handlePointerUp}
+                        onPointerLeave={handlePointerLeave}
+                >
+                        <div
+                                style={{
+                                        position: "absolute",
+                                        width: "100%",
+                                        height: "100%",
+                                        transformStyle: "preserve-3d",
+                                        willChange: isDragging ? "transform" : "auto",
+                                }}
+                        >
+                                {gridCells}
+                        </div>
+                        <div
+                                style={{
+                                        position: "absolute",
+                                        inset: 0,
+                                        pointerEvents: "none",
+                                        background: `radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0.8) 90%, rgba(0,0,0,1) 100%)`,
+                                }}
+                        />
+                        {lightboxImage && (
+                                <div
+                                        style={{
+                                                position: "fixed",
+                                                top: 0,
+                                                left: 0,
+                                                right: 0,
+                                                bottom: 0,
+                                                backgroundColor: "rgba(0, 0, 0, 0.95)",
+                                                backdropFilter: "blur(10px)",
+                                                WebkitBackdropFilter: "blur(10px)",
+                                                zIndex: 9999,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                padding: "40px",
+                                                cursor: "default",
+                                                animation: lightboxClosing
+                                                        ? "fadeOut 0.3s ease-out forwards"
+                                                        : "fadeIn 0.3s ease-out",
+                                                pointerEvents: lightboxClosing ? "none" : "auto",
+                                        }}
+                                        onClick={(e) => {
+                                                if (e.target === e.currentTarget && !lightboxClosing) {
+                                                        closeLightbox();
+                                                }
+                                        }}
+                                >
+                                        <style>{`
               @keyframes fadeIn {
                 from { opacity: 0; }
                 to { opacity: 1; }
@@ -905,403 +910,403 @@ function GalleryX(props) {
                 to { transform: scale(0.95); opacity: 0; }
               }
             `}</style>
-					<button
-						style={{
-							position: "absolute",
-							top: "20px",
-							right: "20px",
-							background: "rgba(255, 255, 255, 0.1)",
-							border: "1px solid rgba(255, 255, 255, 0.3)",
-							borderRadius: "50%",
-							width: "48px",
-							height: "48px",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							cursor: "pointer",
-							color: "#FFFFFF",
-							fontSize: "24px",
-							fontWeight: "300",
-							transition: "all 0.2s ease",
-							zIndex: 10001,
-							pointerEvents: lightboxClosing ? "none" : "auto",
-						}}
-						onClick={(e) => {
-							e.stopPropagation();
-							if (!lightboxClosing) {
-								closeLightbox();
-							}
-						}}
-						onMouseEnter={(e) => {
-							if (!lightboxClosing) {
-								e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
-								e.currentTarget.style.transform = "scale(1.1) rotate(90deg)";
-							}
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
-							e.currentTarget.style.transform = "scale(1) rotate(0deg)";
-						}}
-						aria-label={"Close lightbox"}
-					>
-						{"\xD7"}
-					</button>
-					<div
-						style={{
-							maxWidth: "90%",
-							maxHeight: "90%",
-							display: "flex",
-							flexDirection: "column",
-							alignItems: "center",
-							gap: "20px",
-							animation: lightboxClosing
-								? "scaleOut 0.3s ease-out forwards"
-								: "scaleIn 0.3s ease-out",
-						}}
-						onClick={(e) => e.stopPropagation()}
-					>
-						<img
-							src={lightboxImage.src}
-							alt={lightboxImage.alt}
-							style={{
-								maxWidth: "100%",
-								maxHeight: "calc(90vh - 100px)",
-								objectFit: "contain",
-								borderRadius: "8px",
-								boxShadow: "0 20px 60px rgba(0, 0, 0, 0.5)",
-								userSelect: "none",
-								WebkitUserSelect: "none",
-								pointerEvents: "none",
-							}}
-						/>
-						<div
-							style={{
-								color: "#FFFFFF",
-								fontSize: "18px",
-								fontFamily: "monospace",
-								textTransform: "uppercase",
-								fontWeight: "bold",
-								letterSpacing: "0.1em",
-								textAlign: "center",
-								userSelect: "none",
-								WebkitUserSelect: "none",
-							}}
-						>
-							{lightboxImage.title}
-						</div>
-					</div>
-				</div>
-			)}
-		</div>
-	);
+                                        <button
+                                                style={{
+                                                        position: "absolute",
+                                                        top: "20px",
+                                                        right: "20px",
+                                                        background: "rgba(255, 255, 255, 0.1)",
+                                                        border: "1px solid rgba(255, 255, 255, 0.3)",
+                                                        borderRadius: "50%",
+                                                        width: "48px",
+                                                        height: "48px",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "center",
+                                                        cursor: "pointer",
+                                                        color: "#FFFFFF",
+                                                        fontSize: "24px",
+                                                        fontWeight: "300",
+                                                        transition: "all 0.2s ease",
+                                                        zIndex: 10001,
+                                                        pointerEvents: lightboxClosing ? "none" : "auto",
+                                                }}
+                                                onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (!lightboxClosing) {
+                                                                closeLightbox();
+                                                        }
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                        if (!lightboxClosing) {
+                                                                e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+                                                                e.currentTarget.style.transform = "scale(1.1) rotate(90deg)";
+                                                        }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                        e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+                                                        e.currentTarget.style.transform = "scale(1) rotate(0deg)";
+                                                }}
+                                                aria-label={"Close lightbox"}
+                                        >
+                                                {"\xD7"}
+                                        </button>
+                                        <div
+                                                style={{
+                                                        maxWidth: "90%",
+                                                        maxHeight: "90%",
+                                                        display: "flex",
+                                                        flexDirection: "column",
+                                                        alignItems: "center",
+                                                        gap: "20px",
+                                                        animation: lightboxClosing
+                                                                ? "scaleOut 0.3s ease-out forwards"
+                                                                : "scaleIn 0.3s ease-out",
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                        >
+                                                <img
+                                                        src={lightboxImage.src}
+                                                        alt={lightboxImage.alt}
+                                                        style={{
+                                                                maxWidth: "100%",
+                                                                maxHeight: "calc(90vh - 100px)",
+                                                                objectFit: "contain",
+                                                                borderRadius: "8px",
+                                                                boxShadow: "0 20px 60px rgba(0, 0, 0, 0.5)",
+                                                                userSelect: "none",
+                                                                WebkitUserSelect: "none",
+                                                                pointerEvents: "none",
+                                                        }}
+                                                />
+                                                <div
+                                                        style={{
+                                                                color: "#FFFFFF",
+                                                                fontSize: "18px",
+                                                                fontFamily: "monospace",
+                                                                textTransform: "uppercase",
+                                                                fontWeight: "bold",
+                                                                letterSpacing: "0.1em",
+                                                                textAlign: "center",
+                                                                userSelect: "none",
+                                                                WebkitUserSelect: "none",
+                                                        }}
+                                                >
+                                                        {lightboxImage.title}
+                                                </div>
+                                        </div>
+                                </div>
+                        )}
+                </div>
+        );
 }
 addPropertyControls(GalleryX, {
-	items: {
-		type: ControlType.Array,
-		title: "Items",
-		description:
-			"Configure the gallery cards. Click or hover a card to show overlay. Overlay closes on click or hover out.",
-		control: {
-			type: ControlType.Object,
-			controls: {
-				title: {
-					type: ControlType.String,
-					defaultValue: "Project",
-				},
-				image: {
-					type: ControlType.ResponsiveImage,
-				},
-				year: {
-					type: ControlType.Number,
-					defaultValue: 2024,
-					min: 1900,
-					max: 2100,
-					displayStepper: true,
-				},
-				hoverColor: {
-					type: ControlType.Color,
-					defaultValue: "#FF5588",
-				},
-			},
-		},
-		defaultValue: [
-			{
-				title: "Motion Study",
-				image: {
-					src: "https://framerusercontent.com/images/GfGkADagM4KEibNcIiRUWlfrR0.jpg",
-					alt: "Motion Study",
-				},
-				year: 2024,
-				hoverColor: "#FF5588",
-			},
-			{
-				title: "Idle Form",
-				image: {
-					src: "https://framerusercontent.com/images/aNsAT3jCvt4zglbWCUoFe33Q.jpg",
-					alt: "Idle Form",
-				},
-				year: 2023,
-				hoverColor: "#8855FF",
-			},
-			{
-				title: "Blur Signal",
-				image: {
-					src: "https://framerusercontent.com/images/BYnxEV1zjYb9bhWh1IwBZ1ZoS60.jpg",
-					alt: "Blur Signal",
-				},
-				year: 2024,
-				hoverColor: "#FFBB00",
-			},
-			{
-				title: "Still Drift",
-				image: {
-					src: "https://framerusercontent.com/images/2uTNEj5aTl2K3NJaEFWMbnrA.jpg",
-					alt: "Still Drift",
-				},
-				year: 2023,
-				hoverColor: "#22CC66",
-			},
-			{
-				title: "Tidewalk",
-				image: {
-					src: "https://framerusercontent.com/images/f9RiWoNpmlCMqVRIHz8l8wYfeI.jpg",
-					alt: "Tidewalk",
-				},
-				year: 2024,
-				hoverColor: "#0099FF",
-			},
-		],
-	},
-	cellSize: {
-		type: ControlType.Number,
-		title: "Cell Size",
-		description: "Size of each card in the grid.",
-		min: 100,
-		max: 400,
-		step: 10,
-		defaultValue: 200,
-		unit: "px",
-	},
-	gap: {
-		type: ControlType.Number,
-		title: "Image Gap",
-		description: "Gap between cards.",
-		min: 0,
-		max: 50,
-		step: 1,
-		defaultValue: 12,
-		unit: "px",
-	},
-	backgroundColor: {
-		type: ControlType.Color,
-		title: "Background",
-		description: "Background color of the gallery.",
-		defaultValue: "#000000",
-	},
-	textColor: {
-		type: ControlType.Color,
-		title: "Text Color",
-		description: "Text color for card labels.",
-		defaultValue: "#808080",
-	},
-	border: {
-		type: ControlType.Object,
-		title: "Border",
-		description: "Border style for each card.",
-		controls: {
-			width: {
-				type: ControlType.Number,
-				title: "Width",
-				min: 0,
-				max: 10,
-				step: 1,
-				defaultValue: 1,
-				unit: "px",
-			},
-			style: {
-				type: ControlType.Enum,
-				title: "Style",
-				options: ["solid", "dashed", "dotted", "double"],
-				optionTitles: ["Solid", "Dashed", "Dotted", "Double"],
-				defaultValue: "solid",
-			},
-			color: {
-				type: ControlType.Color,
-				title: "Color",
-				defaultValue: "#FFFFFF",
-			},
-			showTop: {
-				type: ControlType.Boolean,
-				title: "Show Top",
-				defaultValue: false,
-				enabledTitle: "Show",
-				disabledTitle: "Hide",
-			},
-			showBottom: {
-				type: ControlType.Boolean,
-				title: "Show Bottom",
-				defaultValue: true,
-				enabledTitle: "Show",
-				disabledTitle: "Hide",
-			},
-			showLeft: {
-				type: ControlType.Boolean,
-				title: "Show Left",
-				defaultValue: true,
-				enabledTitle: "Show",
-				disabledTitle: "Hide",
-			},
-			showRight: {
-				type: ControlType.Boolean,
-				title: "Show Right",
-				defaultValue: true,
-				enabledTitle: "Show",
-				disabledTitle: "Hide",
-			},
-		},
-		defaultValue: {
-			width: 1,
-			style: "solid",
-			color: "#FFFFFF",
-			showTop: false,
-			showBottom: true,
-			showLeft: true,
-			showRight: true,
-		},
-	},
-	hoverColor: {
-		type: ControlType.Color,
-		title: "Default Hover Color",
-		description: "Hover color for all cards.",
-		defaultValue: "#FF5588",
-	},
-	cellPadding: {
-		type: ControlType.Number,
-		title: "Cell Padding",
-		description: "Padding inside each card.",
-		min: 0,
-		max: 50,
-		step: 1,
-		defaultValue: 10,
-		unit: "px",
-	},
-	zoomValue: {
-		type: ControlType.Number,
-		title: "Zoom Value",
-		description: "Zoom out factor on press.",
-		min: 0.1,
-		max: 1,
-		step: 0.05,
-		defaultValue: 0.7,
-		unit: "",
-	},
-	arcAmount: {
-		type: ControlType.Number,
-		title: "Arc Amount",
-		description: "Curvature of the grid.",
-		min: 0,
-		max: 1,
-		step: 0.01,
-		defaultValue: 0.6,
-	},
-	arcMaxAngleDeg: {
-		type: ControlType.Number,
-		title: "Arc Max Angle",
-		description: "Maximum arc angle.",
-		min: 0,
-		max: 60,
-		step: 1,
-		defaultValue: 28,
-	},
-	arcAxis: {
-		type: ControlType.Enum,
-		title: "Arc Axis",
-		description: "Axis for arc effect.",
-		options: ["horizontal", "vertical"],
-		optionTitles: ["Horizontal", "Vertical"],
-		defaultValue: "horizontal",
-	},
-	edgeFade: {
-		type: ControlType.Number,
-		title: "Edge Fade",
-		description: "Fade at grid edges.",
-		min: 0,
-		max: 1,
-		step: 0.01,
-		defaultValue: 0.25,
-	},
-	parallaxEnabled: {
-		type: ControlType.Boolean,
-		title: "Parallax",
-		description: "Enable mouse parallax.",
-		defaultValue: true,
-	},
-	parallaxStrength: {
-		type: ControlType.Number,
-		title: "Parallax Strength",
-		description: "Strength of parallax effect.",
-		min: 0,
-		max: 0.5,
-		step: 0.01,
-		defaultValue: 0.1,
-	},
-	parallaxEase: {
-		type: ControlType.Number,
-		title: "Parallax Ease",
-		description: "Easing for parallax.",
-		min: 0.01,
-		max: 0.5,
-		step: 0.01,
-		defaultValue: 0.12,
-	},
-	parallaxWhileDragging: {
-		type: ControlType.Boolean,
-		title: "Parallax While Drag",
-		description: "Parallax while dragging.",
-		defaultValue: false,
-	},
-	inertiaEnabled: {
-		type: ControlType.Boolean,
-		title: "Throw/Inertia",
-		description: "Enable inertia after drag.",
-		defaultValue: true,
-	},
-	throwFriction: {
-		type: ControlType.Number,
-		title: "Friction",
-		description: "Friction for inertia.",
-		min: 0.85,
-		max: 0.99,
-		step: 1e-3,
-		defaultValue: 0.92,
-	},
-	throwVelocityScale: {
-		type: ControlType.Number,
-		title: "Velocity Scale",
-		description: "Scale pointer velocity.",
-		min: 0.5,
-		max: 2,
-		step: 0.05,
-		defaultValue: 1,
-	},
-	throwMinSpeed: {
-		type: ControlType.Number,
-		title: "Min Speed (px/s)",
-		description: "Minimum speed for inertia.",
-		min: 0,
-		max: 500,
-		step: 10,
-		defaultValue: 80,
-	},
-	throwMaxSpeed: {
-		type: ControlType.Number,
-		title: "Max Speed (px/s)",
-		description: "Maximum speed for inertia.",
-		min: 500,
-		max: 6e3,
-		step: 100,
-		defaultValue: 2500,
-	},
+        items: {
+                type: ControlType.Array,
+                title: "Items",
+                description:
+                        "Configure the gallery cards. Click or hover a card to show overlay. Overlay closes on click or hover out.",
+                control: {
+                        type: ControlType.Object,
+                        controls: {
+                                title: {
+                                        type: ControlType.String,
+                                        defaultValue: "Project",
+                                },
+                                image: {
+                                        type: ControlType.ResponsiveImage,
+                                },
+                                year: {
+                                        type: ControlType.Number,
+                                        defaultValue: 2024,
+                                        min: 1900,
+                                        max: 2100,
+                                        displayStepper: true,
+                                },
+                                hoverColor: {
+                                        type: ControlType.Color,
+                                        defaultValue: "#FF5588",
+                                },
+                        },
+                },
+                defaultValue: [
+                        {
+                                title: "Motion Study",
+                                image: {
+                                        src: "https://framerusercontent.com/images/GfGkADagM4KEibNcIiRUWlfrR0.jpg",
+                                        alt: "Motion Study",
+                                },
+                                year: 2024,
+                                hoverColor: "#FF5588",
+                        },
+                        {
+                                title: "Idle Form",
+                                image: {
+                                        src: "https://framerusercontent.com/images/aNsAT3jCvt4zglbWCUoFe33Q.jpg",
+                                        alt: "Idle Form",
+                                },
+                                year: 2023,
+                                hoverColor: "#8855FF",
+                        },
+                        {
+                                title: "Blur Signal",
+                                image: {
+                                        src: "https://framerusercontent.com/images/BYnxEV1zjYb9bhWh1IwBZ1ZoS60.jpg",
+                                        alt: "Blur Signal",
+                                },
+                                year: 2024,
+                                hoverColor: "#FFBB00",
+                        },
+                        {
+                                title: "Still Drift",
+                                image: {
+                                        src: "https://framerusercontent.com/images/2uTNEj5aTl2K3NJaEFWMbnrA.jpg",
+                                        alt: "Still Drift",
+                                },
+                                year: 2023,
+                                hoverColor: "#22CC66",
+                        },
+                        {
+                                title: "Tidewalk",
+                                image: {
+                                        src: "https://framerusercontent.com/images/f9RiWoNpmlCMqVRIHz8l8wYfeI.jpg",
+                                        alt: "Tidewalk",
+                                },
+                                year: 2024,
+                                hoverColor: "#0099FF",
+                        },
+                ],
+        },
+        cellSize: {
+                type: ControlType.Number,
+                title: "Cell Size",
+                description: "Size of each card in the grid.",
+                min: 100,
+                max: 400,
+                step: 10,
+                defaultValue: 200,
+                unit: "px",
+        },
+        gap: {
+                type: ControlType.Number,
+                title: "Image Gap",
+                description: "Gap between cards.",
+                min: 0,
+                max: 50,
+                step: 1,
+                defaultValue: 12,
+                unit: "px",
+        },
+        backgroundColor: {
+                type: ControlType.Color,
+                title: "Background",
+                description: "Background color of the gallery.",
+                defaultValue: "#000000",
+        },
+        textColor: {
+                type: ControlType.Color,
+                title: "Text Color",
+                description: "Text color for card labels.",
+                defaultValue: "#808080",
+        },
+        border: {
+                type: ControlType.Object,
+                title: "Border",
+                description: "Border style for each card.",
+                controls: {
+                        width: {
+                                type: ControlType.Number,
+                                title: "Width",
+                                min: 0,
+                                max: 10,
+                                step: 1,
+                                defaultValue: 1,
+                                unit: "px",
+                        },
+                        style: {
+                                type: ControlType.Enum,
+                                title: "Style",
+                                options: ["solid", "dashed", "dotted", "double"],
+                                optionTitles: ["Solid", "Dashed", "Dotted", "Double"],
+                                defaultValue: "solid",
+                        },
+                        color: {
+                                type: ControlType.Color,
+                                title: "Color",
+                                defaultValue: "#FFFFFF",
+                        },
+                        showTop: {
+                                type: ControlType.Boolean,
+                                title: "Show Top",
+                                defaultValue: false,
+                                enabledTitle: "Show",
+                                disabledTitle: "Hide",
+                        },
+                        showBottom: {
+                                type: ControlType.Boolean,
+                                title: "Show Bottom",
+                                defaultValue: true,
+                                enabledTitle: "Show",
+                                disabledTitle: "Hide",
+                        },
+                        showLeft: {
+                                type: ControlType.Boolean,
+                                title: "Show Left",
+                                defaultValue: true,
+                                enabledTitle: "Show",
+                                disabledTitle: "Hide",
+                        },
+                        showRight: {
+                                type: ControlType.Boolean,
+                                title: "Show Right",
+                                defaultValue: true,
+                                enabledTitle: "Show",
+                                disabledTitle: "Hide",
+                        },
+                },
+                defaultValue: {
+                        width: 1,
+                        style: "solid",
+                        color: "#FFFFFF",
+                        showTop: false,
+                        showBottom: true,
+                        showLeft: true,
+                        showRight: true,
+                },
+        },
+        hoverColor: {
+                type: ControlType.Color,
+                title: "Default Hover Color",
+                description: "Hover color for all cards.",
+                defaultValue: "#FF5588",
+        },
+        cellPadding: {
+                type: ControlType.Number,
+                title: "Cell Padding",
+                description: "Padding inside each card.",
+                min: 0,
+                max: 50,
+                step: 1,
+                defaultValue: 10,
+                unit: "px",
+        },
+        zoomValue: {
+                type: ControlType.Number,
+                title: "Zoom Value",
+                description: "Zoom out factor on press.",
+                min: 0.1,
+                max: 1,
+                step: 0.05,
+                defaultValue: 0.7,
+                unit: "",
+        },
+        arcAmount: {
+                type: ControlType.Number,
+                title: "Arc Amount",
+                description: "Curvature of the grid.",
+                min: 0,
+                max: 1,
+                step: 0.01,
+                defaultValue: 0.6,
+        },
+        arcMaxAngleDeg: {
+                type: ControlType.Number,
+                title: "Arc Max Angle",
+                description: "Maximum arc angle.",
+                min: 0,
+                max: 60,
+                step: 1,
+                defaultValue: 28,
+        },
+        arcAxis: {
+                type: ControlType.Enum,
+                title: "Arc Axis",
+                description: "Axis for arc effect.",
+                options: ["horizontal", "vertical"],
+                optionTitles: ["Horizontal", "Vertical"],
+                defaultValue: "horizontal",
+        },
+        edgeFade: {
+                type: ControlType.Number,
+                title: "Edge Fade",
+                description: "Fade at grid edges.",
+                min: 0,
+                max: 1,
+                step: 0.01,
+                defaultValue: 0.25,
+        },
+        parallaxEnabled: {
+                type: ControlType.Boolean,
+                title: "Parallax",
+                description: "Enable mouse parallax.",
+                defaultValue: true,
+        },
+        parallaxStrength: {
+                type: ControlType.Number,
+                title: "Parallax Strength",
+                description: "Strength of parallax effect.",
+                min: 0,
+                max: 0.5,
+                step: 0.01,
+                defaultValue: 0.1,
+        },
+        parallaxEase: {
+                type: ControlType.Number,
+                title: "Parallax Ease",
+                description: "Easing for parallax.",
+                min: 0.01,
+                max: 0.5,
+                step: 0.01,
+                defaultValue: 0.12,
+        },
+        parallaxWhileDragging: {
+                type: ControlType.Boolean,
+                title: "Parallax While Drag",
+                description: "Parallax while dragging.",
+                defaultValue: false,
+        },
+        inertiaEnabled: {
+                type: ControlType.Boolean,
+                title: "Throw/Inertia",
+                description: "Enable inertia after drag.",
+                defaultValue: true,
+        },
+        throwFriction: {
+                type: ControlType.Number,
+                title: "Friction",
+                description: "Friction for inertia.",
+                min: 0.85,
+                max: 0.99,
+                step: 1e-3,
+                defaultValue: 0.92,
+        },
+        throwVelocityScale: {
+                type: ControlType.Number,
+                title: "Velocity Scale",
+                description: "Scale pointer velocity.",
+                min: 0.5,
+                max: 2,
+                step: 0.05,
+                defaultValue: 1,
+        },
+        throwMinSpeed: {
+                type: ControlType.Number,
+                title: "Min Speed (px/s)",
+                description: "Minimum speed for inertia.",
+                min: 0,
+                max: 500,
+                step: 10,
+                defaultValue: 80,
+        },
+        throwMaxSpeed: {
+                type: ControlType.Number,
+                title: "Max Speed (px/s)",
+                description: "Maximum speed for inertia.",
+                min: 500,
+                max: 6e3,
+                step: 100,
+                defaultValue: 2500,
+        },
 });
 
 // virtual:gallery-x
@@ -1309,9 +1314,9 @@ import { WithFramerBreakpoints } from "unframer";
 
 // virtual:__routes
 var routes = {
-	augiA20Il: {
-		path: "/",
-	},
+        augiA20Il: {
+                path: "/",
+        },
 };
 
 // virtual:gallery-x
@@ -1320,18 +1325,18 @@ var locales = [];
 var defaultResponsiveVariants = {};
 /** @type {function(Props): any} */
 function ComponentWithRoot({ locale, ...rest }) {
-	return (
-		<ContextProviders
-			routes={routes}
-			framerSiteId={
-				"1392e3015dd5e01ab4c9b7a00702a55a45e4ba73af978f96facf805148bb638b"
-			}
-			locale={locale}
-			locales={locales}
-		>
-			<GalleryX {...rest} />
-		</ContextProviders>
-	);
+        return (
+                <ContextProviders
+                        routes={routes}
+                        framerSiteId={
+                                "1392e3015dd5e01ab4c9b7a00702a55a45e4ba73af978f96facf805148bb638b"
+                        }
+                        locale={locale}
+                        locales={locales}
+                >
+                        <GalleryX {...rest} />
+                </ContextProviders>
+        );
 }
 /**
  * @type {import("unframer").UnframerBreakpoint}
@@ -1351,22 +1356,22 @@ function ComponentWithRoot({ locale, ...rest }) {
  * @returns {any}
  */
 ComponentWithRoot.Responsive = ({ locale = "", ...rest }) => {
-	return (
-		<ContextProviders
-			routes={routes}
-			framerSiteId={
-				"1392e3015dd5e01ab4c9b7a00702a55a45e4ba73af978f96facf805148bb638b"
-			}
-			locale={locale}
-			locales={locales}
-		>
-			<WithFramerBreakpoints
-				Component={GalleryX}
-				variants={defaultResponsiveVariants}
-				{...rest}
-			/>
-		</ContextProviders>
-	);
+        return (
+                <ContextProviders
+                        routes={routes}
+                        framerSiteId={
+                                "1392e3015dd5e01ab4c9b7a00702a55a45e4ba73af978f96facf805148bb638b"
+                        }
+                        locale={locale}
+                        locales={locales}
+                >
+                        <WithFramerBreakpoints
+                                Component={GalleryX}
+                                variants={defaultResponsiveVariants}
+                                {...rest}
+                        />
+                </ContextProviders>
+        );
 };
 Object.assign(ComponentWithRoot, GalleryX);
 var gallery_x_default = ComponentWithRoot;
