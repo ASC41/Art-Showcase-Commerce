@@ -5,6 +5,8 @@ import { Link } from "wouter";
 
 const IMAGE_A =
   "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@b44d1d62aa42791752090a1da9c71a3ca9af1e15/uploads/2026-03-31T01-52-59-145Z-yxebv7avv.jpg";
+const IMAGE_B =
+  "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@9945ae1994b6366c3943e8e125bb3700e7336b83/uploads/2026-03-31T01-53-19-925Z-y59y2l4f4.jpg";
 
 function ParallaxHero() {
   const ref = useRef<HTMLDivElement>(null);
@@ -119,6 +121,67 @@ function ParallaxHero() {
   );
 }
 
+function TreatmentPhoto() {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const y = useTransform(scrollYProgress, [0, 1], ["-8%", "8%"]);
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        position: "relative",
+        width: "100%",
+        aspectRatio: "16/9",
+        overflow: "hidden",
+        background: "#060606",
+        margin: "0 0 0",
+      }}
+    >
+      <motion.div
+        style={{
+          position: "absolute",
+          inset: "-10% 0",
+          backgroundImage: `url(${IMAGE_B})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          y,
+          filter: "brightness(0.6) saturate(0.85) contrast(1.15)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(20, 30, 60, 0.22)",
+          mixBlendMode: "multiply",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E")`,
+          backgroundRepeat: "repeat",
+          backgroundSize: "200px 200px",
+          opacity: 0.07,
+          pointerEvents: "none",
+          mixBlendMode: "overlay",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%)",
+          pointerEvents: "none",
+        }}
+      />
+    </div>
+  );
+}
+
 export default function About() {
   return (
     <div style={{ minHeight: "100vh", background: "#060606", color: "#f5f5f5" }}>
@@ -189,6 +252,9 @@ export default function About() {
           an acknowledgment that difficulty can be witnessed, expressed, and transformed.
         </p>
       </div>
+
+      {/* Second photo treatment */}
+      <TreatmentPhoto />
 
       {/* Contact */}
       <div
