@@ -115,10 +115,10 @@ export default function Landing() {
         <div style={{ position: "absolute", inset: 0, zIndex: 5 }}>
           <DraggableGallery
             items={items}
-            columns={4}
-            baseWidth={320}
-            smallHeight={420}
-            largeHeight={420}
+            columns={5}
+            baseWidth={250}
+            smallHeight={375}
+            largeHeight={375}
             itemGap={22}
             hoverScale={1.04}
             expandedScale={0.82}
