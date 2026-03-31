@@ -2,7 +2,6 @@ import { useListArtworks } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import DraggableGallery, { DraggableGalleryItem } from "@/framer/draggable-gallery";
 import Navbar from "@/components/Navbar";
-
 import { ARTWORK_ASPECT } from "@/lib/artworkDimensions";
 
 export default function Landing() {
@@ -10,6 +9,8 @@ export default function Landing() {
   const [, navigate] = useLocation();
 
   const SPACER: DraggableGalleryItem = { type: "empty", src: "", alt: "", title: "" };
+
+  // Spacer after every 2nd artwork for more breathing room between paintings
   const items: DraggableGalleryItem[] = (() => {
     if (!artworks) return [];
     const result: DraggableGalleryItem[] = [];
@@ -24,17 +25,13 @@ export default function Landing() {
         aspectRatio: ar,
         wide: ar < 1,
       });
-      if ((i + 1) % 4 === 0) result.push(SPACER);
+      if ((i + 1) % 2 === 0) result.push(SPACER);
     });
     return result;
   })();
 
   function handleItemClick(item: DraggableGalleryItem) {
-    if (item.slug) {
-      navigate(`/portfolio?artwork=${item.slug}`);
-    } else {
-      navigate("/portfolio");
-    }
+    navigate(item.slug ? `/portfolio?artwork=${item.slug}` : "/portfolio");
   }
 
   return (
@@ -49,25 +46,27 @@ export default function Landing() {
     >
       <Navbar />
 
-      {/* Artist wordmark overlay */}
+      {/* Artist wordmark — centered, fixed behind the gallery */}
       <div
         style={{
           position: "absolute",
-          bottom: "48px",
-          left: "48px",
-          zIndex: 50,
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: 2,
           pointerEvents: "none",
+          textAlign: "center",
+          opacity: 0.3,
         }}
       >
         <div
           style={{
             fontFamily: "'Cormorant Garamond', serif",
-            fontSize: "clamp(36px, 5vw, 64px)",
+            fontSize: "clamp(52px, 7vw, 96px)",
             fontWeight: 300,
-            letterSpacing: "0.08em",
-            color: "rgba(245,245,245,0.9)",
+            letterSpacing: "0.1em",
+            color: "rgba(245,245,245,1)",
             lineHeight: 1,
-            textShadow: "0 2px 40px rgba(0,0,0,0.8)",
           }}
         >
           Ryan Cellar
@@ -75,12 +74,12 @@ export default function Landing() {
         <div
           style={{
             fontFamily: "'Inter'",
-            fontSize: "12px",
+            fontSize: "13px",
             fontWeight: 400,
-            letterSpacing: "0.25em",
+            letterSpacing: "0.35em",
             textTransform: "uppercase",
-            color: "rgba(245,245,245,0.45)",
-            marginTop: "8px",
+            color: "rgba(245,245,245,0.7)",
+            marginTop: "12px",
           }}
         >
           Contemporary Artist
@@ -91,15 +90,11 @@ export default function Landing() {
       <div
         style={{
           position: "absolute",
-          bottom: "48px",
+          bottom: "40px",
           right: "48px",
-          zIndex: 50,
+          zIndex: 60,
           pointerEvents: "none",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "8px",
-          opacity: 0.4,
+          opacity: 0.35,
         }}
       >
         <span
@@ -115,22 +110,23 @@ export default function Landing() {
         </span>
       </div>
 
+      {/* Gallery — transparent background so wordmark shows through gaps */}
       {!isLoading && items.length > 0 && (
-        <div style={{ position: "absolute", inset: 0 }}>
+        <div style={{ position: "absolute", inset: 0, zIndex: 5 }}>
           <DraggableGallery
             items={items}
             columns={4}
             baseWidth={280}
             smallHeight={350}
             largeHeight={350}
-            itemGap={14}
+            itemGap={22}
             hoverScale={1.04}
             expandedScale={0.82}
             dragEase={0.1}
             momentumFactor={20}
             bufferZone={0.5}
             borderRadius={4}
-            background="#080808"
+            background="transparent"
             vignetteStrength={0.7}
             vignetteSize={160}
             overlayOpacity={0.88}
