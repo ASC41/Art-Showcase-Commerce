@@ -1,12 +1,10 @@
 import { useListArtworks } from "@workspace/api-client-react";
-import { useLocation } from "wouter";
 import DraggableGallery, { DraggableGalleryItem } from "@/framer/draggable-gallery";
 import Navbar from "@/components/Navbar";
 import { ARTWORK_ASPECT } from "@/lib/artworkDimensions";
 
 export default function Landing() {
   const { data: artworks, isLoading } = useListArtworks();
-  const [, navigate] = useLocation();
 
   const SPACER: DraggableGalleryItem = { type: "empty", src: "", alt: "", title: "" };
 
@@ -29,10 +27,6 @@ export default function Landing() {
     });
     return result;
   })();
-
-  function handleItemClick(item: DraggableGalleryItem) {
-    navigate(item.slug ? `/portfolio?artwork=${item.slug}` : "/portfolio");
-  }
 
   return (
     <div
@@ -143,7 +137,7 @@ export default function Landing() {
             }}
             captionColor="#f5f5f5"
             introAnimation="topLeft"
-            onItemClick={handleItemClick}
+            showCellCaptions={false}
             style={{ width: "100%", height: "100%" }}
           />
         </div>
