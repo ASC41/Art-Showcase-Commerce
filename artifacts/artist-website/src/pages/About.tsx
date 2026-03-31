@@ -28,10 +28,10 @@ function ParallaxHero() {
       <motion.div
         style={{
           position: "absolute",
-          inset: "-5% 0 -25%",
+          inset: "-15% 0",
           backgroundImage: `url(${IMAGE_A})`,
           backgroundSize: "cover",
-          backgroundPosition: "center top",
+          backgroundPosition: "center 30%",
           y,
           filter: "brightness(0.55) saturate(1.3) contrast(1.1)",
         }}
