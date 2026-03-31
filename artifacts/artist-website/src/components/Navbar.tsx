@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 
 function InstagramIcon() {
@@ -15,6 +16,79 @@ function TikTokIcon() {
     <svg width="16" height="18" viewBox="0 0 24 24" fill="currentColor">
       <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.75a4.85 4.85 0 0 1-1.01-.06z"/>
     </svg>
+  );
+}
+
+const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+function ScrambleLogo({ text }: { text: string }) {
+  const [display, setDisplay] = useState(text);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const iterRef = useRef(0);
+
+  const nonSpaceCount = text.replace(/ /g, "").length;
+
+  const startScramble = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    iterRef.current = 0;
+
+    timerRef.current = setInterval(() => {
+      const iter = iterRef.current;
+      const resolvedCount = Math.floor(iter / 2);
+
+      setDisplay(
+        text
+          .split("")
+          .map((char, i) => {
+            if (char === " ") return " ";
+            // count non-space chars up to index i
+            const nonSpaceBefore = text.slice(0, i).replace(/ /g, "").length;
+            if (nonSpaceBefore < resolvedCount) return char;
+            return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+          })
+          .join("")
+      );
+
+      iterRef.current++;
+      if (iterRef.current >= nonSpaceCount * 2 + 3) {
+        clearInterval(timerRef.current!);
+        timerRef.current = null;
+        setDisplay(text);
+      }
+    }, 38);
+  };
+
+  const stopScramble = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    setDisplay(text);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  return (
+    <span
+      onMouseEnter={startScramble}
+      onMouseLeave={stopScramble}
+      style={{
+        fontFamily: "'Cormorant Garamond', serif",
+        fontSize: "20px",
+        fontWeight: 500,
+        letterSpacing: "0.08em",
+        color: "#f5f5f5",
+        cursor: "pointer",
+        display: "inline-block",
+        minWidth: "120px",
+      }}
+    >
+      {display}
+    </span>
   );
 }
 
@@ -47,18 +121,7 @@ export default function Navbar() {
       }}
     >
       <Link href="/" style={{ textDecoration: "none" }}>
-        <span
-          style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontSize: "20px",
-            fontWeight: 500,
-            letterSpacing: "0.08em",
-            color: "#f5f5f5",
-            cursor: "pointer",
-          }}
-        >
-          Ryan Cellar
-        </span>
+        <ScrambleLogo text="Ryan Cellar" />
       </Link>
 
       <div style={{ display: "flex", gap: "36px", alignItems: "center" }}>
