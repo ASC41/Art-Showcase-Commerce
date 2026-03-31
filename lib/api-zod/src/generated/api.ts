@@ -64,15 +64,34 @@ export const GetArtworkResponse = zod.object({
 /**
  * @summary Create a Stripe checkout session
  */
-export const CreateCheckoutSessionBody = zod.object({
-  artworkSlug: zod.string(),
-  purchaseType: zod.enum(["original", "print"]),
-  customerEmail: zod.string().nullish(),
-  successUrl: zod.string(),
-  cancelUrl: zod.string(),
-  printType: zod.enum(["matte", "framed"]).optional(),
-  printSize: zod.enum(["8x10", "11x14", "18x24", "24x36"]).optional(),
-});
+export const CreateCheckoutSessionBody = zod
+  .object({
+    artworkSlug: zod.string(),
+    purchaseType: zod.enum(["original", "print"]),
+    customerEmail: zod.string().nullish(),
+    successUrl: zod.string(),
+    cancelUrl: zod.string(),
+    printType: zod.enum(["matte", "framed"]).optional(),
+    printSize: zod.enum(["8x10", "11x14", "18x24", "24x36"]).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.purchaseType === "print") {
+      if (!data.printType) {
+        ctx.addIssue({
+          code: zod.ZodIssueCode.custom,
+          message: "printType is required when purchaseType is 'print'",
+          path: ["printType"],
+        });
+      }
+      if (!data.printSize) {
+        ctx.addIssue({
+          code: zod.ZodIssueCode.custom,
+          message: "printSize is required when purchaseType is 'print'",
+          path: ["printSize"],
+        });
+      }
+    }
+  });
 
 export const CreateCheckoutSessionResponse = zod.object({
   url: zod.string(),

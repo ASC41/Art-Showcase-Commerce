@@ -4,8 +4,14 @@
  * Creates Enhanced Matte Paper Poster and Framed Poster products in Printify
  * for every artwork in the database, then stores the product IDs back in the DB.
  *
- * Products are created for API-based ordering (not published to a sales channel).
- * Printify orders can reference products by ID regardless of publish status.
+ * Products are intentionally NOT published to a sales channel.
+ * We fulfil orders via the Printify REST API (not Shopify/Etsy/etc.), which means:
+ *   - Products are created and stored in Printify's system by ID.
+ *   - Orders are created by POSTing to /orders.json with explicit product_id + variant_id.
+ *   - Products do not need to be "published" to a channel to be orderable this way.
+ *   - The Printify publish endpoint (/products/{id}/publish.json) is intended for
+ *     OAuth integration partners linking to a connected storefront — it is not used
+ *     in a direct API-key workflow and would 422/404 without a connected sales channel.
  *
  * Run once (idempotent — skips artworks that already have product IDs):
  *   pnpm --filter @workspace/api-server run provision-printify
