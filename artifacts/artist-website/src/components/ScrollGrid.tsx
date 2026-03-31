@@ -70,6 +70,7 @@ function GridItem({ artwork, type, index, columns, onClick }: GridItemProps) {
   );
 
   const ar = ARTWORK_ASPECT[artwork.slug] ?? 1.33;
+  const isLandscape = ar < 1;
 
   return (
     <motion.div
@@ -86,6 +87,7 @@ function GridItem({ artwork, type, index, columns, onClick }: GridItemProps) {
         filter,
         position: "relative",
         aspectRatio: `${1} / ${ar}`,
+        gridColumn: isLandscape ? "span 2" : undefined,
         borderRadius: "8px",
         overflow: "hidden",
         backgroundColor: "#111",

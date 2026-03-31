@@ -17,13 +17,15 @@ export default function Landing() {
     if (!artworks) return [];
     const result: DraggableGalleryItem[] = [];
     artworks.forEach((a, i) => {
+      const ar = ARTWORK_ASPECT[a.slug] ?? 1.33;
       result.push({
         type: "image",
         src: a.imageUrl,
         alt: a.title,
         title: a.title,
         slug: a.slug,
-        aspectRatio: ARTWORK_ASPECT[a.slug] ?? 1.33,
+        aspectRatio: ar,
+        wide: ar < 1,
       });
       if ((i + 1) % 4 === 0) result.push(SPACER);
     });
