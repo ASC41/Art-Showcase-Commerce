@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useListArtworks } from "@workspace/api-client-react";
 import type { Artwork } from "@workspace/api-client-react";
@@ -31,20 +31,6 @@ interface MerchLightboxProps {
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-// Approximate print area position on Printify mockup images (as % of image container)
-const PRINT_OVERLAY: Record<string, { top: string; left: string; width: string; height: string }> = {
-  tshirt:          { top: "25%", left: "22%", width: "56%", height: "44%" },
-  hoodie:          { top: "22%", left: "25%", width: "50%", height: "32%" },
-  crewneck:        { top: "23%", left: "24%", width: "52%", height: "44%" },
-  "dad-cap":       { top: "38%", left: "27%", width: "46%", height: "24%" },
-  "phone-case":    { top: "5%",  left: "18%", width: "64%", height: "88%" },
-  "tote-bag":      { top: "12%", left: "22%", width: "56%", height: "72%" },
-  "cuff-beanie":   { top: "44%", left: "22%", width: "56%", height: "22%" },
-  "bucket-hat":    { top: "36%", left: "26%", width: "48%", height: "28%" },
-  "sweat-shorts":  { top: "50%", left: "10%", width: "34%", height: "38%" },
-  "matte-poster":  { top: "2%",  left: "4%",  width: "92%", height: "94%" },
-};
-
 export default function MerchLightbox({ product, onClose }: MerchLightboxProps) {
   const { data: artworks } = useListArtworks();
   const { toast } = useToast();
@@ -55,6 +41,11 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
   const [mockupIndex, setMockupIndex] = useState(0);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
+  // Artwork-specific mockup state
+  const [artworkMockups, setArtworkMockups] = useState<string[] | null>(null);
+  const [loadingMockups, setLoadingMockups] = useState(false);
+  const fetchAbortRef = useRef<AbortController | null>(null);
+
   // Reset state when product changes
   useEffect(() => {
     if (product) {
@@ -62,6 +53,8 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
       setSelectedVariantId(null);
       setSelectedColor(null);
       setMockupIndex(0);
+      setArtworkMockups(null);
+      setLoadingMockups(false);
     }
   }, [product?.slug]);
 
@@ -89,6 +82,43 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
       }
     }
   }, [product, selectedColor, selectedVariantId]);
+
+  // Fetch artwork-specific mockup images when artwork changes
+  useEffect(() => {
+    if (!product || !selectedArtwork) return;
+
+    // Cancel any in-flight request
+    if (fetchAbortRef.current) {
+      fetchAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    fetchAbortRef.current = controller;
+
+    setLoadingMockups(true);
+    setMockupIndex(0);
+
+    fetch(
+      `${BASE_URL}/api/merch/${encodeURIComponent(product.slug)}/artwork/${encodeURIComponent(selectedArtwork.slug)}/mockups`,
+      { signal: controller.signal }
+    )
+      .then((r) => r.json())
+      .then((data: { mockupImages: string[] }) => {
+        if (data.mockupImages && data.mockupImages.length > 0) {
+          setArtworkMockups(data.mockupImages);
+        } else {
+          setArtworkMockups(null);
+        }
+        setLoadingMockups(false);
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          setArtworkMockups(null);
+          setLoadingMockups(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [product?.slug, selectedArtwork?.slug]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -146,8 +176,10 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
     : [];
 
   const selectedVariant = variants.find((v) => v.id === selectedVariantId);
-  const mockupImages = product.mockupImages ?? [];
-  const currentMockup = mockupImages[mockupIndex] ?? null;
+
+  // Use artwork-specific mockups if loaded, else fall back to template mockups
+  const displayMockups = artworkMockups ?? product.mockupImages ?? [];
+  const currentMockup = displayMockups[mockupIndex] ?? displayMockups[0] ?? null;
 
   const isOneSize =
     variants.length > 0 && variants.every((v) => v.size === "One size");
@@ -211,115 +243,134 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
             ✕
           </button>
 
-          {/* LEFT: Product mockup */}
+          {/* LEFT: Product mockup (artwork-specific from Printify) */}
           <div style={{ flex: "0 0 440px", maxWidth: "440px" }}>
-            {currentMockup ? (
-              <div style={{ position: "relative" }}>
-                {/* Mockup image wrapper — relative so artwork overlay can be positioned inside */}
-                <div style={{ position: "relative", borderRadius: "12px", overflow: "hidden", background: "#111" }}>
-                  <motion.img
-                    key={mockupIndex}
+            {/* Main mockup image */}
+            <div
+              style={{
+                position: "relative",
+                borderRadius: "12px",
+                overflow: "hidden",
+                background: "#111",
+                aspectRatio: "1",
+              }}
+            >
+              {/* Loading overlay */}
+              <AnimatePresence>
+                {loadingMockups && (
+                  <motion.div
+                    key="loading"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    src={currentMockup}
-                    alt={`${product.name} mockup`}
+                    exit={{ opacity: 0 }}
                     style={{
-                      width: "100%",
-                      display: "block",
-                      objectFit: "contain",
-                    }}
-                  />
-
-                  {/* Artwork overlay — updates live when artwork selection changes */}
-                  {selectedArtwork && PRINT_OVERLAY[product.slug] && (() => {
-                    const ov = PRINT_OVERLAY[product.slug];
-                    return (
-                      <motion.div
-                        key={selectedArtwork.slug}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.25 }}
-                        style={{
-                          position: "absolute",
-                          top: ov.top,
-                          left: ov.left,
-                          width: ov.width,
-                          height: ov.height,
-                          overflow: "hidden",
-                          pointerEvents: "none",
-                        }}
-                      >
-                        <img
-                          src={selectedArtwork.imageUrl}
-                          alt={selectedArtwork.title}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "contain",
-                            display: "block",
-                            opacity: 0.93,
-                          }}
-                        />
-                      </motion.div>
-                    );
-                  })()}
-                </div>
-
-                {mockupImages.length > 1 && (
-                  <div
-                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      zIndex: 2,
                       display: "flex",
-                      gap: "8px",
-                      marginTop: "12px",
-                      flexWrap: "wrap",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "rgba(8,8,8,0.72)",
+                      backdropFilter: "blur(4px)",
                     }}
                   >
-                    {mockupImages.slice(0, 6).map((src, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setMockupIndex(i)}
-                        style={{
-                          width: "56px",
-                          height: "56px",
-                          padding: 0,
-                          border: i === mockupIndex
-                            ? "2px solid #f5f5f5"
-                            : "2px solid transparent",
-                          borderRadius: "6px",
-                          overflow: "hidden",
-                          cursor: "pointer",
-                          background: "#111",
-                          opacity: i === mockupIndex ? 1 : 0.5,
-                          transition: "opacity 0.2s, border-color 0.2s",
-                        }}
-                      >
-                        <img
-                          src={src}
-                          alt={`Mockup ${i + 1}`}
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        />
-                      </button>
-                    ))}
-                  </div>
+                    <div
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                        border: "2px solid rgba(255,255,255,0.1)",
+                        borderTopColor: "#f5f5f5",
+                        borderRadius: "50%",
+                        animation: "spin 0.8s linear infinite",
+                        marginBottom: "12px",
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontFamily: "'Inter'",
+                        fontSize: "11px",
+                        letterSpacing: "0.1em",
+                        color: "#666",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Generating preview…
+                    </span>
+                  </motion.div>
                 )}
-              </div>
-            ) : (
+              </AnimatePresence>
+
+              {currentMockup ? (
+                <motion.img
+                  key={`${selectedArtwork?.slug ?? "default"}-${mockupIndex}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.35 }}
+                  src={currentMockup}
+                  alt={`${product.name} mockup`}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                    display: "block",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#444",
+                    fontFamily: "'Inter'",
+                    fontSize: "13px",
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  GENERATING MOCKUP
+                </div>
+              )}
+            </div>
+
+            {/* Thumbnail strip — updates with artwork-specific mockups */}
+            {displayMockups.length > 1 && (
               <div
                 style={{
-                  width: "100%",
-                  aspectRatio: "1",
-                  background: "#111",
-                  borderRadius: "12px",
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#444",
-                  fontFamily: "'Inter'",
-                  fontSize: "13px",
-                  letterSpacing: "0.08em",
+                  gap: "8px",
+                  marginTop: "12px",
+                  flexWrap: "wrap",
                 }}
               >
-                MOCKUP GENERATING
+                {displayMockups.slice(0, 6).map((src, i) => (
+                  <button
+                    key={`${selectedArtwork?.slug ?? "default"}-${i}`}
+                    onClick={() => setMockupIndex(i)}
+                    style={{
+                      width: "56px",
+                      height: "56px",
+                      padding: 0,
+                      border: i === mockupIndex
+                        ? "2px solid #f5f5f5"
+                        : "2px solid transparent",
+                      borderRadius: "6px",
+                      overflow: "hidden",
+                      cursor: "pointer",
+                      background: "#111",
+                      opacity: i === mockupIndex ? 1 : 0.5,
+                      transition: "opacity 0.2s, border-color 0.2s",
+                    }}
+                  >
+                    <img
+                      src={src}
+                      alt={`Mockup ${i + 1}`}
+                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                    />
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -584,6 +635,12 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
             </p>
           </div>
         </motion.div>
+
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </motion.div>
     </AnimatePresence>
   );

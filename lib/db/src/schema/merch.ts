@@ -46,6 +46,7 @@ export const merchArtworkProductsTable = pgTable("merch_artwork_products", {
   merchProductId: integer("merch_product_id").notNull(),
   artworkId: integer("artwork_id").notNull(),
   printifyProductId: text("printify_product_id").notNull(),
+  mockupImages: text("mockup_images").array(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

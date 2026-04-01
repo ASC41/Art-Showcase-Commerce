@@ -31,21 +31,6 @@ interface Artwork {
   imageUrl: string;
 }
 
-// Approximate print area position on Printify mockup images (as % of image container)
-// top/left/width/height are percentages of the image container dimensions
-const PRINT_OVERLAY: Record<string, { top: string; left: string; width: string; height: string }> = {
-  tshirt:          { top: "25%", left: "22%", width: "56%", height: "44%" },
-  hoodie:          { top: "22%", left: "25%", width: "50%", height: "32%" },
-  crewneck:        { top: "23%", left: "24%", width: "52%", height: "44%" },
-  "dad-cap":       { top: "38%", left: "27%", width: "46%", height: "24%" },
-  "phone-case":    { top: "5%",  left: "18%", width: "64%", height: "88%" },
-  "tote-bag":      { top: "12%", left: "22%", width: "56%", height: "72%" },
-  "cuff-beanie":   { top: "44%", left: "22%", width: "56%", height: "22%" },
-  "bucket-hat":    { top: "36%", left: "26%", width: "48%", height: "28%" },
-  "sweat-shorts":  { top: "50%", left: "10%", width: "34%", height: "38%" },
-  "matte-poster":  { top: "2%",  left: "4%",  width: "92%", height: "94%" },
-};
-
 function MerchCard({
   product,
   index,
@@ -69,7 +54,6 @@ function MerchCard({
   const mockup = product.mockupImages?.[0];
   const colors = [...new Set((product.variants ?? []).map((v) => v.color))];
   const minPrice = product.priceCents;
-  const overlay = PRINT_OVERLAY[product.slug];
 
   return (
     <motion.div
@@ -95,17 +79,38 @@ function MerchCard({
           (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.06)";
         }}
       >
-        {/* Mockup image with artwork overlay */}
+        {/* Card image: show the featured artwork for this card */}
         <div
           style={{
             width: "100%",
             aspectRatio: "1",
-            background: "#111",
+            background: "#0a0a0a",
             position: "relative",
             overflow: "hidden",
           }}
         >
-          {mockup ? (
+          {featuredArtwork ? (
+            <img
+              src={featuredArtwork.imageUrl}
+              alt={featuredArtwork.title}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                display: "block",
+                padding: "12px",
+                boxSizing: "border-box",
+                transition: "transform 0.4s ease",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLImageElement).style.transform = "scale(1.04)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLImageElement).style.transform = "scale(1)";
+              }}
+              loading="lazy"
+            />
+          ) : mockup ? (
             <img
               src={mockup}
               alt={product.name}
@@ -138,34 +143,7 @@ function MerchCard({
                 letterSpacing: "0.1em",
               }}
             >
-              GENERATING MOCKUP
-            </div>
-          )}
-
-          {/* Artwork overlay — shows different artwork per card */}
-          {featuredArtwork && overlay && mockup && (
-            <div
-              style={{
-                position: "absolute",
-                top: overlay.top,
-                left: overlay.left,
-                width: overlay.width,
-                height: overlay.height,
-                overflow: "hidden",
-                pointerEvents: "none",
-              }}
-            >
-              <img
-                src={featuredArtwork.imageUrl}
-                alt={featuredArtwork.title}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                  display: "block",
-                  opacity: 0.92,
-                }}
-              />
+              YOUR ARTWORK HERE
             </div>
           )}
 
