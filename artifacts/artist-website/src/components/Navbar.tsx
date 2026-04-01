@@ -61,6 +61,7 @@ export default function Navbar() {
   const navLinks = [
     { label: "Gallery", href: "/" },
     { label: "Portfolio", href: "/portfolio" },
+    { label: "Merch", href: "/merch" },
     { label: "Inquire", href: "/inquire" },
     { label: "About", href: "/about" },
   ];

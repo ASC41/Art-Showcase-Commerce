@@ -6,6 +6,7 @@ import Landing from "@/pages/Landing";
 import Portfolio from "@/pages/Portfolio";
 import About from "@/pages/About";
 import Inquire from "@/pages/Inquire";
+import Merch from "@/pages/Merch";
 import OrderSuccess from "@/pages/OrderSuccess";
 import NotFound from "@/pages/not-found";
 
@@ -23,6 +24,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/portfolio" component={Portfolio} />
+      <Route path="/merch" component={Merch} />
       <Route path="/about" component={About} />
       <Route path="/inquire" component={Inquire} />
       <Route path="/order/success" component={OrderSuccess} />

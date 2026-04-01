@@ -8,7 +8,8 @@
     "build": "tsx ./build.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "seed": "tsx ./src/seed.ts",
-    "provision-printify": "tsx ./src/scripts/provision-printify.ts"
+    "provision-printify": "tsx ./src/scripts/provision-printify.ts",
+    "provision-merch": "tsx ./src/scripts/provision-merch.ts"
   },
   "dependencies": {
     "@types/nodemailer": "^7.0.11",

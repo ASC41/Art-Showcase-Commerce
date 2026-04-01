@@ -28,12 +28,32 @@ A full-stack contemporary art gallery website for artist Ryan Cellar (ryancellar
 - `printify_order_id`, `status` (pending | paid | fulfilled | failed)
 - `customer_email`, `created_at`, `updated_at`
 
+### `merch_products` table
+- `id`, `slug`, `name`, `description`, `price_cents`
+- `blueprint_id`, `print_provider_id`, `print_area_position`
+- `print_area_width`, `print_area_height`
+- `printify_product_id` — template Printify product ID
+- `mockup_images` — array of Printify-generated mockup image URLs
+- `variants` — JSONB array of `{ id, title, color, size }`
+- `category` — "apparel" | "accessories" | "print"
+- `display_order`, `is_active`, `created_at`
+
+### `merch_artwork_products` table
+- Per-artwork Printify product cache (created lazily at first purchase)
+- `merch_product_id`, `artwork_id`, `printify_product_id`
+
+### `merch_orders` table
+- `id`, `stripe_session_id`, `merch_product_id`, `artwork_id`, `variant_id`
+- `printify_order_id`, `status` (pending | paid | fulfilled | failed)
+- `customer_email`, `created_at`, `updated_at`
+
 ## Frontend Pages
 
 | Route | Component | Description |
 |-------|-----------|-------------|
 | `/` | `Landing.tsx` | GalleryX Framer — infinite draggable 3D grid |
 | `/portfolio` | `Portfolio.tsx` | ScrollGrid with 3D animation + ArtworkLightbox |
+| `/merch` | `Merch.tsx` | Merch shop with animated product grid + MerchLightbox |
 | `/about` | `About.tsx` | Artist bio, contact info |
 | `/order/success` | `OrderSuccess.tsx` | Post-purchase confirmation with verify call |
 
@@ -41,7 +61,8 @@ A full-stack contemporary art gallery website for artist Ryan Cellar (ryancellar
 - **`GalleryX`** — Framer component at `src/framer/gallery-x.jsx` (unframer package). Used on landing page with real artwork data.
 - **`ScrollGrid`** — Adapted FramerScroll3DGrid with framer-motion scroll animations, 6 animation styles, hover overlays, and onclick handling.
 - **`ArtworkLightbox`** — Full-screen overlay with artwork details, status/price, Buy Original/Buy Print CTAs, keyboard nav (arrows + Escape).
-- **`Navbar`** — Fixed top nav with Ryan Cellar wordmark and Portfolio/About links.
+- **`MerchLightbox`** — Full-screen overlay with product mockup, artwork selector (thumbnail grid), size/color picker, and Buy Now CTA.
+- **`Navbar`** — Fixed top nav with Ryan Cellar wordmark and Gallery/Portfolio/Merch/Inquire/About links.
 
 ## API Endpoints
 
@@ -50,19 +71,47 @@ A full-stack contemporary art gallery website for artist Ryan Cellar (ryancellar
 | GET | `/api/healthz` | Health check |
 | GET | `/api/artworks` | List all 20 artworks (featured first) |
 | GET | `/api/artworks/:slug` | Get artwork by slug |
-| POST | `/api/checkout/session` | Create Stripe checkout session |
+| GET | `/api/merch` | List all active merch products |
+| GET | `/api/merch/:slug` | Get single merch product |
+| POST | `/api/checkout/session` | Create Stripe checkout session (artwork prints/originals) |
+| POST | `/api/checkout/merch-session` | Create Stripe checkout session (merch) |
 | POST | `/api/checkout/verify` | Verify payment and fulfill order |
 
-### Checkout Flow
-1. Frontend calls `POST /api/checkout/session` with `artworkSlug`, `purchaseType` (original | print), `successUrl`, `cancelUrl`
-2. Backend creates Stripe session and returns `{ url, sessionId }`
-3. User redirected to Stripe Checkout
-4. On success, Stripe redirects to `/order/success?session_id=SESSION_ID`
-5. Frontend calls `POST /api/checkout/verify` with `sessionId`
-6. Backend verifies with Stripe, marks artwork as sold (originals), sends Gmail notification, creates Printify order (prints)
+### Merch Checkout Flow
+1. Frontend calls `POST /api/checkout/merch-session` with `{ merchSlug, variantId, artworkSlug, successUrl, cancelUrl }`
+2. Backend validates product + variant + artwork, creates Stripe session with metadata
+3. User redirected to Stripe Checkout (includes shipping address collection)
+4. Stripe webhook fires `checkout.session.completed`
+5. Webhook checks `metadata.purchaseType === "merch"` → calls `fulfillMerchOrder`
+6. Creates entry in `merch_orders` table, then creates Printify order
 
 ### Print Price
-Prints are priced at $45 (4500 cents) — hard-coded in `checkout.ts`.
+- Enhanced Matte: $45 (11x14), $65 (18x24), $95 (24x36)
+- Framed Print: $85 (11x14), $115 (18x24), $165 (24x36)
+- Matte Poster (merch): $20 (starting at 11×14)
+
+## Merch Products (10 items)
+| Slug | Name | Price | Category |
+|------|------|-------|----------|
+| tshirt | Comfort Colors T-Shirt | $32 | apparel |
+| hoodie | Gildan Pullover Hoodie | $55 | apparel |
+| crewneck | Gildan Crewneck Sweatshirt | $45 | apparel |
+| dad-cap | Classic Dad Cap | $35 | accessories |
+| phone-case | Tough Phone Case | $28 | accessories |
+| tote-bag | All-Over Print Tote Bag | $45 | accessories |
+| cuff-beanie | Cuff Beanie | $32 | accessories |
+| bucket-hat | Bucket Hat | $32 | accessories |
+| sweat-shorts | Sponge Fleece Sweat Shorts | $48 | apparel |
+| matte-poster | Matte Art Poster | $20 | print |
+
+## Merch Provisioning
+```bash
+# Create Printify template products for all merch items
+pnpm --filter @workspace/api-server run provision-merch
+
+# Force recreate all (--force flag)
+pnpm --filter @workspace/api-server run provision-merch -- --force
+```
 
 ## Artwork Data
 All 20 artworks from Ryan Cellar, with CDN images from the GitHub-hosted jsdelivr CDN:

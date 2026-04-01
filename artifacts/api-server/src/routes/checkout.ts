@@ -17,6 +17,7 @@ import {
   type PrintSize,
   type PrintOrientation,
 } from "../lib/printify";
+import { fulfillMerchOrder } from "./merch-checkout";
 
 const router: IRouter = Router();
 
@@ -283,11 +284,16 @@ export async function handleStripeWebhook(
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
     if (session.payment_status === "paid") {
+      const purchaseType = session.metadata?.purchaseType;
       try {
-        await fulfillOrder(session);
+        if (purchaseType === "merch") {
+          await fulfillMerchOrder(session);
+        } else {
+          await fulfillOrder(session);
+        }
       } catch (err) {
         console.error(
-          "fulfillOrder infrastructure error — returning 500 for Stripe retry:",
+          "fulfillment infrastructure error — returning 500 for Stripe retry:",
           err instanceof Error ? err.message : String(err)
         );
         res.status(500).json({ error: "Fulfillment failed — will retry" });
