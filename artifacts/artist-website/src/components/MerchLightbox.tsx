@@ -103,12 +103,30 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
     )
       .then((r) => r.json())
       .then((data: { mockupImages: string[] }) => {
-        if (data.mockupImages && data.mockupImages.length > 0) {
-          setArtworkMockups(data.mockupImages);
+        const urls = data.mockupImages ?? [];
+        if (urls.length > 0) {
+          // Preload the first image so the spinner stays on until it's ready.
+          // This eliminates the blank gap between the spinner disappearing and
+          // the image rendering — the image is in the browser cache by the time
+          // we update state, so it appears instantly.
+          const img = new window.Image();
+          img.onload = () => {
+            if (!controller.signal.aborted) {
+              setArtworkMockups(urls);
+              setLoadingMockups(false);
+            }
+          };
+          img.onerror = () => {
+            if (!controller.signal.aborted) {
+              setArtworkMockups(urls);
+              setLoadingMockups(false);
+            }
+          };
+          img.src = urls[0];
         } else {
           setArtworkMockups(null);
+          setLoadingMockups(false);
         }
-        setLoadingMockups(false);
       })
       .catch((err) => {
         if (err.name !== "AbortError") {
