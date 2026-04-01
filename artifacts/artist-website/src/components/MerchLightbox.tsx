@@ -31,6 +31,20 @@ interface MerchLightboxProps {
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+// Approximate print area position on Printify mockup images (as % of image container)
+const PRINT_OVERLAY: Record<string, { top: string; left: string; width: string; height: string }> = {
+  tshirt:          { top: "25%", left: "22%", width: "56%", height: "44%" },
+  hoodie:          { top: "22%", left: "25%", width: "50%", height: "32%" },
+  crewneck:        { top: "23%", left: "24%", width: "52%", height: "44%" },
+  "dad-cap":       { top: "38%", left: "27%", width: "46%", height: "24%" },
+  "phone-case":    { top: "5%",  left: "18%", width: "64%", height: "88%" },
+  "tote-bag":      { top: "12%", left: "22%", width: "56%", height: "72%" },
+  "cuff-beanie":   { top: "44%", left: "22%", width: "56%", height: "22%" },
+  "bucket-hat":    { top: "36%", left: "26%", width: "48%", height: "28%" },
+  "sweat-shorts":  { top: "50%", left: "10%", width: "34%", height: "38%" },
+  "matte-poster":  { top: "2%",  left: "4%",  width: "92%", height: "94%" },
+};
+
 export default function MerchLightbox({ product, onClose }: MerchLightboxProps) {
   const { data: artworks } = useListArtworks();
   const { toast } = useToast();
@@ -201,20 +215,56 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
           <div style={{ flex: "0 0 440px", maxWidth: "440px" }}>
             {currentMockup ? (
               <div style={{ position: "relative" }}>
-                <motion.img
-                  key={mockupIndex}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  src={currentMockup}
-                  alt={`${product.name} mockup`}
-                  style={{
-                    width: "100%",
-                    borderRadius: "12px",
-                    objectFit: "cover",
-                    display: "block",
-                    background: "#111",
-                  }}
-                />
+                {/* Mockup image wrapper — relative so artwork overlay can be positioned inside */}
+                <div style={{ position: "relative", borderRadius: "12px", overflow: "hidden", background: "#111" }}>
+                  <motion.img
+                    key={mockupIndex}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    src={currentMockup}
+                    alt={`${product.name} mockup`}
+                    style={{
+                      width: "100%",
+                      display: "block",
+                      objectFit: "contain",
+                    }}
+                  />
+
+                  {/* Artwork overlay — updates live when artwork selection changes */}
+                  {selectedArtwork && PRINT_OVERLAY[product.slug] && (() => {
+                    const ov = PRINT_OVERLAY[product.slug];
+                    return (
+                      <motion.div
+                        key={selectedArtwork.slug}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.25 }}
+                        style={{
+                          position: "absolute",
+                          top: ov.top,
+                          left: ov.left,
+                          width: ov.width,
+                          height: ov.height,
+                          overflow: "hidden",
+                          pointerEvents: "none",
+                        }}
+                      >
+                        <img
+                          src={selectedArtwork.imageUrl}
+                          alt={selectedArtwork.title}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "contain",
+                            display: "block",
+                            opacity: 0.93,
+                          }}
+                        />
+                      </motion.div>
+                    );
+                  })()}
+                </div>
+
                 {mockupImages.length > 1 && (
                   <div
                     style={{

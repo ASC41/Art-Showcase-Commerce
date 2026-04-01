@@ -25,13 +25,36 @@ interface MerchProduct {
   printAreaHeight: number | null;
 }
 
+interface Artwork {
+  slug: string;
+  title: string;
+  imageUrl: string;
+}
+
+// Approximate print area position on Printify mockup images (as % of image container)
+// top/left/width/height are percentages of the image container dimensions
+const PRINT_OVERLAY: Record<string, { top: string; left: string; width: string; height: string }> = {
+  tshirt:          { top: "25%", left: "22%", width: "56%", height: "44%" },
+  hoodie:          { top: "22%", left: "25%", width: "50%", height: "32%" },
+  crewneck:        { top: "23%", left: "24%", width: "52%", height: "44%" },
+  "dad-cap":       { top: "38%", left: "27%", width: "46%", height: "24%" },
+  "phone-case":    { top: "5%",  left: "18%", width: "64%", height: "88%" },
+  "tote-bag":      { top: "12%", left: "22%", width: "56%", height: "72%" },
+  "cuff-beanie":   { top: "44%", left: "22%", width: "56%", height: "22%" },
+  "bucket-hat":    { top: "36%", left: "26%", width: "48%", height: "28%" },
+  "sweat-shorts":  { top: "50%", left: "10%", width: "34%", height: "38%" },
+  "matte-poster":  { top: "2%",  left: "4%",  width: "92%", height: "94%" },
+};
+
 function MerchCard({
   product,
   index,
+  featuredArtwork,
   onSelect,
 }: {
   product: MerchProduct;
   index: number;
+  featuredArtwork?: Artwork;
   onSelect: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -46,6 +69,7 @@ function MerchCard({
   const mockup = product.mockupImages?.[0];
   const colors = [...new Set((product.variants ?? []).map((v) => v.color))];
   const minPrice = product.priceCents;
+  const overlay = PRINT_OVERLAY[product.slug];
 
   return (
     <motion.div
@@ -71,7 +95,7 @@ function MerchCard({
           (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.06)";
         }}
       >
-        {/* Mockup image */}
+        {/* Mockup image with artwork overlay */}
         <div
           style={{
             width: "100%",
@@ -88,7 +112,7 @@ function MerchCard({
               style={{
                 width: "100%",
                 height: "100%",
-                objectFit: "cover",
+                objectFit: "contain",
                 display: "block",
                 transition: "transform 0.4s ease",
               }}
@@ -115,6 +139,33 @@ function MerchCard({
               }}
             >
               GENERATING MOCKUP
+            </div>
+          )}
+
+          {/* Artwork overlay — shows different artwork per card */}
+          {featuredArtwork && overlay && mockup && (
+            <div
+              style={{
+                position: "absolute",
+                top: overlay.top,
+                left: overlay.left,
+                width: overlay.width,
+                height: overlay.height,
+                overflow: "hidden",
+                pointerEvents: "none",
+              }}
+            >
+              <img
+                src={featuredArtwork.imageUrl}
+                alt={featuredArtwork.title}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  display: "block",
+                  opacity: 0.92,
+                }}
+              />
             </div>
           )}
 
@@ -198,8 +249,47 @@ function MerchCard({
                 marginRight: "4px",
               }}
             >
-              Your artwork →
+              {colors.length > 0 ? "Colors" : ""}
             </span>
+            {colors.slice(0, 8).map((color) => (
+              <div
+                key={color}
+                title={color}
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  borderRadius: "50%",
+                  background: color.toLowerCase(),
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  flexShrink: 0,
+                }}
+              />
+            ))}
+            {colors.length > 8 && (
+              <span
+                style={{
+                  fontFamily: "'Inter'",
+                  fontSize: "10px",
+                  color: "#444",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                +{colors.length - 8}
+              </span>
+            )}
+          </div>
+
+          <div
+            style={{
+              marginTop: "14px",
+              fontFamily: "'Inter'",
+              fontSize: "10px",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "#555",
+            }}
+          >
+            Your artwork →
           </div>
         </div>
       </div>
@@ -251,14 +341,18 @@ function SkeletonCard() {
 
 export default function Merch() {
   const [products, setProducts] = useState<MerchProduct[]>([]);
+  const [artworks, setArtworks] = useState<Artwork[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<MerchProduct | null>(null);
 
   useEffect(() => {
-    fetch(`${BASE_URL}/api/merch`)
-      .then((r) => r.json())
-      .then((data: MerchProduct[]) => {
-        setProducts(Array.isArray(data) ? data : []);
+    Promise.all([
+      fetch(`${BASE_URL}/api/merch`).then((r) => r.json()),
+      fetch(`${BASE_URL}/api/artworks`).then((r) => r.json()),
+    ])
+      .then(([merch, aws]: [MerchProduct[], Artwork[]]) => {
+        setProducts(Array.isArray(merch) ? merch : []);
+        setArtworks(Array.isArray(aws) ? aws : []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -267,6 +361,15 @@ export default function Merch() {
   const apparel = products.filter((p) => p.category === "apparel");
   const accessories = products.filter((p) => p.category === "accessories");
   const prints = products.filter((p) => p.category === "print");
+
+  // Rotate artworks across all product cards globally
+  const allProducts = [...apparel, ...accessories, ...prints];
+
+  function getFeaturedArtwork(product: MerchProduct): Artwork | undefined {
+    if (artworks.length === 0) return undefined;
+    const globalIndex = allProducts.findIndex((p) => p.slug === product.slug);
+    return artworks[globalIndex % artworks.length];
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: "#080808", color: "#f5f5f5" }}>
@@ -319,11 +422,7 @@ export default function Merch() {
 
       {/* Apparel section */}
       {(loading || apparel.length > 0) && (
-        <section
-          style={{
-            padding: "0 40px 64px",
-          }}
-        >
+        <section style={{ padding: "0 40px 64px" }}>
           <div
             style={{
               fontFamily: "'Inter'",
@@ -353,6 +452,7 @@ export default function Merch() {
                     key={product.slug}
                     product={product}
                     index={i}
+                    featuredArtwork={getFeaturedArtwork(product)}
                     onSelect={() => setSelected(product)}
                   />
                 ))}
@@ -362,11 +462,7 @@ export default function Merch() {
 
       {/* Accessories section */}
       {(loading || accessories.length > 0) && (
-        <section
-          style={{
-            padding: "0 40px 80px",
-          }}
-        >
+        <section style={{ padding: "0 40px 80px" }}>
           <div
             style={{
               fontFamily: "'Inter'",
@@ -396,6 +492,7 @@ export default function Merch() {
                     key={product.slug}
                     product={product}
                     index={i}
+                    featuredArtwork={getFeaturedArtwork(product)}
                     onSelect={() => setSelected(product)}
                   />
                 ))}
@@ -405,11 +502,7 @@ export default function Merch() {
 
       {/* Prints section */}
       {(loading || prints.length > 0) && (
-        <section
-          style={{
-            padding: "0 40px 80px",
-          }}
-        >
+        <section style={{ padding: "0 40px 80px" }}>
           <div
             style={{
               fontFamily: "'Inter'",
@@ -439,6 +532,7 @@ export default function Merch() {
                     key={product.slug}
                     product={product}
                     index={i}
+                    featuredArtwork={getFeaturedArtwork(product)}
                     onSelect={() => setSelected(product)}
                   />
                 ))}
