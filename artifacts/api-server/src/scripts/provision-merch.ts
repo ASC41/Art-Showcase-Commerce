@@ -322,28 +322,30 @@ const MERCH_CONFIG: MerchItemConfig[] = [
   },
 ];
 
-// ── Contained-dimensions helper (no-crop placement) ──────────────────────────
-// Printify uses COVER semantics within the declared width×height bounding box:
-// the image fills the box's shorter side and overflows the other — causing
-// cropping when art ratio ≠ box ratio.
+// ── Scale-to-contain helper ───────────────────────────────────────────────────
+// KEY FACT: Printify IGNORES the width/height fields — it always normalizes them
+// to the actual uploaded image's pixel dimensions. Only `scale` matters.
 //
-// Fix: declare width×height equal to the artwork's contained dimensions inside
-// the print area (same aspect ratio as the artwork). At scale=1.0, COVER fills
-// the ratio-matched box exactly — zero overflow, zero cropping.
-function computeContainedDims(
+// At scale=1.0 Printify uses COVER: fills the print area by whichever dimension
+// requires the LARGER scale-up factor; the other dimension overflows → cropped.
+//
+// CONTAIN scale = min(artRatio, areaRatio) / max(artRatio, areaRatio)
+//   → always ≤ 1.0; at this scale the overflowing dimension exactly fits.
+//
+// Example: portrait art (0.664) in portrait t-shirt area (0.875):
+//   fill-by-width factor = 3461/691 = 5.007  (larger → Printify uses this)
+//   fill-by-height factor = 3955/1041 = 3.799
+//   scale = 3.799/5.007 = 0.759
+//   → at 0.759, height renders to 3955px exactly → no overflow → no cropping.
+function computeScale(
   artworkW: number,
   artworkH: number,
   areaW: number,
   areaH: number
-): { imgW: number; imgH: number } {
+): number {
   const artRatio = artworkW / artworkH;
   const areaRatio = areaW / areaH;
-  if (artRatio <= areaRatio) {
-    // Art is more portrait — fit by height
-    return { imgW: Math.round(areaH * artRatio), imgH: areaH };
-  }
-  // Art is more landscape — fit by width
-  return { imgW: areaW, imgH: Math.round(areaW / artRatio) };
+  return Math.min(artRatio, areaRatio) / Math.max(artRatio, areaRatio);
 }
 
 // ── Create a Printify product for a merch item ────────────────────────────────
@@ -355,9 +357,7 @@ async function createMerchProduct(
   const artW = artwork.imageWidth ?? 2000;
   const artH = artwork.imageHeight ?? 2000;
 
-  const { imgW, imgH } = computeContainedDims(
-    artW, artH, config.printAreaWidth, config.printAreaHeight
-  );
+  const scale = computeScale(artW, artH, config.printAreaWidth, config.printAreaHeight);
 
   // Build print areas - main position
   const positions = config.allPrintAreaPositions ?? [config.printAreaPosition];
@@ -372,11 +372,13 @@ async function createMerchProduct(
             id: "default", // Will be replaced by Printify after upload
             name: `${artwork.title} — ${config.name}`,
             type: "image/jpeg",
-            height: imgH,
-            width: imgW,
+            // Printify ignores width/height (normalizes to actual file dims).
+            // Only scale matters — use artW/artH for semantic clarity.
+            width: artW,
+            height: artH,
             x: 0.5,
             y: 0.5,
-            scale: 1.0,
+            scale,
             angle: 0,
           },
         ],
@@ -406,11 +408,11 @@ async function createMerchProduct(
             id: imageId,
             name: `${artwork.title} — ${config.name}`,
             type: "image/jpeg",
-            height: imgH,
-            width: imgW,
+            width: artW,
+            height: artH,
             x: 0.5,
             y: 0.5,
-            scale: 1.0,
+            scale,
             angle: 0,
           },
         ],

@@ -130,28 +130,31 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
 
     const shopId = await getShopId();
 
-    // Contained dimensions — ensures the artwork is never cropped.
+    // Scale-to-contain: prevents artwork cropping regardless of orientation mismatch.
     //
-    // Printify uses COVER semantics within the declared width×height bounding box:
-    // it scales the artwork so its SHORTER side fills the box dimension, causing
-    // the LONGER side to overflow and be clipped.
+    // KEY FACT (confirmed from Printify API response): Printify IGNORES the width/height
+    // fields we send — it always normalizes them to the actual uploaded image dimensions.
+    // Only `scale` affects rendering.
     //
-    // Reducing `scale` alone doesn't help — the bounding box ratio stays the same
-    // as the print area, so COVER still overflows for mismatched orientations.
+    // At scale=1.0 Printify uses COVER semantics: it fills the print area by whichever
+    // dimension requires the LARGER scale-up factor, causing the other dimension to
+    // overflow and be clipped. For portrait artwork in a portrait area (artRatio < areaRatio):
+    //   - fill factor by width: areaW/artW  (larger)
+    //   - fill factor by height: areaH/artH (smaller)
+    //   → fills by WIDTH → height rendered = artH × (areaW/artW) > areaH → TOP/BOTTOM CROPPED
     //
-    // Fix: declare width×height as the artwork's CONTAINED dimensions inside the
-    // print area (same aspect ratio as the artwork). COVER of a ratio-matched box
-    // fills exactly — zero overflow at scale=1.0.
+    // CONTAIN scale = (smaller fill factor) / (larger fill factor)
+    //              = min(areaW/artW, areaH/artH) / max(areaW/artW, areaH/artH)
+    //              = min(artRatio, areaRatio)    / max(artRatio, areaRatio)
+    //
+    // At this scale the longer overflowing dimension now exactly fits → zero cropping.
     const artW = artwork.imageWidth ?? 3000;
     const artH = artwork.imageHeight ?? 3000;
     const areaW = merch.printAreaWidth ?? 3000;
     const areaH = merch.printAreaHeight ?? 3000;
     const artRatio = artW / artH;
     const areaRatio = areaW / areaH;
-    // Artwork more portrait than area → fit by height; more landscape → fit by width
-    const imgW = artRatio <= areaRatio ? Math.round(areaH * artRatio) : areaW;
-    const imgH = artRatio <= areaRatio ? areaH : Math.round(areaW / artRatio);
-    const scale = 1.0;
+    const scale = Math.min(artRatio, areaRatio) / Math.max(artRatio, areaRatio);
 
     // Upload artwork image to Printify
     const uploadRes = await printifyRequest("/uploads/images.json", {
@@ -188,8 +191,10 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
                     id: imageId,
                     name: `${artwork.title} — ${merch.name}`,
                     type: "image/jpeg",
-                    height: imgH,
-                    width: imgW,
+                    // Printify normalizes width/height to the actual uploaded file dims;
+                    // pass real artwork dims here for semantic clarity.
+                    width: artW,
+                    height: artH,
                     x: 0.5,
                     y: 0.5,
                     scale,
