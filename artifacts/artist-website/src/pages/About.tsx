@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import { Link } from "wouter";
 
 const IMAGE_A =
-  "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@b44d1d62aa42791752090a1da9c71a3ca9af1e15/uploads/2026-03-31T01-52-59-145Z-yxebv7avv.jpg";
+  "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@990d8c2ae129855c329db463e8506e8344dd8e21/uploads/2026-04-01T01-02-14-259Z-plfdrd2mp.jpg";
 const IMAGE_B =
   "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@9945ae1994b6366c3943e8e125bb3700e7336b83/uploads/2026-03-31T01-53-19-925Z-y59y2l4f4.jpg";
 
