@@ -64,7 +64,8 @@ function MerchCard({
       (u) => !avoided.some((a) => getLabel(u).includes(a))
     );
     if (fallback) return fallback;
-    return images[1] ?? images[0];
+    // Always prefer index 0 (front shot with art) over index 1 (back — no art)
+    return images[0];
   })();
   const colors = [...new Set((product.variants ?? []).map((v) => v.color))];
   const minPrice = product.priceCents;
