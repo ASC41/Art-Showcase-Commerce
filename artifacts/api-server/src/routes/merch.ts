@@ -130,6 +130,15 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
 
     const shopId = await getShopId();
 
+    // Compute "contain" scale — artwork fits fully within print area, no cropping.
+    // Formula: scale = min(printAreaW / artW, printAreaH / artH, 1.0)
+    // At this scale, both artwork dimensions fit inside the print area.
+    const artW = artwork.imageWidth ?? 3000;
+    const artH = artwork.imageHeight ?? 3000;
+    const areaW = merch.printAreaWidth ?? 3000;
+    const areaH = merch.printAreaHeight ?? 3000;
+    const scale = Math.min(areaW / artW, areaH / artH, 1.0);
+
     // Upload artwork image to Printify
     const uploadRes = await printifyRequest("/uploads/images.json", {
       method: "POST",
@@ -165,11 +174,11 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
                     id: imageId,
                     name: `${artwork.title} — ${merch.name}`,
                     type: "image/jpeg",
-                    height: artwork.imageHeight ?? 3000,
-                    width: artwork.imageWidth ?? 3000,
+                    height: artH,
+                    width: artW,
                     x: 0.5,
                     y: 0.5,
-                    scale: 1.0,
+                    scale,
                     angle: 0,
                   },
                 ],

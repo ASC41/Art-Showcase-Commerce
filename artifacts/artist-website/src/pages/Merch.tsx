@@ -25,21 +25,13 @@ interface MerchProduct {
   printAreaHeight: number | null;
 }
 
-interface Artwork {
-  slug: string;
-  title: string;
-  imageUrl: string;
-}
-
 function MerchCard({
   product,
   index,
-  featuredArtwork,
   onSelect,
 }: {
   product: MerchProduct;
   index: number;
-  featuredArtwork?: Artwork;
   onSelect: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -79,7 +71,7 @@ function MerchCard({
           (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.06)";
         }}
       >
-        {/* Card image: show the featured artwork for this card */}
+        {/* Card image: show the product template mockup — each product type is unique */}
         <div
           style={{
             width: "100%",
@@ -89,28 +81,7 @@ function MerchCard({
             overflow: "hidden",
           }}
         >
-          {featuredArtwork ? (
-            <img
-              src={featuredArtwork.imageUrl}
-              alt={featuredArtwork.title}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-                display: "block",
-                padding: "12px",
-                boxSizing: "border-box",
-                transition: "transform 0.4s ease",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLImageElement).style.transform = "scale(1.04)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLImageElement).style.transform = "scale(1)";
-              }}
-              loading="lazy"
-            />
-          ) : mockup ? (
+          {mockup ? (
             <img
               src={mockup}
               alt={product.name}
@@ -143,7 +114,7 @@ function MerchCard({
                 letterSpacing: "0.1em",
               }}
             >
-              YOUR ARTWORK HERE
+              LOADING
             </div>
           )}
 
@@ -319,18 +290,14 @@ function SkeletonCard() {
 
 export default function Merch() {
   const [products, setProducts] = useState<MerchProduct[]>([]);
-  const [artworks, setArtworks] = useState<Artwork[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<MerchProduct | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      fetch(`${BASE_URL}/api/merch`).then((r) => r.json()),
-      fetch(`${BASE_URL}/api/artworks`).then((r) => r.json()),
-    ])
-      .then(([merch, aws]: [MerchProduct[], Artwork[]]) => {
+    fetch(`${BASE_URL}/api/merch`)
+      .then((r) => r.json())
+      .then((merch: MerchProduct[]) => {
         setProducts(Array.isArray(merch) ? merch : []);
-        setArtworks(Array.isArray(aws) ? aws : []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -339,15 +306,6 @@ export default function Merch() {
   const apparel = products.filter((p) => p.category === "apparel");
   const accessories = products.filter((p) => p.category === "accessories");
   const prints = products.filter((p) => p.category === "print");
-
-  // Rotate artworks across all product cards globally
-  const allProducts = [...apparel, ...accessories, ...prints];
-
-  function getFeaturedArtwork(product: MerchProduct): Artwork | undefined {
-    if (artworks.length === 0) return undefined;
-    const globalIndex = allProducts.findIndex((p) => p.slug === product.slug);
-    return artworks[globalIndex % artworks.length];
-  }
 
   return (
     <div style={{ minHeight: "100vh", background: "#080808", color: "#f5f5f5" }}>
@@ -430,7 +388,6 @@ export default function Merch() {
                     key={product.slug}
                     product={product}
                     index={i}
-                    featuredArtwork={getFeaturedArtwork(product)}
                     onSelect={() => setSelected(product)}
                   />
                 ))}
@@ -470,7 +427,6 @@ export default function Merch() {
                     key={product.slug}
                     product={product}
                     index={i}
-                    featuredArtwork={getFeaturedArtwork(product)}
                     onSelect={() => setSelected(product)}
                   />
                 ))}
@@ -510,7 +466,6 @@ export default function Merch() {
                     key={product.slug}
                     product={product}
                     index={i}
-                    featuredArtwork={getFeaturedArtwork(product)}
                     onSelect={() => setSelected(product)}
                   />
                 ))}
