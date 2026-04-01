@@ -353,8 +353,9 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
               )}
             </div>
 
-            {/* Thumbnail strip — updates with artwork-specific mockups */}
-            {displayMockups.length > 1 && (
+            {/* Thumbnail strip — only shown once artwork-specific mockups are ready.
+                Deliberately avoids showing template/fallback images here. */}
+            {!loadingMockups && artworkMockups && artworkMockups.length > 1 && (
               <div
                 style={{
                   display: "flex",
@@ -363,7 +364,7 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
                   flexWrap: "wrap",
                 }}
               >
-                {displayMockups.slice(0, 6).map((src, i) => (
+                {artworkMockups.slice(0, 6).map((src, i) => (
                   <button
                     key={`${selectedArtwork?.slug ?? "default"}-${i}`}
                     onClick={() => setMockupIndex(i)}

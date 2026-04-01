@@ -27,11 +27,11 @@ interface MerchProduct {
 
 function MerchCard({
   product,
-  index,
+  globalIndex,
   onSelect,
 }: {
   product: MerchProduct;
-  index: number;
+  globalIndex: number;
   onSelect: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -43,7 +43,29 @@ function MerchCard({
   const opacity = useTransform(scrollYProgress, [0, 0.6], [0, 1]);
   const y = useTransform(scrollYProgress, [0, 0.6], [60, 0]);
 
-  const mockup = product.mockupImages?.[0];
+  // Pick the best mockup image for this card.
+  // globalIndex=0 (first t-shirt) → always the clean front product shot.
+  // All other cards → prefer a lifestyle/person shot so the grid has variety.
+  // Avoid back/folded/size-chart angles where the art isn't visible.
+  const images = product.mockupImages ?? [];
+  const mockup = (() => {
+    if (globalIndex === 0 || images.length <= 1) return images[0];
+    const getLabel = (url: string) =>
+      url.match(/camera_label=([^&]+)/)?.[1] ?? "";
+    const preferred = ["person", "context", "collar", "detail"];
+    const avoided = ["back", "folded", "size-chart"];
+    // Try preferred labels first
+    for (const pref of preferred) {
+      const hit = images.find((u) => getLabel(u).includes(pref));
+      if (hit) return hit;
+    }
+    // Fall back to any non-avoided shot after index 0
+    const fallback = images.slice(1).find(
+      (u) => !avoided.some((a) => getLabel(u).includes(a))
+    );
+    if (fallback) return fallback;
+    return images[1] ?? images[0];
+  })();
   const colors = [...new Set((product.variants ?? []).map((v) => v.color))];
   const minPrice = product.priceCents;
 
@@ -387,7 +409,7 @@ export default function Merch() {
                   <MerchCard
                     key={product.slug}
                     product={product}
-                    index={i}
+                    globalIndex={i}
                     onSelect={() => setSelected(product)}
                   />
                 ))}
@@ -426,7 +448,7 @@ export default function Merch() {
                   <MerchCard
                     key={product.slug}
                     product={product}
-                    index={i}
+                    globalIndex={apparel.length + i}
                     onSelect={() => setSelected(product)}
                   />
                 ))}
@@ -465,7 +487,7 @@ export default function Merch() {
                   <MerchCard
                     key={product.slug}
                     product={product}
-                    index={i}
+                    globalIndex={apparel.length + accessories.length + i}
                     onSelect={() => setSelected(product)}
                   />
                 ))}
