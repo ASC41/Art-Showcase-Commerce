@@ -32,14 +32,6 @@ function mapMerchProduct(p: typeof merchProductsTable.$inferSelect) {
   };
 }
 
-// Compute scale so artwork fits the print area without cropping
-function computeScale(artW: number, artH: number, areaW: number, areaH: number): number {
-  const artRatio = artW / artH;
-  const areaRatio = areaW / areaH;
-  const scale = artRatio > areaRatio ? areaW / artW : areaH / artH;
-  return Math.min(Math.max(scale, 0.5), 1.0);
-}
-
 // GET /api/merch — list all active merch products
 router.get("/merch", async (_req, res) => {
   try {
@@ -137,12 +129,6 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     }
 
     const shopId = await getShopId();
-
-    const artW = artwork.imageWidth ?? 2000;
-    const artH = artwork.imageHeight ?? 2000;
-    const areaW = merch.printAreaWidth ?? 3000;
-    const areaH = merch.printAreaHeight ?? 3000;
-    const scale = computeScale(artW, artH, areaW, areaH);
 
     // Upload artwork image to Printify
     const uploadRes = await printifyRequest("/uploads/images.json", {
