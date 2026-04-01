@@ -322,21 +322,28 @@ const MERCH_CONFIG: MerchItemConfig[] = [
   },
 ];
 
-// ── Scale-to-fit helper (contain — never crops) ───────────────────────────────
-// Printify at scale=1.0 fills the print area by its LARGEST dimension (cover
-// semantics). For a portrait artwork on a landscape print area this overflows
-// the height → cropped. The safe contain scale is:
-//   min(artRatio, areaRatio) / max(artRatio, areaRatio)
-// Always ≤ 1.0; ratio = 1.0 when art and area have the same aspect ratio.
-function computeScale(
+// ── Contained-dimensions helper (no-crop placement) ──────────────────────────
+// Printify uses COVER semantics within the declared width×height bounding box:
+// the image fills the box's shorter side and overflows the other — causing
+// cropping when art ratio ≠ box ratio.
+//
+// Fix: declare width×height equal to the artwork's contained dimensions inside
+// the print area (same aspect ratio as the artwork). At scale=1.0, COVER fills
+// the ratio-matched box exactly — zero overflow, zero cropping.
+function computeContainedDims(
   artworkW: number,
   artworkH: number,
   areaW: number,
   areaH: number
-): number {
+): { imgW: number; imgH: number } {
   const artRatio = artworkW / artworkH;
   const areaRatio = areaW / areaH;
-  return Math.min(artRatio, areaRatio) / Math.max(artRatio, areaRatio);
+  if (artRatio <= areaRatio) {
+    // Art is more portrait — fit by height
+    return { imgW: Math.round(areaH * artRatio), imgH: areaH };
+  }
+  // Art is more landscape — fit by width
+  return { imgW: areaW, imgH: Math.round(areaW / artRatio) };
 }
 
 // ── Create a Printify product for a merch item ────────────────────────────────
@@ -348,7 +355,9 @@ async function createMerchProduct(
   const artW = artwork.imageWidth ?? 2000;
   const artH = artwork.imageHeight ?? 2000;
 
-  const scale = computeScale(artW, artH, config.printAreaWidth, config.printAreaHeight);
+  const { imgW, imgH } = computeContainedDims(
+    artW, artH, config.printAreaWidth, config.printAreaHeight
+  );
 
   // Build print areas - main position
   const positions = config.allPrintAreaPositions ?? [config.printAreaPosition];
@@ -363,11 +372,11 @@ async function createMerchProduct(
             id: "default", // Will be replaced by Printify after upload
             name: `${artwork.title} — ${config.name}`,
             type: "image/jpeg",
-            height: config.printAreaHeight,
-            width: config.printAreaWidth,
+            height: imgH,
+            width: imgW,
             x: 0.5,
             y: 0.5,
-            scale,
+            scale: 1.0,
             angle: 0,
           },
         ],
@@ -397,11 +406,11 @@ async function createMerchProduct(
             id: imageId,
             name: `${artwork.title} — ${config.name}`,
             type: "image/jpeg",
-            height: config.printAreaHeight,
-            width: config.printAreaWidth,
+            height: imgH,
+            width: imgW,
             x: 0.5,
             y: 0.5,
-            scale,
+            scale: 1.0,
             angle: 0,
           },
         ],
