@@ -130,14 +130,24 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
 
     const shopId = await getShopId();
 
-    // Compute "contain" scale — artwork fits fully within print area, no cropping.
-    // Formula: scale = min(printAreaW / artW, printAreaH / artH, 1.0)
-    // At this scale, both artwork dimensions fit inside the print area.
+    // Contain scale — artwork is never cropped, regardless of aspect ratio.
+    //
+    // Printify at scale=1.0 fills the print area by its LARGEST dimension
+    // (cover/fill semantics). For a portrait artwork on a landscape print area
+    // (e.g. hoodie: 2976×1982), this scales the image to fill the 2976px width,
+    // which makes the artwork's height overflow the 1982px area → cropped.
+    //
+    // The correct scale = min(artRatio, areaRatio) / max(artRatio, areaRatio)
+    // This is always ≤ 1.0 and ensures neither dimension overflows.
+    //
+    // width/height = printArea dims (the Printify coordinate space declaration).
     const artW = artwork.imageWidth ?? 3000;
     const artH = artwork.imageHeight ?? 3000;
     const areaW = merch.printAreaWidth ?? 3000;
     const areaH = merch.printAreaHeight ?? 3000;
-    const scale = Math.min(areaW / artW, areaH / artH, 1.0);
+    const artRatio = artW / artH;
+    const areaRatio = areaW / areaH;
+    const scale = Math.min(artRatio, areaRatio) / Math.max(artRatio, areaRatio);
 
     // Upload artwork image to Printify
     const uploadRes = await printifyRequest("/uploads/images.json", {
@@ -174,8 +184,8 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
                     id: imageId,
                     name: `${artwork.title} — ${merch.name}`,
                     type: "image/jpeg",
-                    height: artH,
-                    width: artW,
+                    height: areaH,
+                    width: areaW,
                     x: 0.5,
                     y: 0.5,
                     scale,

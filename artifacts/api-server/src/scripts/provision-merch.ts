@@ -322,7 +322,12 @@ const MERCH_CONFIG: MerchItemConfig[] = [
   },
 ];
 
-// ── Scale-to-fit helper ───────────────────────────────────────────────────────
+// ── Scale-to-fit helper (contain — never crops) ───────────────────────────────
+// Printify at scale=1.0 fills the print area by its LARGEST dimension (cover
+// semantics). For a portrait artwork on a landscape print area this overflows
+// the height → cropped. The safe contain scale is:
+//   min(artRatio, areaRatio) / max(artRatio, areaRatio)
+// Always ≤ 1.0; ratio = 1.0 when art and area have the same aspect ratio.
 function computeScale(
   artworkW: number,
   artworkH: number,
@@ -331,10 +336,7 @@ function computeScale(
 ): number {
   const artRatio = artworkW / artworkH;
   const areaRatio = areaW / areaH;
-  const scale = artRatio > areaRatio
-    ? areaW / artworkW
-    : areaH / artworkH;
-  return Math.min(Math.max(scale, 0.5), 1.0);
+  return Math.min(artRatio, areaRatio) / Math.max(artRatio, areaRatio);
 }
 
 // ── Create a Printify product for a merch item ────────────────────────────────
