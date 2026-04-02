@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "fHiVsyMWgW-xnXMbg1xTk"
+uri = "file://.local/gallery-guide.md"
+type = "text"
+title = "Draggable Infinite Gallery — Build Guide"
