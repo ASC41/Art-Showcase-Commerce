@@ -215,17 +215,29 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
     url.replace(/\/mockup\/([^/]+)\/\d+\//, `/mockup/$1/${targetVariantId}/`);
 
   const colorizedMockups = (urls: string[]): string[] => {
-    // Prefer the exact selected variant — this makes phone case mockups show the
-    // correct phone model when the user picks a size (e.g. iPhone 15 Pro shows an
-    // iPhone 15 Pro shape, not always the default iPhone 12).
-    // Falls back to the color representative (size L) for products where size
-    // doesn't visually change the mockup shape (clothing).
+    // Phone cases store one image per phone model variant — each URL already has
+    // the correct variant ID baked in, and the associated camera ID only works for
+    // that variant. Swapping the variant segment would produce broken CDN links.
+    // Navigation for phone cases is handled by the useEffect below (mockupIndex sync).
+    if (product.slug === "phone-case") return urls;
     const targetId = selectedVariantId ?? representativeVariantId(selectedColor);
     if (!targetId) return urls;
     return urls.map((url) =>
       url.includes("/mockup/") ? recolorMockupUrl(url, targetId) : url
     );
   };
+
+  // Phone cases: when the user picks a phone model, jump to the matching image.
+  // artworkMockups stores one front image per variant (iPhone 12 → 16 Pro Max),
+  // so we find the index whose URL contains the selected variant ID.
+  useEffect(() => {
+    if (product?.slug !== "phone-case" || !artworkMockups || !selectedVariantId) return;
+    const idx = artworkMockups.findIndex((url) => {
+      const m = url.match(/\/mockup\/[^/]+\/(\d+)\//);
+      return m ? parseInt(m[1], 10) === selectedVariantId : false;
+    });
+    if (idx >= 0) setMockupIndex(idx);
+  }, [product?.slug, selectedVariantId, artworkMockups]);
 
   // Use artwork-specific mockups if loaded, else fall back to template mockups;
   // then apply color substitution so every image shows the selected color.

@@ -483,6 +483,31 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
         .filter((url) => sigCameraPriority(url) < 5)
         .sort((a, b) => sigCameraPriority(a) - sigCameraPriority(b))
         .slice(0, 5);
+    } else if (merch.slug === "phone-case") {
+      // Phone cases: one front-facing image per phone model variant.
+      // Each variant (iPhone 12, 13, 14, 15, 16 …) has its own camera ID — swapping
+      // only the variant segment in the URL would produce a broken CDN link.
+      // Instead we store one "front" image per variant so the frontend can jump to
+      // the matching image when the user picks a different phone model.
+      // Prefer camera_label=front over front-and-side; fall back if front absent.
+      const variantOrder = new Map(variants.map((v, i) => [v.id, i]));
+      const byVariant = new Map<number, string>();
+      for (const img of product.images ?? []) {
+        if (!img.src) continue;
+        const label = cameraLabel(img.src);
+        if (label !== "front" && label !== "front-and-side") continue;
+        const vid = variantIdFromUrl(img.src);
+        if (vid === null || !variantOrder.has(vid)) continue;
+        // Prefer "front" over "front-and-side"
+        const existing = byVariant.get(vid);
+        if (!existing || cameraLabel(existing) !== "front") {
+          byVariant.set(vid, img.src);
+        }
+      }
+      // Sort in the same order as our variants list (iPhone 12 → 16 Pro Max)
+      mockupImages = [...byVariant.entries()]
+        .sort(([a], [b]) => (variantOrder.get(a) ?? 999) - (variantOrder.get(b) ?? 999))
+        .map(([, url]) => url);
     } else if (merch.slug === "tote-bag") {
       // Tote bag: front (Side A = artwork) → back (Side B = wordmark) → person shots.
       // The AOP blueprint generates 6 variants × 8 camera labels = 48 images.
