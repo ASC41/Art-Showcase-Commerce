@@ -151,15 +151,17 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     const areaH = merch.printAreaHeight ?? 3000;
     const artRatio = artW / artH;
     const areaRatio = areaW / areaH;
-    // CONTAIN scale: the full artwork is always visible with no cropping.
-    // At scale=1.0 Printify fills the print-area WIDTH. CONTAIN clamps to the
-    // lesser of (artRatio/areaRatio, 1.0) so neither axis overflows:
-    //   - Portrait art in portrait area  → fills height, small left/right margins
-    //   - Landscape art in portrait area → fills width, top/bottom margins
-    //   - Any art in wide area (hat/beanie) → fills height, large side margins
-    // This matches the provision script's computeScale() and preserves each
-    // painting's full composition on all products.
-    const artworkScale = Math.min(1.0, artRatio / areaRatio);
+    // Artwork scale on the print area.
+    // phone-case uses COVER: the case is designed to be fully wrapped, so the
+    //   painting fills the full 1853px height (trimming ~3.8% each side — invisible
+    //   on a curved case). CONTAIN would leave a 59px white gap top and bottom.
+    // All other products use CONTAIN: full artwork visible, no clipping, may have
+    //   margins. This preserves each painting's full composition on tees, hoodies,
+    //   crewnecks, bucket hats, and wide accessories.
+    const COVER_SLUGS = new Set(["phone-case"]);
+    const artworkScale = COVER_SLUGS.has(merch.slug)
+      ? Math.max(1.0, artRatio / areaRatio)  // COVER: fills case edge-to-edge
+      : Math.min(1.0, artRatio / areaRatio); // CONTAIN: full artwork visible
 
     // Upload artwork image to Printify
     const uploadRes = await printifyRequest("/uploads/images.json", {
