@@ -163,28 +163,6 @@ const MERCH_CONFIG: MerchItemConfig[] = [
     ],
   },
   {
-    slug: "dad-cap",
-    name: "Classic Dad Cap",
-    description:
-      "Yupoong structured 6-panel cap with a low profile. Artwork embroidered on the front panel.",
-    priceCents: 3500, // $35 — est cost ~$13 → ~63% margin
-    estimatedCostCents: 1300,
-    blueprintId: 1447,
-    printProviderId: 99,
-    printAreaPosition: "front",
-    printAreaWidth: 1200,
-    printAreaHeight: 675,
-    category: "accessories",
-    displayOrder: 4,
-    variants: [
-      { id: 105372, color: "Black", size: "One size" },
-      { id: 105373, color: "Dark Grey", size: "One size" },
-      { id: 105377, color: "Navy", size: "One size" },
-      { id: 105375, color: "Khaki", size: "One size" },
-      { id: 105381, color: "White", size: "One size" },
-    ],
-  },
-  {
     slug: "phone-case",
     name: "Tough Phone Case",
     description:
