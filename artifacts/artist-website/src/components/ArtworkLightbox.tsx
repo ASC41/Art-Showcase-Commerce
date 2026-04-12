@@ -83,8 +83,8 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
 
   const rotation = ARTWORK_ROTATION[artwork.slug];
 
-  const formatPrice = (cents: number | null) => {
-    if (!cents) return null;
+  const formatPrice = (cents: number | null | undefined) => {
+    if (!cents) return "—";
     return `$${(cents / 100).toLocaleString("en-US")}`;
   };
 
@@ -381,19 +381,17 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
             <>
               {/* Normal state */}
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                {isAvailable && artwork.price && (
-                  <span
-                    style={{
-                      fontFamily: "'Cormorant Garamond', serif",
-                      fontSize: "26px",
-                      fontWeight: 300,
-                      color: "#f5f5f5",
-                      letterSpacing: "0.02em",
-                    }}
-                  >
-                    {formatPrice(artwork.price)}
-                  </span>
-                )}
+                <span
+                  style={{
+                    fontFamily: "'Cormorant Garamond', serif",
+                    fontSize: "26px",
+                    fontWeight: 300,
+                    color: artwork.price ? "#f5f5f5" : "#555",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  {formatPrice(artwork.price)}
+                </span>
                 <span
                   style={{
                     display: "inline-block",
