@@ -195,12 +195,20 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
 
   const selectedVariant = variants.find((v) => v.id === selectedVariantId);
 
-  // ── Color-aware mockup images ─────────────────────────────────────────────
-  // Printify CDN URLs embed the variant ID:
-  //   https://images-api.printify.com/mockup/{productId}/{variantId}/{cameraId}/…
-  // When the user picks a color, we swap every URL's variant ID to the
-  // representative variant for that color (prefer L, fall back to M, then first).
-  // This makes the entire carousel update cohesively on color change.
+  // ── Per-variant vs colorized mockup strategy ─────────────────────────────
+  //
+  // Some products (phone cases, cuff beanies, bucket hats) store ONE mockup image
+  // per variant in the Printify response. Each URL's camera ID is only valid for
+  // its specific variant — swapping the variant segment produces broken CDN links
+  // and makes every thumbnail show the same image (the selected variant's image).
+  //
+  // For these products we skip colorization entirely and instead filter the image
+  // list to only the URLs whose embedded variantId matches the selected variant.
+  // For all other products (tees, hoodies, crewnecks, posters, totes) Printify
+  // shares camera IDs across variants so URL-swapping works correctly.
+  const PER_VARIANT_SLUGS = ["phone-case", "cuff-beanie", "bucket-hat"];
+  const isPerVariant = PER_VARIANT_SLUGS.includes(product.slug);
+
   const representativeVariantId = (color: string | null): number | null => {
     if (!color) return null;
     const colorVars = variants.filter((v) => v.color === color);
@@ -215,11 +223,9 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
     url.replace(/\/mockup\/([^/]+)\/\d+\//, `/mockup/$1/${targetVariantId}/`);
 
   const colorizedMockups = (urls: string[]): string[] => {
-    // Phone cases store one image per phone model variant — each URL already has
-    // the correct variant ID baked in, and the associated camera ID only works for
-    // that variant. Swapping the variant segment would produce broken CDN links.
-    // Navigation for phone cases is handled by the useEffect below (mockupIndex sync).
-    if (product.slug === "phone-case") return urls;
+    // Per-variant products: URLs already have the correct variant ID baked in.
+    // Return unchanged — filtering handles color display below.
+    if (isPerVariant) return urls;
     const targetId = selectedVariantId ?? representativeVariantId(selectedColor);
     if (!targetId) return urls;
     return urls.map((url) =>
@@ -241,7 +247,20 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
 
   // Use artwork-specific mockups if loaded, else fall back to template mockups;
   // then apply color substitution so every image shows the selected color.
-  const displayMockups = colorizedMockups(artworkMockups ?? product.mockupImages ?? []);
+  const rawMockups = colorizedMockups(artworkMockups ?? product.mockupImages ?? []);
+
+  // For per-variant products: only show images for the currently selected variant
+  // so the carousel doesn't mix different colors in the thumbnail strip.
+  const displayMockups = (() => {
+    if (!isPerVariant) return rawMockups;
+    const targetId = selectedVariantId ?? representativeVariantId(selectedColor);
+    if (!targetId) return rawMockups;
+    const filtered = rawMockups.filter((url) => {
+      const m = url.match(/\/mockup\/[^/]+\/(\d+)\//);
+      return m ? parseInt(m[1], 10) === targetId : true;
+    });
+    return filtered.length > 0 ? filtered : rawMockups;
+  })();
   const currentMockup = displayMockups[mockupIndex] ?? displayMockups[0] ?? null;
 
   const isOneSize =
