@@ -11,10 +11,16 @@
 
 import { db, artworksTable } from "@workspace/db";
 import { merchProductsTable } from "@workspace/db/schema";
+import type { SignatureConfig } from "@workspace/db/schema";
 import { printifyRequest, getShopId } from "../lib/printify";
 import { eq } from "drizzle-orm";
 
 const FORCE = process.argv.includes("--force");
+// Optional: scope to a single product slug (e.g. --slug hoodie)
+const SLUG_FILTER = (() => {
+  const idx = process.argv.indexOf("--slug");
+  return idx !== -1 ? process.argv[idx + 1] : null;
+})();
 
 // ── Default artwork for mockup generation ────────────────────────────────────
 const DEFAULT_ARTWORK_SLUG = "grin-and-bear-it";
@@ -32,10 +38,16 @@ interface MerchItemConfig {
   allPrintAreaPositions?: string[]; // extra positions (socks have 4)
   printAreaWidth: number;
   printAreaHeight: number;
-  category: "apparel" | "accessories";
+  category: "apparel" | "accessories" | "print";
   displayOrder: number;
   /** subset of variants to enable (all colors/sizes we support) */
   variants: Array<{ id: number; color: string; size: string }>;
+  /**
+   * Optional: secondary print area with a color-aware wordmark/signature.
+   * When set, createMerchProduct builds two print_areas groups so dark
+   * garments get the white wordmark and light garments get the black one.
+   */
+  signatureConfig?: SignatureConfig;
 }
 
 const MERCH_CONFIG: MerchItemConfig[] = [
@@ -71,14 +83,16 @@ const MERCH_CONFIG: MerchItemConfig[] = [
     slug: "hoodie",
     name: "Gildan Pullover Hoodie",
     description:
-      "Heavyweight 50/50 cotton-poly fleece. Kangaroo pocket, double-lined hood. Large-format front print.",
+      "Heavyweight 50/50 cotton-poly fleece. Kangaroo pocket, double-lined hood. Large-format artwork on the back, artist signature embroidered on the chest.",
     priceCents: 5500, // $55 — est cost ~$20 → ~64% margin
     estimatedCostCents: 2000,
     blueprintId: 77,
     printProviderId: 217,
-    printAreaPosition: "front",
+    // Primary artwork: full back — 2976×3398 portrait, much larger than the front strip.
+    // Artwork is always contain-scaled to honor each painting's orientation.
+    printAreaPosition: "back",
     printAreaWidth: 2976,
-    printAreaHeight: 1982,
+    printAreaHeight: 3398,
     category: "apparel",
     displayOrder: 2,
     variants: [
@@ -98,6 +112,20 @@ const MERCH_CONFIG: MerchItemConfig[] = [
       { id: 32913, color: "White", size: "XL" },
       { id: 32914, color: "White", size: "2XL" },
     ],
+    // Color-aware signature: white wordmark on dark garments, black on white.
+    signatureConfig: {
+      position: "front_left_chest",
+      whiteWordmarkUrl:
+        "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@475907b09a0969a684bac008d7aca675f3138ef4/uploads/2026-04-12T05-30-52-237Z-pd2wptkwr.png",
+      blackWordmarkUrl:
+        "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@232b3d5040a133da0e8c0c29a46a9dc28016d2f8/uploads/2026-04-12T05-31-45-372Z-upz8q5hd4.png",
+      // Black + Navy → white wordmark so it shows on dark fabric
+      darkVariantIds: [32918, 32919, 32920, 32921, 32922, 32894, 32895, 32896, 32897, 32898],
+      // White → black wordmark so it shows on light fabric
+      lightVariantIds: [32910, 32911, 32912, 32913, 32914],
+      areaWidth: 1200,
+      areaHeight: 1200,
+    },
   },
   {
     slug: "crewneck",
@@ -357,36 +385,11 @@ async function createMerchProduct(
   const artW = artwork.imageWidth ?? 2000;
   const artH = artwork.imageHeight ?? 2000;
 
-  const scale = computeScale(artW, artH, config.printAreaWidth, config.printAreaHeight);
+  // Scale-to-contain: fills as much of the print area as possible without
+  // cropping, honouring each painting's natural orientation (portrait/landscape/square).
+  const artworkScale = computeScale(artW, artH, config.printAreaWidth, config.printAreaHeight);
 
-  // Build print areas - main position
-  const positions = config.allPrintAreaPositions ?? [config.printAreaPosition];
-
-  const printAreas = positions.map((pos) => ({
-    variant_ids: config.variants.map((v) => v.id),
-    placeholders: [
-      {
-        position: pos,
-        images: [
-          {
-            id: "default", // Will be replaced by Printify after upload
-            name: `${artwork.title} — ${config.name}`,
-            type: "image/jpeg",
-            // Printify ignores width/height (normalizes to actual file dims).
-            // Only scale matters — use artW/artH for semantic clarity.
-            width: artW,
-            height: artH,
-            x: 0.5,
-            y: 0.5,
-            scale,
-            angle: 0,
-          },
-        ],
-      },
-    ],
-  }));
-
-  // First, upload the image to Printify
+  // Upload the artwork image to Printify
   const uploadRes = await printifyRequest(`/uploads/images.json`, {
     method: "POST",
     body: JSON.stringify({
@@ -394,31 +397,123 @@ async function createMerchProduct(
       url: artwork.imageUrl,
     }),
   }) as { id: string };
-
   const imageId = uploadRes.id;
 
-  // Build print areas with real image ID
-  const printAreasWithId = positions.map((pos) => ({
-    variant_ids: config.variants.map((v) => v.id),
-    placeholders: [
+  // ── Build print_areas array ──────────────────────────────────────────────
+  let printAreasWithId: object[];
+
+  const sig = config.signatureConfig;
+
+  if (sig) {
+    // Products with a color-aware signature (e.g. hoodie):
+    //   • Two print_areas groups split by dark vs light variant IDs.
+    //   • Each group gets the artwork on the primary position (back) AND
+    //     the correct wordmark on the secondary position (front_left_chest).
+    //   • Artwork scale-to-contain is always computed from the actual image dims.
+
+    // Upload both wordmarks (can happen in parallel)
+    const [whiteUpload, blackUpload] = await Promise.all([
+      printifyRequest(`/uploads/images.json`, {
+        method: "POST",
+        body: JSON.stringify({
+          file_name: "wordmark-white.png",
+          url: sig.whiteWordmarkUrl,
+        }),
+      }) as Promise<{ id: string }>,
+      printifyRequest(`/uploads/images.json`, {
+        method: "POST",
+        body: JSON.stringify({
+          file_name: "wordmark-black.png",
+          url: sig.blackWordmarkUrl,
+        }),
+      }) as Promise<{ id: string }>,
+    ]);
+
+    // Compute contain-scale for each wordmark against the embroidery area.
+    // We don't know wordmark pixel dims ahead of time, but Printify normalises
+    // width/height to the actual file — so we just pass the area dims here and
+    // Printify will use the real uploaded dimensions internally.
+    // We use scale=1.0 intentionally for the wordmark so it fills the embroidery
+    // area at maximum size; the PNG transparency prevents overflow artifacts.
+    const wordmarkScale = 1.0;
+
+    const artworkPlaceholder = (imgId: string) => ({
+      position: config.printAreaPosition,
+      images: [
+        {
+          id: imgId,
+          name: `${artwork.title} — ${config.name}`,
+          type: "image/jpeg",
+          width: artW,
+          height: artH,
+          x: 0.5,
+          y: 0.5,
+          scale: artworkScale,
+          angle: 0,
+        },
+      ],
+    });
+
+    const signaturePlaceholder = (wordmarkId: string) => ({
+      position: sig.position,
+      images: [
+        {
+          id: wordmarkId,
+          name: "Artist Signature",
+          type: "image/png",
+          width: sig.areaWidth,
+          height: sig.areaHeight,
+          x: 0.5,
+          y: 0.5,
+          scale: wordmarkScale,
+          angle: 0,
+        },
+      ],
+    });
+
+    printAreasWithId = [
+      // Dark variants (Black, Navy) → white wordmark
       {
-        position: pos,
-        images: [
-          {
-            id: imageId,
-            name: `${artwork.title} — ${config.name}`,
-            type: "image/jpeg",
-            width: artW,
-            height: artH,
-            x: 0.5,
-            y: 0.5,
-            scale,
-            angle: 0,
-          },
+        variant_ids: sig.darkVariantIds,
+        placeholders: [
+          artworkPlaceholder(imageId),
+          signaturePlaceholder(whiteUpload.id),
         ],
       },
-    ],
-  }));
+      // Light variants (White) → black wordmark
+      {
+        variant_ids: sig.lightVariantIds,
+        placeholders: [
+          artworkPlaceholder(imageId),
+          signaturePlaceholder(blackUpload.id),
+        ],
+      },
+    ];
+  } else {
+    // Standard products: single group covering all variants, one or more positions.
+    const positions = config.allPrintAreaPositions ?? [config.printAreaPosition];
+    printAreasWithId = positions.map((pos) => ({
+      variant_ids: config.variants.map((v) => v.id),
+      placeholders: [
+        {
+          position: pos,
+          images: [
+            {
+              id: imageId,
+              name: `${artwork.title} — ${config.name}`,
+              type: "image/jpeg",
+              width: artW,
+              height: artH,
+              x: 0.5,
+              y: 0.5,
+              scale: artworkScale,
+              angle: 0,
+            },
+          ],
+        },
+      ],
+    }));
+  }
 
   const product = await printifyRequest(`/shops/${shopId}/products.json`, {
     method: "POST",
@@ -449,7 +544,9 @@ async function createMerchProduct(
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
   console.log("=== Merch Provisioning Script ===");
-  console.log(`Mode: ${FORCE ? "FORCE (recreate all)" : "incremental (skip existing)"}\n`);
+  console.log(`Mode: ${FORCE ? "FORCE (recreate all)" : "incremental (skip existing)"}`);
+  if (SLUG_FILTER) console.log(`Scoped to: ${SLUG_FILTER}`);
+  console.log();
 
   const shopId = await getShopId();
   console.log(`Shop ID: ${shopId}\n`);
@@ -469,7 +566,15 @@ async function main() {
   let skipped = 0;
   let failed = 0;
 
-  for (const config of MERCH_CONFIG) {
+  const configsToRun = SLUG_FILTER
+    ? MERCH_CONFIG.filter((c) => c.slug === SLUG_FILTER)
+    : MERCH_CONFIG;
+
+  if (SLUG_FILTER && configsToRun.length === 0) {
+    throw new Error(`No merch config found for slug '${SLUG_FILTER}'`);
+  }
+
+  for (const config of configsToRun) {
     const margin = (((config.priceCents - config.estimatedCostCents) / config.priceCents) * 100).toFixed(0);
     console.log(`\n[${config.displayOrder}/10] ${config.name} (${config.slug})`);
     console.log(`  Price: $${(config.priceCents / 100).toFixed(2)} | Est cost: $${(config.estimatedCostCents / 100).toFixed(2)} | Margin: ~${margin}%`);
@@ -517,6 +622,7 @@ async function main() {
           color: v.color,
           size: v.size,
         })),
+        signatureConfig: config.signatureConfig ?? null,
         category: config.category,
         displayOrder: config.displayOrder,
         isActive: true,

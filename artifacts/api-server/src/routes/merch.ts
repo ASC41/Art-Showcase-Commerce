@@ -4,7 +4,7 @@ import {
   merchProductsTable,
   merchArtworkProductsTable,
 } from "@workspace/db/schema";
-import type { MerchVariant } from "@workspace/db/schema";
+import type { MerchVariant, SignatureConfig } from "@workspace/db/schema";
 import { asc, and, eq } from "drizzle-orm";
 import { printifyRequest, getShopId } from "../lib/printify";
 
@@ -130,31 +130,17 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
 
     const shopId = await getShopId();
 
-    // Scale-to-contain: prevents artwork cropping regardless of orientation mismatch.
-    //
-    // KEY FACT (confirmed from Printify API response): Printify IGNORES the width/height
-    // fields we send — it always normalizes them to the actual uploaded image dimensions.
-    // Only `scale` affects rendering.
-    //
-    // At scale=1.0 Printify uses COVER semantics: it fills the print area by whichever
-    // dimension requires the LARGER scale-up factor, causing the other dimension to
-    // overflow and be clipped. For portrait artwork in a portrait area (artRatio < areaRatio):
-    //   - fill factor by width: areaW/artW  (larger)
-    //   - fill factor by height: areaH/artH (smaller)
-    //   → fills by WIDTH → height rendered = artH × (areaW/artW) > areaH → TOP/BOTTOM CROPPED
-    //
-    // CONTAIN scale = (smaller fill factor) / (larger fill factor)
-    //              = min(areaW/artW, areaH/artH) / max(areaW/artW, areaH/artH)
-    //              = min(artRatio, areaRatio)    / max(artRatio, areaRatio)
-    //
-    // At this scale the longer overflowing dimension now exactly fits → zero cropping.
+    // Scale-to-contain for the artwork: prevents cropping regardless of orientation.
+    // Printify IGNORES width/height fields (normalises to actual file dims).
+    // At scale=1.0 Printify COVERS (crops). CONTAIN = min(r,ar)/max(r,ar).
+    // Using actual artwork pixel dims honours portrait/landscape/square paintings.
     const artW = artwork.imageWidth ?? 3000;
     const artH = artwork.imageHeight ?? 3000;
     const areaW = merch.printAreaWidth ?? 3000;
     const areaH = merch.printAreaHeight ?? 3000;
     const artRatio = artW / artH;
     const areaRatio = areaW / areaH;
-    const scale = Math.min(artRatio, areaRatio) / Math.max(artRatio, areaRatio);
+    const artworkScale = Math.min(artRatio, areaRatio) / Math.max(artRatio, areaRatio);
 
     // Upload artwork image to Printify
     const uploadRes = await printifyRequest("/uploads/images.json", {
@@ -167,6 +153,95 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
 
     const imageId = uploadRes.id;
     const variants = (merch.variants ?? []) as MerchVariant[];
+    const sig = merch.signatureConfig as SignatureConfig | null;
+
+    // ── Build print_areas ─────────────────────────────────────────────────────
+    let printAreas: object[];
+
+    if (sig) {
+      // Color-aware signature product (e.g. hoodie):
+      //   dark variants → white wordmark; light variants → black wordmark.
+      // Both wordmark uploads can happen in parallel.
+      const [whiteUpload, blackUpload] = await Promise.all([
+        printifyRequest("/uploads/images.json", {
+          method: "POST",
+          body: JSON.stringify({ file_name: "wordmark-white.png", url: sig.whiteWordmarkUrl }),
+        }) as Promise<{ id: string }>,
+        printifyRequest("/uploads/images.json", {
+          method: "POST",
+          body: JSON.stringify({ file_name: "wordmark-black.png", url: sig.blackWordmarkUrl }),
+        }) as Promise<{ id: string }>,
+      ]);
+
+      const artworkPlaceholder = {
+        position: merch.printAreaPosition,
+        images: [
+          {
+            id: imageId,
+            name: `${artwork.title} — ${merch.name}`,
+            type: "image/jpeg",
+            width: artW,
+            height: artH,
+            x: 0.5,
+            y: 0.5,
+            scale: artworkScale,
+            angle: 0,
+          },
+        ],
+      };
+
+      const signaturePlaceholder = (wordmarkId: string) => ({
+        position: sig.position,
+        images: [
+          {
+            id: wordmarkId,
+            name: "Artist Signature",
+            type: "image/png",
+            width: sig.areaWidth,
+            height: sig.areaHeight,
+            x: 0.5,
+            y: 0.5,
+            scale: 1.0,
+            angle: 0,
+          },
+        ],
+      });
+
+      printAreas = [
+        {
+          variant_ids: sig.darkVariantIds,
+          placeholders: [artworkPlaceholder, signaturePlaceholder(whiteUpload.id)],
+        },
+        {
+          variant_ids: sig.lightVariantIds,
+          placeholders: [artworkPlaceholder, signaturePlaceholder(blackUpload.id)],
+        },
+      ];
+    } else {
+      printAreas = [
+        {
+          variant_ids: variants.map((v) => v.id),
+          placeholders: [
+            {
+              position: merch.printAreaPosition,
+              images: [
+                {
+                  id: imageId,
+                  name: `${artwork.title} — ${merch.name}`,
+                  type: "image/jpeg",
+                  width: artW,
+                  height: artH,
+                  x: 0.5,
+                  y: 0.5,
+                  scale: artworkScale,
+                  angle: 0,
+                },
+              ],
+            },
+          ],
+        },
+      ];
+    }
 
     // Create the product on Printify
     const product = await printifyRequest(`/shops/${shopId}/products.json`, {
@@ -180,31 +255,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
           price: merch.priceCents,
           is_enabled: true,
         })),
-        print_areas: [
-          {
-            variant_ids: variants.map((v) => v.id),
-            placeholders: [
-              {
-                position: merch.printAreaPosition,
-                images: [
-                  {
-                    id: imageId,
-                    name: `${artwork.title} — ${merch.name}`,
-                    type: "image/jpeg",
-                    // Printify normalizes width/height to the actual uploaded file dims;
-                    // pass real artwork dims here for semantic clarity.
-                    width: artW,
-                    height: artH,
-                    x: 0.5,
-                    y: 0.5,
-                    scale,
-                    angle: 0,
-                  },
-                ],
-              },
-            ],
-          },
-        ],
+        print_areas: printAreas,
       }),
     }) as { id: string; images: Array<{ src: string; is_default?: boolean }> };
 

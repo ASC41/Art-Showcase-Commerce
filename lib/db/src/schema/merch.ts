@@ -16,6 +16,24 @@ export interface MerchVariant {
   size: string;
 }
 
+/**
+ * Per-product signature/wordmark placement config.
+ * When present, the product has a secondary print area (e.g. front_left_chest)
+ * with a color-aware wordmark: dark variants get the white wordmark, light
+ * variants get the black wordmark.
+ */
+export interface SignatureConfig {
+  position: string;
+  whiteWordmarkUrl: string;
+  blackWordmarkUrl: string;
+  /** Variant IDs that should receive the white wordmark (dark garments) */
+  darkVariantIds: number[];
+  /** Variant IDs that should receive the black wordmark (light garments) */
+  lightVariantIds: number[];
+  areaWidth: number;
+  areaHeight: number;
+}
+
 export const merchProductsTable = pgTable("merch_products", {
   id: serial("id").primaryKey(),
   slug: text("slug").notNull().unique(),
@@ -31,6 +49,7 @@ export const merchProductsTable = pgTable("merch_products", {
   printifyProductId: text("printify_product_id"),
   mockupImages: text("mockup_images").array(),
   variants: jsonb("variants").$type<MerchVariant[]>(),
+  signatureConfig: jsonb("signature_config").$type<SignatureConfig>(),
   category: text("category").notNull().default("apparel"),
   displayOrder: integer("display_order").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
