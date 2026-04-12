@@ -11,7 +11,7 @@ export const ARTWORK_ASPECT: Record<string, number> = {
   "the-warm-waking-cold": 2156 / 1792,
   "endure":               2374 / 1776,
   "hope-far-away-hope":   2101 / 1503,
-  "untitled-01":          925  / 1490,
+  "she-runs-these-hills": 925  / 1490,
   "untitled-02":          2390 / 1792,
   "untitled-03":          2462 / 1728,
   "untitled-04":          1607 / 2456,
