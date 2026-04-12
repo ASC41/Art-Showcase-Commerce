@@ -791,6 +791,30 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
         .sort((a, b) => totePriority(a[0]) - totePriority(b[0]))
         .map(([, url]) => url)
         .slice(0, 6);
+    } else if (merch.slug === "giclee-print") {
+      // Giclée prints: show exactly ONE flat front image per artwork.
+      //
+      // Printify generates one `front` mockup per size variant, all rendered at
+      // the same camera distance — so the small 8×11 print fills less of the
+      // frame than the 16×20, making the white border look proportionally wider
+      // on each. Showing all 4 front images side-by-side gives the impression of
+      // inconsistent borders. `context` lifestyle shots (print tiny on a wall)
+      // make this worse. Solution: pick ONE representative front image.
+      //
+      // Preferred variants (middle tier — best compromise of detail vs. scale):
+      //   Portrait: 66043 (12" × 18")
+      //   Landscape: 66045 (18" × 12")
+      const isLandscapeArtwork = dispW > dispH;
+      const preferredVariantId = isLandscapeArtwork ? 66045 : 66043;
+      const frontImages = (product.images ?? [])
+        .filter((img) => img.src && cameraLabel(img.src) === "front");
+
+      const preferred = frontImages.find(
+        (img) => variantIdFromUrl(img.src) === preferredVariantId
+      );
+      const fallback = frontImages[0];
+      const chosen = preferred ?? fallback;
+      mockupImages = chosen ? [chosen.src] : [];
     } else {
       mockupImages = (product.images ?? [])
         .filter((img) => img.src)
