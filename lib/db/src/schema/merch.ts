@@ -32,6 +32,15 @@ export interface SignatureConfig {
   lightVariantIds: number[];
   areaWidth: number;
   areaHeight: number;
+  /**
+   * Optional placement overrides. Defaults: x=0.5, y=0.5 (centered).
+   * signatureScale overrides the computed contain-scale — use when the wordmark
+   * should be smaller than a full contain-fit of the print area (e.g. a small
+   * upper-back logo on a large back print area).
+   */
+  signatureX?: number;
+  signatureY?: number;
+  signatureScale?: number;
 }
 
 export const merchProductsTable = pgTable("merch_products", {

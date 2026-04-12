@@ -81,6 +81,26 @@ const MERCH_CONFIG: MerchItemConfig[] = [
       { id: 73211, color: "White", size: "XL" },
       { id: 73215, color: "White", size: "2XL" },
     ],
+    // Small centered-top wordmark on the back.
+    // Back print area: 3461×3955 (same as front).
+    // signatureScale=0.30 → ~4" wide at 277 DPI (same physical size as hoodie chest logo).
+    // signatureY=0.20  → center at 20% from top of back panel (upper-back placement).
+    signatureConfig: {
+      position: "back",
+      whiteWordmarkUrl:
+        "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@475907b09a0969a684bac008d7aca675f3138ef4/uploads/2026-04-12T05-30-52-237Z-pd2wptkwr.png",
+      blackWordmarkUrl:
+        "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@232b3d5040a133da0e8c0c29a46a9dc28016d2f8/uploads/2026-04-12T05-31-45-372Z-upz8q5hd4.png",
+      // Black → white wordmark so it shows on dark fabric
+      darkVariantIds: [73196, 73200, 73204, 73208, 73212],
+      // White → black wordmark so it shows on light fabric
+      lightVariantIds: [73199, 73203, 73207, 73211, 73215],
+      areaWidth: 3461,
+      areaHeight: 3955,
+      signatureX: 0.5,
+      signatureY: 0.20,
+      signatureScale: 0.30,
+    },
   },
   {
     slug: "hoodie",
@@ -443,18 +463,18 @@ async function createMerchProduct(
       ],
     });
 
-    const signaturePlaceholder = (wordmarkId: string, wordmarkScale: number) => ({
+    const signaturePlaceholder = (wordmarkId: string, wordmarkScale: number, uploadW: number, uploadH: number) => ({
       position: sig.position,
       images: [
         {
           id: wordmarkId,
-          name: "Artist Signature",
+          name: "Artist Wordmark",
           type: "image/png",
-          width: sig.areaWidth,
-          height: sig.areaHeight,
-          x: 0.5,
-          y: 0.5,
-          scale: wordmarkScale,
+          width: uploadW,
+          height: uploadH,
+          x: sig.signatureX ?? 0.5,
+          y: sig.signatureY ?? 0.5,
+          scale: sig.signatureScale ?? wordmarkScale,
           angle: 0,
         },
       ],
@@ -466,7 +486,7 @@ async function createMerchProduct(
         variant_ids: sig.darkVariantIds,
         placeholders: [
           artworkPlaceholder(imageId),
-          signaturePlaceholder(whiteUpload.id, whiteWordmarkScale),
+          signaturePlaceholder(whiteUpload.id, whiteWordmarkScale, whiteUpload.width, whiteUpload.height),
         ],
       },
       // Light variants (White) → black wordmark
@@ -474,7 +494,7 @@ async function createMerchProduct(
         variant_ids: sig.lightVariantIds,
         placeholders: [
           artworkPlaceholder(imageId),
-          signaturePlaceholder(blackUpload.id, blackWordmarkScale),
+          signaturePlaceholder(blackUpload.id, blackWordmarkScale, blackUpload.width, blackUpload.height),
         ],
       },
     ];

@@ -206,18 +206,23 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
         ],
       };
 
-      const signaturePlaceholder = (wordmarkId: string, wordmarkScale: number) => ({
+      const signaturePlaceholder = (
+        wordmarkId: string,
+        wordmarkScale: number,
+        uploadW: number,
+        uploadH: number
+      ) => ({
         position: sig.position,
         images: [
           {
             id: wordmarkId,
-            name: "Artist Signature",
+            name: "Artist Wordmark",
             type: "image/png",
-            width: sig.areaWidth,
-            height: sig.areaHeight,
-            x: 0.5,
-            y: 0.5,
-            scale: wordmarkScale,
+            width: uploadW,
+            height: uploadH,
+            x: sig.signatureX ?? 0.5,
+            y: sig.signatureY ?? 0.5,
+            scale: sig.signatureScale ?? wordmarkScale,
             angle: 0,
           },
         ],
@@ -226,11 +231,17 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
       printAreas = [
         {
           variant_ids: sig.darkVariantIds,
-          placeholders: [artworkPlaceholder, signaturePlaceholder(whiteUpload.id, whiteWordmarkScale)],
+          placeholders: [
+            artworkPlaceholder,
+            signaturePlaceholder(whiteUpload.id, whiteWordmarkScale, whiteUpload.width, whiteUpload.height),
+          ],
         },
         {
           variant_ids: sig.lightVariantIds,
-          placeholders: [artworkPlaceholder, signaturePlaceholder(blackUpload.id, blackWordmarkScale)],
+          placeholders: [
+            artworkPlaceholder,
+            signaturePlaceholder(blackUpload.id, blackWordmarkScale, blackUpload.width, blackUpload.height),
+          ],
         },
       ];
     } else {
@@ -291,28 +302,44 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
       return 5;
     };
 
-    // Priority for signature products (e.g. hoodie): person shots surface before flat
-    // ghost front because Printify does NOT render front_left_chest in flat ghost front
-    // shots. Person/lifestyle shots (real person wearing the hoodie) DO render the
-    // left-chest print, making the wordmark visible. Flat "front" is excluded entirely
-    // (priority 99) so it doesn't consume a slot when better shots exist.
+    // Priority for signature products — two modes:
+    //
+    // Hoodie (sig.position = "front_left_chest"): artwork on back, wordmark on chest.
+    //   0=back(artwork), 1=person-1(model+wordmark), 2=collar-closeup, 3=person-4-back,
+    //   4=folded. Flat "front" excluded (Printify never renders front_left_chest there).
+    //
+    // T-shirt (sig.position = "back"): artwork on front, wordmark on back.
+    //   0=front(artwork), 1=back(wordmark), 2=person-1-front, 3=person-1-back, 4=folded.
+    //   Sleeve/size-chart shots excluded.
+    const sigIsBackPos = sig.position === "back" || sig.position === "back-2";
     const sigCameraPriority = (url: string) => {
       const label = cameraLabel(url);
+      if (sigIsBackPos) {
+        // T-shirt: artwork front, wordmark back
+        if (label === "front") return 0;
+        if (label === "back") return 1;
+        if (label === "person-1-front" || label === "person-2") return 2;
+        if (label === "person-1-back") return 3;
+        if (label === "folded") return 4;
+        if (label.includes("sleeve")) return 99;  // no sleeve shots
+        if (label === "size-chart") return 99;
+        if (label.includes("context")) return 6;
+        if (label.startsWith("person")) return 5;
+        return 6;
+      }
+      // Hoodie: artwork back, wordmark front_left_chest
       if (label === "back") return 0;
-      if (label === "person-1") return 1;       // model front — wordmark visible on chest
+      if (label === "person-1") return 1;
       if (label.includes("collar") || label === "front-collar-closeup") return 2;
-      if (label === "person-4-back") return 3;  // model back — artwork visible; no cuff issue
+      if (label === "person-4-back") return 3;
       if (label === "folded") return 4;
-      if (label === "back-2") return 99;        // excluded — shows sleeve cuff print areas
-      if (label.startsWith("person")) return 5; // other person shots deprioritised
-      if (label === "front") return 99;         // excluded — never renders front_left_chest
+      if (label === "back-2") return 99;
+      if (label.startsWith("person")) return 5;
+      if (label === "front") return 99;
       return 6;
     };
 
-    // For signature products (e.g. hoodie), pick variant-aware images per angle:
-    //   front-facing angles → dark variant (Black) so the WHITE wordmark is clearly
-    //   visible on dark fabric; back angles → light variant (White) so the artwork
-    //   prints on a neutral background and pops.
+    // For signature products, pick variant-aware images per angle.
     // We extract the variant ID embedded in Printify's CDN URL pattern:
     //   https://images-api.printify.com/mockup/{productId}/{variantId}/{cameraId}/...
     const variantIdFromUrl = (url: string): number | null => {
@@ -324,10 +351,31 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     if (sig) {
       const darkIds = new Set(sig.darkVariantIds);
       const lightIds = new Set(sig.lightVariantIds);
-      const isFrontAngle = (label: string) =>
-        label === "front" || label.includes("collar") || label.startsWith("person");
-      const isBackAngle = (label: string) =>
-        label === "back" || label === "back-2" || label === "folded";
+
+      // Variant preference per angle type:
+      //
+      // sig on FRONT (e.g. hoodie front_left_chest):
+      //   front/person angles → dark (white wordmark visible on dark fabric)
+      //   back/folded angles  → light (artwork on neutral background)
+      //
+      // sig on BACK (e.g. t-shirt back):
+      //   front/back/person angles → dark (white wordmark visible on dark fabric)
+      //   folded only              → light (clean product shot)
+      const preferDarkLabel = (label: string) => {
+        if (sigIsBackPos) {
+          // Everything except folded shows white wordmark on dark fabric
+          return label !== "folded";
+        }
+        // Hoodie: front/person shots prefer dark
+        return label === "front" || label.includes("collar") || label.startsWith("person");
+      };
+      const preferLightLabel = (label: string) => {
+        if (sigIsBackPos) {
+          return label === "folded";
+        }
+        // Hoodie: back/folded prefer light
+        return label === "back" || label === "back-2" || label === "folded";
+      };
 
       // Group all candidate URLs by camera label
       const byLabel = new Map<string, string[]>();
@@ -342,20 +390,19 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
       // For each label group, pick the best-variant image
       const chosen: string[] = [];
       for (const [label, urls] of byLabel) {
-        const preferDark = isFrontAngle(label);
-        const preferLight = isBackAngle(label);
+        const wantDark = preferDarkLabel(label);
+        const wantLight = preferLightLabel(label);
         let best = urls[0];
         for (const url of urls) {
           const vid = variantIdFromUrl(url);
           if (vid === null) continue;
-          if (preferDark && darkIds.has(vid)) { best = url; break; }
-          if (preferLight && lightIds.has(vid)) { best = url; break; }
+          if (wantDark && darkIds.has(vid)) { best = url; break; }
+          if (wantLight && lightIds.has(vid)) { best = url; break; }
         }
         chosen.push(best);
       }
 
-      // Keep only the 5 defined slots: back, person-1, collar, back-2, folded.
-      // Priority >= 5 means extra person shots (person-2+) or unknown — excluded.
+      // Keep only the 5 priority slots; everything else is excluded or deprioritised.
       mockupImages = chosen
         .filter((url) => sigCameraPriority(url) < 5)
         .sort((a, b) => sigCameraPriority(a) - sigCameraPriority(b))
