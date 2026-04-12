@@ -41,6 +41,13 @@ export interface SignatureConfig {
   signatureX?: number;
   signatureY?: number;
   signatureScale?: number;
+  /**
+   * When the wordmark should appear on multiple print areas simultaneously
+   * (e.g. both wrists of a crewneck), list all positions here.
+   * If set, overrides `position` for the purposes of placeholder generation.
+   * `position` is still used for camera-priority and variant-preference logic.
+   */
+  signaturePositions?: string[];
 }
 
 export const merchProductsTable = pgTable("merch_products", {

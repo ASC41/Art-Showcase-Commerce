@@ -181,6 +181,27 @@ const MERCH_CONFIG: MerchItemConfig[] = [
       { id: 25489, color: "White", size: "XL" },
       { id: 25520, color: "White", size: "2XL" },
     ],
+    // Small centered wordmark on both wrists (left_wrist_dtf + right_wrist_dtf).
+    // Wrist DTF area: 1050×1050 (square) — same family as hoodie front_left_chest.
+    // signatureScale=0.5 → ~2" wide at ~248 DPI (tasteful cuff logo).
+    // signaturePositions covers both wrists; position="left_wrist_dtf" drives camera priority.
+    signatureConfig: {
+      position: "left_wrist_dtf",
+      signaturePositions: ["left_wrist_dtf", "right_wrist_dtf"],
+      whiteWordmarkUrl:
+        "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@475907b09a0969a684bac008d7aca675f3138ef4/uploads/2026-04-12T05-30-52-237Z-pd2wptkwr.png",
+      blackWordmarkUrl:
+        "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@232b3d5040a133da0e8c0c29a46a9dc28016d2f8/uploads/2026-04-12T05-31-45-372Z-upz8q5hd4.png",
+      // Black + Navy → white wordmark so it shows on dark fabric
+      darkVariantIds: [25397, 25428, 25459, 25490, 25521, 25388, 25419, 25450, 25481, 25512],
+      // White → black wordmark so it shows on light fabric
+      lightVariantIds: [25396, 25427, 25458, 25489, 25520],
+      areaWidth: 1050,
+      areaHeight: 1050,
+      signatureX: 0.5,
+      signatureY: 0.5,
+      signatureScale: 0.5,
+    },
   },
   {
     slug: "phone-case",
@@ -463,22 +484,25 @@ async function createMerchProduct(
       ],
     });
 
-    const signaturePlaceholder = (wordmarkId: string, wordmarkScale: number, uploadW: number, uploadH: number) => ({
-      position: sig.position,
-      images: [
-        {
-          id: wordmarkId,
-          name: "Artist Wordmark",
-          type: "image/png",
-          width: uploadW,
-          height: uploadH,
-          x: sig.signatureX ?? 0.5,
-          y: sig.signatureY ?? 0.5,
-          scale: sig.signatureScale ?? wordmarkScale,
-          angle: 0,
-        },
-      ],
-    });
+    // Build one placeholder per sig position (supports multi-area: e.g. both wrists)
+    const sigPositions = sig.signaturePositions ?? [sig.position];
+    const signaturePlaceholders = (wordmarkId: string, wordmarkScale: number, uploadW: number, uploadH: number) =>
+      sigPositions.map((pos) => ({
+        position: pos,
+        images: [
+          {
+            id: wordmarkId,
+            name: "Artist Wordmark",
+            type: "image/png",
+            width: uploadW,
+            height: uploadH,
+            x: sig.signatureX ?? 0.5,
+            y: sig.signatureY ?? 0.5,
+            scale: sig.signatureScale ?? wordmarkScale,
+            angle: 0,
+          },
+        ],
+      }));
 
     printAreasWithId = [
       // Dark variants (Black, Navy) → white wordmark
@@ -486,7 +510,7 @@ async function createMerchProduct(
         variant_ids: sig.darkVariantIds,
         placeholders: [
           artworkPlaceholder(imageId),
-          signaturePlaceholder(whiteUpload.id, whiteWordmarkScale, whiteUpload.width, whiteUpload.height),
+          ...signaturePlaceholders(whiteUpload.id, whiteWordmarkScale, whiteUpload.width, whiteUpload.height),
         ],
       },
       // Light variants (White) → black wordmark
@@ -494,7 +518,7 @@ async function createMerchProduct(
         variant_ids: sig.lightVariantIds,
         placeholders: [
           artworkPlaceholder(imageId),
-          signaturePlaceholder(blackUpload.id, blackWordmarkScale, blackUpload.width, blackUpload.height),
+          ...signaturePlaceholders(blackUpload.id, blackWordmarkScale, blackUpload.width, blackUpload.height),
         ],
       },
     ];
