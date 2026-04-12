@@ -391,3 +391,17 @@
     inset: -1px;
   }
 }
+
+.merch-lightbox-close {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 24px);
+  right: 24px;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 10;
+  line-height: 1;
+  padding: 8px;
+}

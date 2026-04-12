@@ -356,19 +356,7 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
           {/* Close button */}
           <button
             onClick={onClose}
-            style={{
-              position: "fixed",
-              top: "24px",
-              right: "24px",
-              background: "none",
-              border: "none",
-              color: "#888",
-              fontSize: "24px",
-              cursor: "pointer",
-              zIndex: 10,
-              lineHeight: 1,
-              padding: "8px",
-            }}
+            className="merch-lightbox-close"
           >
             ✕
           </button>
