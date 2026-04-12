@@ -17,7 +17,7 @@ export const ARTWORK_ASPECT: Record<string, number> = {
   "untitled-04":          1607 / 2456,
   "untitled-05":          2371 / 1792,
   "be-no-evil":           1081 / 811,
-  "untitled-07":          856  / 848,
+  "the-lights-too-bright-the-sound-too-loud": 856  / 848,
   "untitled-08":          1296 / 972,
   "untitled-09":          1296 / 972,
   "untitled-10":          1296 / 972,
