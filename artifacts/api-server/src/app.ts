@@ -1,9 +1,22 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import helmet from "helmet";
 import router from "./routes";
 import { handleStripeWebhook } from "./routes/checkout";
 
 const app: Express = express();
+
+// Security headers — remove X-Powered-By, add X-Content-Type-Options,
+// X-Frame-Options, Referrer-Policy, Strict-Transport-Security, etc.
+// contentSecurityPolicy disabled: this is a JSON API, not an HTML app.
+// crossOriginEmbedderPolicy disabled: would block cross-origin image fetches
+// used by the live mockup generation route.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
 app.use(cors());
 
