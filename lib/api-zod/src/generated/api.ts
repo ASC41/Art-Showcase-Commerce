@@ -34,6 +34,7 @@ export const ListArtworksResponseItem = zod.object({
   hasMattePrint: zod.boolean(),
   hasFramedPrint: zod.boolean(),
   imageOrientation: zod.enum(["portrait", "landscape", "square"]).optional(),
+  imageRotation: zod.number().int().nullable().optional(),
   createdAt: zod.date(),
 });
 export const ListArtworksResponse = zod.array(ListArtworksResponseItem);
@@ -60,6 +61,7 @@ export const GetArtworkResponse = zod.object({
   hasMattePrint: zod.boolean(),
   hasFramedPrint: zod.boolean(),
   imageOrientation: zod.enum(["portrait", "landscape", "square"]).optional(),
+  imageRotation: zod.number().int().nullable().optional(),
   createdAt: zod.date(),
 });
 

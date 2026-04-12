@@ -147,6 +147,11 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     //   For very wide art (ratio > 2.128): scale=1.0 → fills panel width, top/bottom margins
     const artW = artwork.imageWidth ?? 3000;
     const artH = artwork.imageHeight ?? 3000;
+    // If the image file is stored rotated (e.g. portrait file displayed landscape via -90°),
+    // derive the display-space dimensions so orientation/scale math matches the visual.
+    const artRotation = artwork.imageRotation ?? 0;
+    const dispW = artRotation === 90 || artRotation === -90 ? artH : artW;
+    const dispH = artRotation === 90 || artRotation === -90 ? artW : artH;
     const areaW = merch.printAreaWidth ?? 3000;
     const areaH = merch.printAreaHeight ?? 3000;
     const artRatio = artW / artH;
@@ -454,13 +459,15 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
       //   Each size has a different aspect ratio, so scale is computed individually.
       //   Orientation filtering ensures portrait art only shows on portrait sizes, etc.
       //   Uses gicleeScaleFor() so all four margins are equal pixels — no flush edges.
-      const artOrient = artH > artW * 1.05 ? "portrait" : artW > artH * 1.05 ? "landscape" : "square";
+      // Use display-space dimensions so rotated images (e.g. portrait file shown landscape)
+      // pick the correct giclée variant orientation.
+      const artOrient = dispH > dispW * 1.05 ? "portrait" : dispW > dispH * 1.05 ? "landscape" : "square";
       // Equal-border scale: (areaW - s*areaW)/2 = (areaH - s*areaW/artRatio)/2
       // → s = (areaW - areaH) / (areaW × (1 - 1/artRatio))
       // Caps at 90% of CONTAIN (visible border when ratios nearly match) and
       // floors at 70% of CONTAIN (artwork stays large enough for a good mockup).
       const gicleeScaleFor = (vAreaW: number, vAreaH: number) => {
-        const ar = artW / artH;
+        const ar = dispW / dispH;
         const containS = Math.min(ar, vAreaW / vAreaH) / Math.max(ar, vAreaW / vAreaH);
         const denom = vAreaW * (1 - 1 / ar);
         const equalBorderS = Math.abs(denom) > 0.5 ? (vAreaW - vAreaH) / denom : containS;
@@ -488,7 +495,9 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
                   x: 0.5,
                   y: 0.5,
                   scale: gicleeScaleFor(vAreaW, vAreaH),
-                  angle: 0,
+                  // Rotate the artwork in the Printify composer to match the display orientation.
+                  // For "A Cry for Help" (portrait file, displayed landscape): angle=-90.
+                  angle: artRotation,
                 },
               ],
             },

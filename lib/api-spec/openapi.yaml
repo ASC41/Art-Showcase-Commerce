@@ -196,6 +196,8 @@ components:
         imageOrientation:
           type: string
           enum: [portrait, landscape, square]
+        imageRotation:
+          type: ["integer", "null"]
         createdAt:
           type: string
           format: date-time

@@ -39,6 +39,7 @@ export interface Artwork {
   hasMattePrint: boolean;
   hasFramedPrint: boolean;
   imageOrientation?: ArtworkImageOrientation;
+  imageRotation?: number | null;
   createdAt: string;
 }
 

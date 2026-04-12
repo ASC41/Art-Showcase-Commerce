@@ -4,9 +4,17 @@ import { asc, eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-function deriveOrientation(w: number | null, h: number | null): "portrait" | "landscape" | "square" {
+// Derives the DISPLAYED orientation — swaps width/height for ±90° rotated images.
+function deriveOrientation(
+  w: number | null,
+  h: number | null,
+  rotation?: number | null,
+): "portrait" | "landscape" | "square" {
   if (!w || !h) return "portrait";
-  const ratio = w / h;
+  // ±90° rotation swaps the displayed width and height
+  const displayW = rotation === 90 || rotation === -90 ? h : w;
+  const displayH = rotation === 90 || rotation === -90 ? w : h;
+  const ratio = displayW / displayH;
   if (ratio > 1.05) return "landscape";
   if (ratio < 0.95) return "portrait";
   return "square";
@@ -27,7 +35,8 @@ function mapArtwork(a: typeof artworksTable.$inferSelect) {
     year: a.year ?? null,
     hasMattePrint: a.printifyMatteProductId !== null,
     hasFramedPrint: a.printifyFramedProductId !== null,
-    imageOrientation: deriveOrientation(a.imageWidth, a.imageHeight),
+    imageOrientation: deriveOrientation(a.imageWidth, a.imageHeight, a.imageRotation),
+    imageRotation: a.imageRotation ?? null,
     createdAt: a.createdAt.toISOString(),
   };
 }
