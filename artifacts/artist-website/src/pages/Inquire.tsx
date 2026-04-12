@@ -158,7 +158,7 @@ export default function Inquire() {
       <div style={{ position: "relative", zIndex: 2 }}>
         <Navbar />
 
-        <div style={{ maxWidth: "600px", margin: "0 auto", padding: isMobile ? "24px 20px 80px" : "36px 40px 100px" }}>
+        <div style={{ maxWidth: "600px", margin: "0 auto", padding: isMobile ? "80px 20px 80px" : "96px 40px 100px" }}>
           <h1
             style={{
               fontFamily: "'Cormorant Garamond', serif",
