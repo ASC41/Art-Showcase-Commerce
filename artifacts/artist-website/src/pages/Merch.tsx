@@ -248,9 +248,9 @@ function MerchCard({
             >
               {colors.length > 0 ? "Colors" : ""}
             </span>
-            {colors.slice(0, 8).map((color) => (
+            {colors.slice(0, 8).map((color, ci) => (
               <div
-                key={color}
+                key={`${ci}-${color}`}
                 title={color}
                 style={{
                   width: "12px",
