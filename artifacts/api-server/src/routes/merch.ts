@@ -151,12 +151,15 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     const areaH = merch.printAreaHeight ?? 3000;
     const artRatio = artW / artH;
     const areaRatio = areaW / areaH;
-    // bucket-hat: 1500×705 (areaRatio=2.128) — wide front patch, CONTAIN to avoid top/bottom crop
-    // cuff-beanie: 1500×526 (areaRatio=2.852) — even wider band, CONTAIN to preserve full art
-    const CONTAIN_SLUGS = new Set(["bucket-hat", "cuff-beanie"]);
-    const artworkScale = CONTAIN_SLUGS.has(merch.slug)
-      ? Math.min(1.0, artRatio / areaRatio)   // CONTAIN: full artwork visible, may have margins
-      : Math.max(1.0, artRatio / areaRatio);  // COVER: fills area edge-to-edge
+    // CONTAIN scale: the full artwork is always visible with no cropping.
+    // At scale=1.0 Printify fills the print-area WIDTH. CONTAIN clamps to the
+    // lesser of (artRatio/areaRatio, 1.0) so neither axis overflows:
+    //   - Portrait art in portrait area  → fills height, small left/right margins
+    //   - Landscape art in portrait area → fills width, top/bottom margins
+    //   - Any art in wide area (hat/beanie) → fills height, large side margins
+    // This matches the provision script's computeScale() and preserves each
+    // painting's full composition on all products.
+    const artworkScale = Math.min(1.0, artRatio / areaRatio);
 
     // Upload artwork image to Printify
     const uploadRes = await printifyRequest("/uploads/images.json", {
