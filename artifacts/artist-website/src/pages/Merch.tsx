@@ -410,6 +410,46 @@ export default function Merch() {
         </p>
       </div>
 
+      {/* Prints section */}
+      {(loading || prints.length > 0) && (
+        <section style={{ padding: `0 ${px} 64px` }}>
+          <div
+            style={{
+              fontFamily: "'Inter'",
+              fontSize: "11px",
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: "#444",
+              marginBottom: "24px",
+              borderBottom: "1px solid rgba(255,255,255,0.04)",
+              paddingBottom: "12px",
+            }}
+          >
+            Prints
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: "24px",
+            }}
+          >
+            {loading
+              ? Array.from({ length: 1 }).map((_, i) => <SkeletonCard key={i} />)
+              : prints.map((product, i) => (
+                  <MerchCard
+                    key={product.slug}
+                    product={product}
+                    globalIndex={i}
+                    featuredArtwork={artworks.length > 0 ? artworks[i % artworks.length] : null}
+                    onSelect={() => setSelected(product)}
+                  />
+                ))}
+          </div>
+        </section>
+      )}
+
       {/* Apparel section */}
       {(loading || apparel.length > 0) && (
         <section style={{ padding: `0 ${px} 64px` }}>
@@ -441,8 +481,8 @@ export default function Merch() {
                   <MerchCard
                     key={product.slug}
                     product={product}
-                    globalIndex={i}
-                    featuredArtwork={artworks.length > 0 ? artworks[i % artworks.length] : null}
+                    globalIndex={prints.length + i}
+                    featuredArtwork={artworks.length > 0 ? artworks[(prints.length + i) % artworks.length] : null}
                     onSelect={() => setSelected(product)}
                   />
                 ))}
@@ -481,48 +521,8 @@ export default function Merch() {
                   <MerchCard
                     key={product.slug}
                     product={product}
-                    globalIndex={apparel.length + i}
-                    featuredArtwork={artworks.length > 0 ? artworks[(apparel.length + i) % artworks.length] : null}
-                    onSelect={() => setSelected(product)}
-                  />
-                ))}
-          </div>
-        </section>
-      )}
-
-      {/* Prints section */}
-      {(loading || prints.length > 0) && (
-        <section style={{ padding: `0 ${px} 80px` }}>
-          <div
-            style={{
-              fontFamily: "'Inter'",
-              fontSize: "11px",
-              letterSpacing: "0.16em",
-              textTransform: "uppercase",
-              color: "#444",
-              marginBottom: "24px",
-              borderBottom: "1px solid rgba(255,255,255,0.04)",
-              paddingBottom: "12px",
-            }}
-          >
-            Prints
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-              gap: "24px",
-            }}
-          >
-            {loading
-              ? Array.from({ length: 1 }).map((_, i) => <SkeletonCard key={i} />)
-              : prints.map((product, i) => (
-                  <MerchCard
-                    key={product.slug}
-                    product={product}
-                    globalIndex={apparel.length + accessories.length + i}
-                    featuredArtwork={artworks.length > 0 ? artworks[(apparel.length + accessories.length + i) % artworks.length] : null}
+                    globalIndex={prints.length + apparel.length + i}
+                    featuredArtwork={artworks.length > 0 ? artworks[(prints.length + apparel.length + i) % artworks.length] : null}
                     onSelect={() => setSelected(product)}
                   />
                 ))}
