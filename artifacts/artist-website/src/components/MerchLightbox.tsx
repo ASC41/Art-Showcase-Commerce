@@ -347,7 +347,7 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
           inset: 0,
           background: "rgba(4,4,4,0.96)",
           backdropFilter: "blur(12px)",
-          zIndex: 200,
+          zIndex: 400,
           display: "flex",
           alignItems: isMobile ? "flex-start" : "center",
           justifyContent: "center",
