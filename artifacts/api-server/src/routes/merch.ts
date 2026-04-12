@@ -448,14 +448,21 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
         },
       ].filter((pa) => pa.variant_ids.length > 0);
     } else if (merch.slug === "giclee-print") {
-      // Giclée Art Print — per-variant scale:
+      // Giclée Art Print — per-variant scale with equal-border logic:
       //   Each size has a different aspect ratio, so scale is computed individually.
       //   Orientation filtering ensures portrait art only shows on portrait sizes, etc.
+      //   Uses gicleeScaleFor() so all four margins are equal pixels — no flush edges.
       const artOrient = artH > artW * 1.05 ? "portrait" : artW > artH * 1.05 ? "landscape" : "square";
-      const containScaleFor = (vAreaW: number, vAreaH: number) => {
+      // Equal-border scale: (areaW - s*areaW)/2 = (areaH - s*areaW/artRatio)/2
+      // → s = (areaW - areaH) / (areaW × (1 - 1/artRatio))
+      // Caps at 90% of CONTAIN (visible border when ratios nearly match) and
+      // floors at 70% of CONTAIN (artwork stays large enough for a good mockup).
+      const gicleeScaleFor = (vAreaW: number, vAreaH: number) => {
         const ar = artW / artH;
-        const vr = vAreaW / vAreaH;
-        return Math.min(ar, vr) / Math.max(ar, vr);
+        const containS = Math.min(ar, vAreaW / vAreaH) / Math.max(ar, vAreaW / vAreaH);
+        const denom = vAreaW * (1 - 1 / ar);
+        const equalBorderS = Math.abs(denom) > 0.5 ? (vAreaW - vAreaH) / denom : containS;
+        return Math.max(Math.min(equalBorderS, containS * 0.90), containS * 0.70);
       };
       const enabledVariantIds: number[] = [];
       printAreas = variants.map((v) => {
@@ -478,7 +485,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
                   height: artH,
                   x: 0.5,
                   y: 0.5,
-                  scale: containScaleFor(vAreaW, vAreaH),
+                  scale: gicleeScaleFor(vAreaW, vAreaH),
                   angle: 0,
                 },
               ],

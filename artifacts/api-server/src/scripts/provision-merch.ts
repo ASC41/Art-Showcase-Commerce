@@ -372,6 +372,26 @@ function computeScale(
   return Math.min(artRatio, areaRatio) / Math.max(artRatio, areaRatio);
 }
 
+// ── Equal-border scale for giclée prints ─────────────────────────────────────
+// Standard CONTAIN fills one axis flush to the edge, leaving bars on the other.
+// This function redistributes the white space so all four margins are equal pixels:
+//
+//   (areaW - renderedW)/2 = (areaH - renderedH)/2
+//   where renderedW = s*areaW  and  renderedH = s*areaW/artRatio
+//   → s = (areaW - areaH) / (areaW × (1 - 1/artRatio))
+//
+// Guards:
+//   • 90% cap on CONTAIN — ensures a visible border when art ratio ≈ area ratio
+//     (e.g. Grin and Bear It on 12×18 where ratios nearly match).
+//   • 70% floor on CONTAIN — keeps artwork large enough for a legible mockup
+//     (e.g. portrait art on tall 11×14 or 16×20 variants).
+function gicleeScale(artRatio: number, areaW: number, areaH: number): number {
+  const containS = Math.min(artRatio, areaW / areaH) / Math.max(artRatio, areaW / areaH);
+  const denom = areaW * (1 - 1 / artRatio);
+  const equalBorderS = Math.abs(denom) > 0.5 ? (areaW - areaH) / denom : containS;
+  return Math.max(Math.min(equalBorderS, containS * 0.90), containS * 0.70);
+}
+
 // ── Orientation helper ────────────────────────────────────────────────────────
 // Returns "portrait", "landscape", or "square".
 function orientation(w: number, h: number): "portrait" | "landscape" | "square" {
@@ -519,7 +539,7 @@ async function createMerchProduct(
       const enabled =
         artOrient === "square" ||
         artOrient === variantOrient;
-      const scale = computeScale(artW, artH, vAreaW, vAreaH);
+      const scale = gicleeScale(artW / artH, vAreaW, vAreaH);
       return {
         variantId: v.id,
         enabled,
