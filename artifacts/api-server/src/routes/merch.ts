@@ -171,7 +171,55 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     // ── Build print_areas ─────────────────────────────────────────────────────
     let printAreas: object[];
 
-    if (sig) {
+    if (merch.slug === "tote-bag") {
+      // All-over print tote bag layout:
+      //   Print area is 2175×4350 — top half = Side A (front), bottom half = Side B (back).
+      //   • Side A: artwork at y=0.25 (center of front face), scale=1.0 (fills full width).
+      //     Portrait art bleeds slightly into the top of Side B — acceptable artistic overflow.
+      //   • Side B: black wordmark centered at y=0.75.
+      //     Since AOP canvas is white regardless of strap colour, black wordmark on all variants.
+      const WORDMARK_BLACK_URL =
+        "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@232b3d5040a133da0e8c0c29a46a9dc28016d2f8/uploads/2026-04-12T05-31-45-372Z-upz8q5hd4.png";
+      const wmUpload = await printifyRequest("/uploads/images.json", {
+        method: "POST",
+        body: JSON.stringify({ file_name: "wordmark-black.png", url: WORDMARK_BLACK_URL }),
+      }) as { id: string; width: number; height: number };
+
+      printAreas = [
+        {
+          variant_ids: variants.map((v) => v.id),
+          placeholders: [
+            {
+              position: merch.printAreaPosition,
+              images: [
+                {
+                  id: imageId,
+                  name: `${artwork.title} — ${merch.name}`,
+                  type: "image/jpeg",
+                  width: artW,
+                  height: artH,
+                  x: 0.5,
+                  y: 0.25,  // Center of Side A (front face)
+                  scale: 1.0, // Fills full face width; portrait art overflows slightly into Side B top
+                  angle: 0,
+                },
+                {
+                  id: wmUpload.id,
+                  name: "Artist Wordmark",
+                  type: "image/png",
+                  width: wmUpload.width,
+                  height: wmUpload.height,
+                  x: 0.5,
+                  y: 0.75,  // Center of Side B (back face)
+                  scale: 0.7, // ~70% of bag face width — clearly legible wordmark on the back
+                  angle: 0,
+                },
+              ],
+            },
+          ],
+        },
+      ];
+    } else if (sig) {
       // Color-aware signature product (e.g. hoodie):
       //   dark variants → white wordmark; light variants → black wordmark.
       // Upload both wordmarks in parallel; Printify returns actual pixel dims.
@@ -434,6 +482,34 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
         .filter((url) => sigCameraPriority(url) < 5)
         .sort((a, b) => sigCameraPriority(a) - sigCameraPriority(b))
         .slice(0, 5);
+    } else if (merch.slug === "tote-bag") {
+      // Tote bag: front (Side A = artwork) → back (Side B = wordmark) → person shots.
+      // The AOP blueprint generates 6 variants × 8 camera labels = 48 images.
+      // Deduplicate: prefer the Black 13" variant (103599) per angle, then pick by priority.
+      const PREFERRED_TOTE_VARIANT = 103599;
+      const totePriority = (label: string) => {
+        if (label === "front") return 0;
+        if (label === "back") return 1;
+        if (label.startsWith("person")) return 2;
+        return 3;
+      };
+      const allUrls = (product.images ?? [])
+        .filter((img) => img.src)
+        .map((img) => img.src);
+
+      // Group by camera label, prefer the canonical variant
+      const byLabel = new Map<string, string>();
+      for (const url of allUrls) {
+        const label = cameraLabel(url);
+        const vid = variantIdFromUrl(url);
+        if (!byLabel.has(label) || vid === PREFERRED_TOTE_VARIANT) {
+          byLabel.set(label, url);
+        }
+      }
+      mockupImages = [...byLabel.entries()]
+        .sort((a, b) => totePriority(a[0]) - totePriority(b[0]))
+        .map(([, url]) => url)
+        .slice(0, 6);
     } else {
       mockupImages = (product.images ?? [])
         .filter((img) => img.src)
