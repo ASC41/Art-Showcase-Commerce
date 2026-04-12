@@ -107,15 +107,17 @@ async function fetchImageDimensions(
   });
 }
 
-// ── Equal-border scale for Giclée prints ─────────────────────────────────────
-// Standard CONTAIN fills one axis flush to the edge, leaving bars on the other.
-// This redistributes the white space so all four margins are equal pixels.
+// ── Scale for fine art prints ─────────────────────────────────────────────────
+// Target: the equal-border scale (redistribute white space so all four margins are equal).
+// Floor at containS × 0.88 and ceiling at containS × 0.95 so the artwork is always
+// clearly visible. The old floor of 0.70 caused wide landscape artworks (e.g. 16:9)
+// to appear at only ~70% of print width (≈ 50% visual area), which looked too small.
 function gicleeScaleFor(artW: number, artH: number, areaW: number, areaH: number): number {
   const ar = artW / artH;
   const containS = Math.min(ar, areaW / areaH) / Math.max(ar, areaW / areaH);
   const denom = areaW * (1 - 1 / ar);
   const equalBorderS = Math.abs(denom) > 0.5 ? (areaW - areaH) / denom : containS;
-  return Math.max(Math.min(equalBorderS, containS * 0.90), containS * 0.70);
+  return Math.max(Math.min(equalBorderS, containS * 0.95), containS * 0.88);
 }
 
 // ── Print area dimensions for each variant (Fine Art Print — Blueprint 804, Print Clever) ──

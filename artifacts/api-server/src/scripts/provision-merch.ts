@@ -384,15 +384,15 @@ function computeScale(
 //   → s = (areaW - areaH) / (areaW × (1 - 1/artRatio))
 //
 // Guards:
-//   • 90% cap on CONTAIN — ensures a visible border when art ratio ≈ area ratio
-//     (e.g. Grin and Bear It on 12×18 where ratios nearly match).
-//   • 70% floor on CONTAIN — keeps artwork large enough for a legible mockup
-//     (e.g. portrait art on tall 11×14 or 16×20 variants).
+//   • 95% cap on CONTAIN — ensures a visible border when art ratio ≈ area ratio.
+//   • 88% floor on CONTAIN — keeps artwork prominent without over-shrinking.
+//     The old floor of 0.70 caused wide landscape artworks (e.g. 16:9) to appear
+//     at only ~70% of print width (~50% visual area) which looked too small.
 function gicleeScale(artRatio: number, areaW: number, areaH: number): number {
   const containS = Math.min(artRatio, areaW / areaH) / Math.max(artRatio, areaW / areaH);
   const denom = areaW * (1 - 1 / artRatio);
   const equalBorderS = Math.abs(denom) > 0.5 ? (areaW - areaH) / denom : containS;
-  return Math.max(Math.min(equalBorderS, containS * 0.90), containS * 0.70);
+  return Math.max(Math.min(equalBorderS, containS * 0.95), containS * 0.88);
 }
 
 // ── Orientation helper ────────────────────────────────────────────────────────
