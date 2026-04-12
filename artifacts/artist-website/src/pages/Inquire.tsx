@@ -88,7 +88,7 @@ export default function Inquire() {
       <style>{`
         @keyframes kenBurnsGlobal {
           from { transform: scale(1.0) translate(0%, 0%); }
-          to   { transform: scale(1.06) translate(-0.5%, -0.4%); }
+          to   { transform: scale(1.18) translate(-2%, -1.5%); }
         }
       `}</style>
 
