@@ -21,7 +21,7 @@ const SLIDES = [
   },
 ];
 
-const DISPLAY_MS = 750;
+const DISPLAY_MS = 3750;
 
 export default function Inquire() {
   const [slideIdx, setSlideIdx] = useState(0);
@@ -88,15 +88,15 @@ export default function Inquire() {
       <style>{`
         @keyframes kenBurns {
           from { transform: scale(1.0) translate(0%, 0%); }
-          to   { transform: scale(1.10) translate(-1.5%, -1%); }
+          to   { transform: scale(1.10) translate(-0.75%, -0.5%); }
         }
         @keyframes kenBurnsAlt {
           from { transform: scale(1.0) translate(0%, 0%); }
-          to   { transform: scale(1.10) translate(1%, -1.5%); }
+          to   { transform: scale(1.10) translate(0.5%, -0.75%); }
         }
         @keyframes kenBurnsC {
           from { transform: scale(1.0) translate(0%, 0%); }
-          to   { transform: scale(1.08) translate(-0.5%, 1%); }
+          to   { transform: scale(1.08) translate(-0.25%, 0.5%); }
         }
       `}</style>
 
@@ -168,7 +168,7 @@ export default function Inquire() {
       <div style={{ position: "relative", zIndex: 2 }}>
         <Navbar />
 
-        <div style={{ maxWidth: "600px", margin: "0 auto", padding: isMobile ? "90px 20px 80px" : "140px 40px 100px" }}>
+        <div style={{ maxWidth: "600px", margin: "0 auto", padding: isMobile ? "24px 20px 80px" : "36px 40px 100px" }}>
           <h1
             style={{
               fontFamily: "'Cormorant Garamond', serif",
