@@ -10,6 +10,7 @@ interface MerchVariant {
   title: string;
   color: string;
   size: string;
+  priceCents?: number;
 }
 
 interface MerchProduct {
@@ -205,6 +206,9 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
     : [];
 
   const selectedVariant = variants.find((v) => v.id === selectedVariantId);
+
+  // Use per-variant price if available (e.g. giclée prints), otherwise product price
+  const displayPriceCents = selectedVariant?.priceCents ?? product?.priceCents ?? 0;
 
   // ── Per-variant vs colorized mockup strategy ─────────────────────────────
   //
@@ -509,7 +513,7 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
                 marginBottom: "16px",
               }}
             >
-              ${(product.priceCents / 100).toFixed(0)}
+              ${(displayPriceCents / 100).toFixed(0)}
             </div>
             {product.description && (
               <p
@@ -714,7 +718,7 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
               {isCheckingOut
                 ? "PROCESSING..."
                 : canBuy
-                ? `BUY NOW — $${(product.priceCents / 100).toFixed(0)}`
+                ? `BUY NOW — $${(displayPriceCents / 100).toFixed(0)}`
                 : selectedArtwork
                 ? "SELECT SIZE"
                 : "SELECT ARTWORK"}

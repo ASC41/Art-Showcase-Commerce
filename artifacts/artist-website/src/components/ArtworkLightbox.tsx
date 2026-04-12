@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useCreateCheckoutSession } from "@workspace/api-client-react";
-import type { Artwork, PrintType, PrintSize } from "@workspace/api-client-react";
+import type { Artwork, PrintSize } from "@workspace/api-client-react";
 import { ARTWORK_ASPECT, ARTWORK_ROTATION } from "@/lib/artworkDimensions";
 
 interface Props {
@@ -10,23 +10,27 @@ interface Props {
   onNavigate: (index: number) => void;
 }
 
-const PRINT_SIZES: PrintSize[] = ["11x14", "18x24", "24x36"];
+const PRINT_SIZES: PrintSize[] = ["8x11", "11x14", "12x18", "16x20"];
 
 const SIZE_LABELS_PORTRAIT: Record<PrintSize, string> = {
+  "8x11":  '8" × 11"',
   "11x14": '11" × 14"',
-  "18x24": '18" × 24"',
-  "24x36": '24" × 36"',
+  "12x18": '12" × 18"',
+  "16x20": '16" × 20"',
 };
 
 const SIZE_LABELS_LANDSCAPE: Record<PrintSize, string> = {
+  "8x11":  '11" × 8"',
   "11x14": '14" × 11"',
-  "18x24": '24" × 18"',
-  "24x36": '36" × 24"',
+  "12x18": '18" × 12"',
+  "16x20": '20" × 16"',
 };
 
-const PRINT_PRICES: Record<PrintType, Record<PrintSize, number>> = {
-  matte:  { "11x14": 45, "18x24": 65, "24x36": 95 },
-  framed: { "11x14": 85, "18x24": 115, "24x36": 165 },
+const PRINT_PRICES: Record<PrintSize, number> = {
+  "8x11":  35,
+  "11x14": 55,
+  "12x18": 75,
+  "16x20": 95,
 };
 
 export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNavigate }: Props) {
@@ -37,8 +41,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
   const [showInfo, setShowInfo] = useState(false);
   const [showPrintPicker, setShowPrintPicker] = useState(false);
   const [pickerStep, setPickerStep] = useState<1 | 2>(1);
-  const [selectedPrintType, setSelectedPrintType] = useState<PrintType>("matte");
-  const [selectedPrintSize, setSelectedPrintSize] = useState<PrintSize>("18x24");
+  const [selectedPrintSize, setSelectedPrintSize] = useState<PrintSize>("11x14");
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleKeyDown = useCallback(
@@ -109,7 +112,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
         data: {
           artworkSlug: artwork.slug,
           purchaseType: "print",
-          printType: selectedPrintType,
+          printType: "matte",
           printSize: selectedPrintSize,
           customerEmail: null,
           successUrl: `${window.location.origin}/order/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -124,16 +127,10 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
   };
 
   const isAvailable = artwork.status === "available";
-  const hasPrints = artwork.hasMattePrint || artwork.hasFramedPrint;
+  const hasPrints = artwork.hasMattePrint;
 
-  // When picker opens, default to the first available print type
   const handleOpenPicker = () => {
     cancelHide();
-    if (!artwork.hasMattePrint && artwork.hasFramedPrint) {
-      setSelectedPrintType("framed");
-    } else {
-      setSelectedPrintType("matte");
-    }
     setPickerStep(1);
     setShowPrintPicker(true);
     setShowInfo(true);
@@ -176,7 +173,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
     }
   };
 
-  const selectedPrice = PRINT_PRICES[selectedPrintType][selectedPrintSize];
+  const selectedPrice = PRINT_PRICES[selectedPrintSize];
 
   return (
     <div
@@ -476,7 +473,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
               </div>
             </>
           ) : pickerStep === 1 ? (
-            /* Step 1 — Select type + size */
+            /* Step 1 — Select size */
             <div
               style={{
                 display: "flex",
@@ -488,51 +485,19 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
             >
               {/* Step indicator */}
               <div style={{ fontFamily: "'Inter'", fontSize: "9px", color: "#444", letterSpacing: "0.14em", textTransform: "uppercase" }}>
-                Step 1 of 2 — Choose options
+                Step 1 of 2 — Choose size
               </div>
 
-              {/* Type selector */}
+              {/* Product label */}
               <div style={{ width: "100%" }}>
-                <div style={{ fontFamily: "'Inter'", fontSize: "9px", letterSpacing: "0.16em", color: "#555", textTransform: "uppercase", marginBottom: "8px" }}>
+                <div style={{ fontFamily: "'Inter'", fontSize: "9px", letterSpacing: "0.16em", color: "#555", textTransform: "uppercase", marginBottom: "6px" }}>
                   Print Type
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-                  {(["matte", "framed"] as PrintType[]).map((type) => {
-                    const typeAvailable = type === "matte" ? artwork.hasMattePrint : artwork.hasFramedPrint;
-                    const isSelected = selectedPrintType === type;
-                    return (
-                      <button
-                        key={type}
-                        onClick={() => typeAvailable && setSelectedPrintType(type)}
-                        disabled={!typeAvailable}
-                        title={!typeAvailable ? "Not available for this artwork" : undefined}
-                        style={{
-                          padding: "8px 12px",
-                          background: isSelected ? "rgba(245,245,245,0.08)" : "transparent",
-                          border: `1px solid ${isSelected ? "rgba(245,245,245,0.35)" : "rgba(255,255,255,0.1)"}`,
-                          borderRadius: "3px",
-                          color: !typeAvailable ? "#333" : isSelected ? "#f5f5f5" : "#666",
-                          fontFamily: "'Inter'",
-                          fontSize: "10px",
-                          fontWeight: isSelected ? 500 : 400,
-                          letterSpacing: "0.08em",
-                          textTransform: "uppercase",
-                          cursor: !typeAvailable ? "not-allowed" : "pointer",
-                          opacity: !typeAvailable ? 0.4 : 1,
-                          transition: "all 0.15s",
-                          textAlign: "center",
-                        }}
-                      >
-                        {type === "matte" ? "Matte" : "Framed"}
-                        {!typeAvailable && (
-                          <span style={{ display: "block", fontSize: "8px", opacity: 0.6, marginTop: "1px" }}>Unavailable</span>
-                        )}
-                      </button>
-                    );
-                  })}
+                <div style={{ fontFamily: "'Inter'", fontSize: "11px", color: "#aaa", letterSpacing: "0.04em" }}>
+                  Giclée Art Print
                 </div>
-                <div style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#444", marginTop: "5px", letterSpacing: "0.03em" }}>
-                  {selectedPrintType === "matte" ? "Enhanced matte paper, 210gsm" : "Black frame, white mat, museum glass"}
+                <div style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#444", marginTop: "3px", letterSpacing: "0.03em" }}>
+                  Archival pigment inks · Premium cotton-rag paper
                 </div>
               </div>
 
@@ -565,7 +530,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                       }}
                     >
                       <span>{SIZE_LABELS[size]}</span>
-                      <span style={{ fontSize: "9px", opacity: 0.6 }}>${PRINT_PRICES[selectedPrintType][size]}</span>
+                      <span style={{ fontSize: "9px", opacity: 0.6 }}>${PRINT_PRICES[size]}</span>
                     </button>
                   ))}
                 </div>
@@ -657,7 +622,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#555", letterSpacing: "0.06em", textTransform: "uppercase" }}>Type</span>
                     <span style={{ fontFamily: "'Inter'", fontSize: "11px", color: "#ccc" }}>
-                      {selectedPrintType === "matte" ? "Enhanced Matte Print" : "Framed Print"}
+                      Giclée Art Print
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

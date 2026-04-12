@@ -23,16 +23,19 @@ const router: IRouter = Router();
 
 const TERMINAL_STATUSES = ["paid", "fulfilled", "failed"] as const;
 
-// ── Per-size, per-type print pricing (cents) ──────────────────────────────────
-const PRINT_PRICES: Record<PrintType, Record<PrintSize, number>> = {
-  matte:  { "11x14": 4500, "18x24": 6500, "24x36": 9500 },
-  framed: { "11x14": 8500, "18x24": 11500, "24x36": 16500 },
+// ── Giclée print pricing (cents) ─────────────────────────────────────────────
+const PRINT_PRICES: Record<PrintSize, number> = {
+  "8x11":  3500,
+  "11x14": 5500,
+  "12x18": 7500,
+  "16x20": 9500,
 };
 
 const PRINT_SIZE_LABELS: Record<PrintSize, string> = {
+  "8x11":  '8" × 11"',
   "11x14": '11" × 14"',
-  "18x24": '18" × 24"',
-  "24x36": '24" × 36"',
+  "12x18": '12" × 18"',
+  "16x20": '16" × 20"',
 };
 
 function getStripe(): Stripe | null {
@@ -364,10 +367,7 @@ router.post("/checkout/session", async (req, res) => {
     let printifyVariantId: number | null = null;
 
     if (purchaseType === "print" && printType && printSize) {
-      printifyProductId =
-        printType === "matte"
-          ? artwork.printifyMatteProductId
-          : artwork.printifyFramedProductId;
+      printifyProductId = artwork.printifyMatteProductId;
 
       const orientation: PrintOrientation =
         artwork.imageWidth && artwork.imageHeight && artwork.imageWidth > artwork.imageHeight
@@ -396,17 +396,15 @@ router.post("/checkout/session", async (req, res) => {
     const unitAmount =
       purchaseType === "original"
         ? artwork.price!
-        : PRINT_PRICES[printType as PrintType][printSize as PrintSize];
+        : PRINT_PRICES[printSize as PrintSize];
 
     const sizeLabel =
       purchaseType === "print" && printSize
         ? ` — ${PRINT_SIZE_LABELS[printSize as PrintSize]}`
         : "";
     const typeLabel =
-      purchaseType === "print" && printType
-        ? printType === "matte"
-          ? "Enhanced Matte Print"
-          : "Framed Print"
+      purchaseType === "print"
+        ? "Giclée Art Print"
         : "Fine Art Print";
 
     const productName =

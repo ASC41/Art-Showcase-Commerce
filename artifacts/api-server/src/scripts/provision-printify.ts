@@ -1,53 +1,64 @@
 /**
- * Printify Provisioning Script (v2 — orientation-aware + scale-to-fit)
+ * Printify Provisioning Script (v3 — Giclée Art Print only)
  *
- * Creates Matte Poster and Framed Paper Poster products in Printify for every
- * artwork in the database, then stores the resulting product IDs back in the DB.
+ * Creates Giclée Art Print products (Blueprint 494, Provider 36) in Printify
+ * for every artwork in the database, then stores the resulting product IDs back
+ * in the DB under printifyMatteProductId (repurposed for Giclée).
  *
- * Enhancements over v1:
- *  - Detects each artwork's pixel dimensions from its image URL
- *  - Uses portrait or landscape Printify variants based on artwork orientation
- *  - Uses scale-to-fit image placement so the entire artwork is always visible
- *    (white borders appear on the shorter dimension rather than cropping)
+ * Also clears printifyFramedProductId for all artworks.
  *
- * Run once per artwork (idempotent — skips artworks that already have product IDs):
+ * Sizes available:
+ *   Portrait:  8×11, 11×14, 12×18, 16×20
+ *   Landscape: 11×8, 14×11, 18×12, 20×16
+ *
+ * Pricing (cents):
+ *   8×11  → $35  |  11×14 → $55  |  12×18 → $75  |  16×20 → $95
+ *
+ * Run once per artwork (idempotent — skips artworks that already have a product ID):
  *   pnpm --filter @workspace/api-server run provision-printify
+ *
+ * Force re-provision all artworks:
+ *   pnpm --filter @workspace/api-server run provision-printify --force
  */
 
 import https from "https";
 import { db, artworksTable } from "@workspace/db";
-import { eq, or, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import {
   printifyRequest,
   getShopId,
-  loadPrintifyConfig,
   REQUIRED_PRINT_SIZES,
   PRINT_SIZE_INCHES_PORTRAIT,
   PRINT_SIZE_INCHES_LANDSCAPE,
+  GICLEE_VARIANT_IDS,
   type PrintSize,
   type PrintOrientation,
 } from "../lib/printify";
 
-const PRINT_TYPE_LABELS = {
-  matte: "Matte Poster",
-  framed: "Framed Fine Art Print",
-} as const;
+const FORCE = process.argv.includes("--force");
+
+const GICLEE_BLUEPRINT_ID = 494;
+const GICLEE_PROVIDER_ID = 36;
 
 const SIZE_LABELS_PORTRAIT: Record<PrintSize, string> = {
+  "8x11":  '8" × 11"',
   "11x14": '11" × 14"',
-  "18x24": '18" × 24"',
-  "24x36": '24" × 36"',
+  "12x18": '12" × 18"',
+  "16x20": '16" × 20"',
 };
 
 const SIZE_LABELS_LANDSCAPE: Record<PrintSize, string> = {
+  "8x11":  '11" × 8"',
   "11x14": '14" × 11"',
-  "18x24": '24" × 18"',
-  "24x36": '36" × 24"',
+  "12x18": '18" × 12"',
+  "16x20": '20" × 16"',
 };
 
-const PRINT_PRICES_CENTS: Record<"matte" | "framed", Record<PrintSize, number>> = {
-  matte:  { "11x14": 4500, "18x24": 6500, "24x36": 9500 },
-  framed: { "11x14": 8500, "18x24": 11500, "24x36": 16500 },
+const GICLEE_PRICES_CENTS: Record<PrintSize, number> = {
+  "8x11":  3500,
+  "11x14": 5500,
+  "12x18": 7500,
+  "16x20": 9500,
 };
 
 // ── Image dimension detection ─────────────────────────────────────────────────
@@ -99,20 +110,31 @@ async function fetchImageDimensions(
   });
 }
 
-// ── Scale-to-fit calculation ──────────────────────────────────────────────────
-// Printify scale=1.0 means the image fills the print width completely.
-// If the image is taller relative to the print (artworkRatio < printRatio),
-// the image will overflow the print height → we reduce scale to prevent that.
-// Formula: scale = min(artworkRatio, printRatio) / max(artworkRatio, printRatio)
-// This ensures the whole artwork fits within the print area with white borders
-// on whichever dimension is shorter.
-function calcScaleToFit(artworkW: number, artworkH: number, printW: number, printH: number): number {
-  const artworkRatio = artworkW / artworkH;
-  const printRatio = printW / printH;
-  const scale = Math.min(artworkRatio, printRatio) / Math.max(artworkRatio, printRatio);
-  // Clamp to [0.5, 1.0] — don't let very extreme ratios create tiny thumbnails
-  return Math.max(0.5, Math.min(1.0, scale));
+// ── Equal-border scale for Giclée prints ─────────────────────────────────────
+// Standard CONTAIN fills one axis flush to the edge, leaving bars on the other.
+// This redistributes the white space so all four margins are equal pixels.
+function gicleeScaleFor(artW: number, artH: number, areaW: number, areaH: number): number {
+  const ar = artW / artH;
+  const containS = Math.min(ar, areaW / areaH) / Math.max(ar, areaW / areaH);
+  const denom = areaW * (1 - 1 / ar);
+  const equalBorderS = Math.abs(denom) > 0.5 ? (areaW - areaH) / denom : containS;
+  return Math.max(Math.min(equalBorderS, containS * 0.90), containS * 0.70);
 }
+
+// ── Print area dimensions for each variant (Giclée Blueprint 494) ─────────────
+const GICLEE_AREA_PORTRAIT: Record<PrintSize, { w: number; h: number }> = {
+  "8x11":  { w: 2400, h: 3300 },
+  "11x14": { w: 3300, h: 4200 },
+  "12x18": { w: 3600, h: 5400 },
+  "16x20": { w: 4800, h: 6000 },
+};
+
+const GICLEE_AREA_LANDSCAPE: Record<PrintSize, { w: number; h: number }> = {
+  "8x11":  { w: 3300, h: 2400 },
+  "11x14": { w: 4200, h: 3300 },
+  "12x18": { w: 5400, h: 3600 },
+  "16x20": { w: 6000, h: 4800 },
+};
 
 // ── Image upload ──────────────────────────────────────────────────────────────
 async function uploadImage(imageUrl: string, slug: string): Promise<string> {
@@ -129,32 +151,28 @@ async function uploadImage(imageUrl: string, slug: string): Promise<string> {
 }
 
 // ── Product creation ──────────────────────────────────────────────────────────
-async function createProduct(
+async function createGicleeProduct(
   shopId: string,
-  blueprintId: number,
-  providerId: number,
-  variantIds: Record<PrintSize, number>,
   imageId: string,
   artworkTitle: string,
-  printType: "matte" | "framed",
   orientation: PrintOrientation,
   artworkW: number,
   artworkH: number
 ): Promise<string> {
-  const typeLabel = PRINT_TYPE_LABELS[printType];
+  const variantIds = GICLEE_VARIANT_IDS[orientation];
   const sizeLabels = orientation === "landscape" ? SIZE_LABELS_LANDSCAPE : SIZE_LABELS_PORTRAIT;
-  const sizeInches = orientation === "landscape" ? PRINT_SIZE_INCHES_LANDSCAPE : PRINT_SIZE_INCHES_PORTRAIT;
+  const areas = orientation === "landscape" ? GICLEE_AREA_LANDSCAPE : GICLEE_AREA_PORTRAIT;
 
   const variants = REQUIRED_PRINT_SIZES.map((size) => ({
     id: variantIds[size],
-    price: PRINT_PRICES_CENTS[printType][size],
+    price: GICLEE_PRICES_CENTS[size],
     is_enabled: true,
   }));
 
-  // Build per-size scale-to-fit placements
-  const placeholders = REQUIRED_PRINT_SIZES.map((size) => {
-    const inches = sizeInches[size];
-    const scale = calcScaleToFit(artworkW, artworkH, inches.w, inches.h);
+  // Build per-size equal-border placements
+  const printAreas = REQUIRED_PRINT_SIZES.map((size) => {
+    const area = areas[size];
+    const scale = gicleeScaleFor(artworkW, artworkH, area.w, area.h);
     return {
       variant_ids: [variantIds[size]],
       placeholders: [
@@ -169,19 +187,20 @@ async function createProduct(
   const product = (await printifyRequest(`/shops/${shopId}/products.json`, {
     method: "POST",
     body: JSON.stringify({
-      title: `${artworkTitle} — ${typeLabel}`,
+      title: `${artworkTitle} — Giclée Art Print`,
       description:
-        `Fine art ${typeLabel.toLowerCase()} by Ryan Cellar. ` +
-        `Archival quality, museum-grade materials. Available in three sizes: ` +
+        `Fine art Giclée print by Ryan Cellar. ` +
+        `Archival pigment inks on premium cotton-rag paper. Gallery-quality reproduction made to order. ` +
+        `Available in four sizes: ` +
         REQUIRED_PRINT_SIZES.map((s) => sizeLabels[s]).join(", ") + `.`,
-      blueprint_id: blueprintId,
-      print_provider_id: providerId,
+      blueprint_id: GICLEE_BLUEPRINT_ID,
+      print_provider_id: GICLEE_PROVIDER_ID,
       variants,
-      print_areas: placeholders,
+      print_areas: printAreas,
     }),
   })) as { id: string };
 
-  console.log(`  Created "${artworkTitle}" ${typeLabel} (${orientation}) → product ID: ${product.id}`);
+  console.log(`  Created "${artworkTitle}" Giclée Art Print (${orientation}) → product ID: ${product.id}`);
 
   try {
     await printifyRequest(`/shops/${shopId}/products/${product.id}/publish.json`, {
@@ -209,46 +228,34 @@ async function createProduct(
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log("=== Printify Provisioning Script v2 (orientation-aware + scale-to-fit) ===\n");
+  console.log("=== Printify Provisioning Script v3 (Giclée Art Print — Blueprint 494) ===\n");
 
   if (!process.env.PRINTIFY_API_KEY) {
     throw new Error("PRINTIFY_API_KEY is not set");
   }
 
-  const config = loadPrintifyConfig();
-  if (!config) {
-    throw new Error(
-      "Blueprint config not found. Ensure src/config/printify-blueprints.json exists " +
-      "or set the PRINTIFY_BLUEPRINT_CONFIG environment variable."
-    );
-  }
-
-  console.log("Blueprint config loaded:");
-  console.log(`  Matte  → blueprint ${config.matte.blueprintId} / provider ${config.matte.printProviderId}`);
-  console.log(`  Framed → blueprint ${config.framed.blueprintId} / provider ${config.framed.printProviderId}`);
+  console.log(`Blueprint: ${GICLEE_BLUEPRINT_ID} (Giclée Art Print)`);
+  console.log(`Provider:  ${GICLEE_PROVIDER_ID} (Print Pigeons)`);
+  console.log(`Sizes:     ${REQUIRED_PRINT_SIZES.join(", ")}`);
+  console.log(`Pricing:   ${REQUIRED_PRINT_SIZES.map((s) => `${s}=$${GICLEE_PRICES_CENTS[s] / 100}`).join("  ")}\n`);
 
   const shopId = await getShopId();
-  console.log(`\nShop ID: ${shopId}\n`);
+  console.log(`Shop ID: ${shopId}\n`);
 
-  const artworks = await db
-    .select()
-    .from(artworksTable)
-    .where(
-      or(
-        isNull(artworksTable.printifyMatteProductId),
-        isNull(artworksTable.printifyFramedProductId)
-      )
-    );
+  const artworks = await db.select().from(artworksTable);
 
-  console.log(`Found ${artworks.length} artwork(s) to provision\n`);
+  const toProcess = FORCE
+    ? artworks
+    : artworks.filter((a) => !a.printifyMatteProductId);
+
+  console.log(`Found ${artworks.length} total artwork(s), ${toProcess.length} to provision\n`);
 
   let successCount = 0;
   let errorCount = 0;
 
-  for (const artwork of artworks) {
+  for (const artwork of toProcess) {
     console.log(`──── Processing: "${artwork.title}" (${artwork.slug})`);
     try {
-      // Determine pixel dimensions (use stored values if available, otherwise fetch)
       let imgW = artwork.imageWidth;
       let imgH = artwork.imageHeight;
 
@@ -260,11 +267,10 @@ async function main() {
           imgH = dims.h;
           console.log(`  Dimensions: ${imgW}×${imgH}`);
         } else {
-          console.warn(`  Could not determine image dimensions — defaulting to portrait, scale=0.95`);
+          console.warn(`  Could not determine image dimensions — defaulting to portrait`);
           imgW = 3;
-          imgH = 4; // fallback portrait
+          imgH = 4;
         }
-        // Store dimensions in DB for future use
         await db
           .update(artworksTable)
           .set({ imageWidth: imgW, imageHeight: imgH })
@@ -278,51 +284,24 @@ async function main() {
 
       const imageId = await uploadImage(artwork.imageUrl, artwork.slug);
 
-      let matteProductId = artwork.printifyMatteProductId;
-      if (!matteProductId) {
-        matteProductId = await createProduct(
-          shopId,
-          config.matte.blueprintId,
-          config.matte.printProviderId,
-          config.matte.variantIds[orientation],
-          imageId,
-          artwork.title,
-          "matte",
-          orientation,
-          imgW,
-          imgH
-        );
-      } else {
-        console.log(`  Matte product already exists (${matteProductId}), skipping.`);
-      }
-
-      let framedProductId = artwork.printifyFramedProductId;
-      if (!framedProductId) {
-        framedProductId = await createProduct(
-          shopId,
-          config.framed.blueprintId,
-          config.framed.printProviderId,
-          config.framed.variantIds[orientation],
-          imageId,
-          artwork.title,
-          "framed",
-          orientation,
-          imgW,
-          imgH
-        );
-      } else {
-        console.log(`  Framed product already exists (${framedProductId}), skipping.`);
-      }
+      const gicleeProductId = await createGicleeProduct(
+        shopId,
+        imageId,
+        artwork.title,
+        orientation,
+        imgW,
+        imgH
+      );
 
       await db
         .update(artworksTable)
         .set({
-          printifyMatteProductId: matteProductId,
-          printifyFramedProductId: framedProductId,
+          printifyMatteProductId: gicleeProductId,
+          printifyFramedProductId: null,
         })
         .where(eq(artworksTable.id, artwork.id));
 
-      console.log(`  Saved to DB ✓\n`);
+      console.log(`  Saved to DB ✓ (printifyMatteProductId = ${gicleeProductId}, printifyFramedProductId = null)\n`);
       successCount++;
     } catch (err) {
       errorCount++;
@@ -333,16 +312,23 @@ async function main() {
     }
   }
 
-  console.log("=== Provisioning complete ===");
-  console.log(`Results: ${successCount} succeeded, ${errorCount} failed`);
-  console.log("\nPricing summary:");
-  for (const size of REQUIRED_PRINT_SIZES) {
-    console.log(
-      `  ${SIZE_LABELS_PORTRAIT[size]} / ${SIZE_LABELS_LANDSCAPE[size]}: ` +
-        `Matte $${PRINT_PRICES_CENTS.matte[size] / 100}  ·  ` +
-        `Framed $${PRINT_PRICES_CENTS.framed[size] / 100}`
-    );
+  // Clear framed product IDs for any artworks not re-provisioned this run
+  if (!FORCE) {
+    const remaining = artworks.filter((a) => a.printifyFramedProductId && a.printifyMatteProductId);
+    if (remaining.length > 0) {
+      console.log(`\nClearing ${remaining.length} stale printifyFramedProductId entries...`);
+      for (const artwork of remaining) {
+        await db
+          .update(artworksTable)
+          .set({ printifyFramedProductId: null })
+          .where(eq(artworksTable.id, artwork.id));
+      }
+      console.log(`  Done ✓`);
+    }
   }
+
+  console.log("\n=== Provisioning complete ===");
+  console.log(`Results: ${successCount} succeeded, ${errorCount} failed`);
 
   if (errorCount > 0) {
     console.error(`\n${errorCount} artwork(s) failed — re-run to retry.`);

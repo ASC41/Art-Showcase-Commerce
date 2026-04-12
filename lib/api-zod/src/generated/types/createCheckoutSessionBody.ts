@@ -7,8 +7,8 @@
  */
 import type { CreateCheckoutSessionBodyPurchaseType } from "./createCheckoutSessionBodyPurchaseType";
 
-export type PrintType = "matte" | "framed";
-export type PrintSize = "8x10" | "11x14" | "18x24" | "24x36";
+export type PrintType = "matte";
+export type PrintSize = "8x11" | "11x14" | "12x18" | "16x20";
 
 export interface CreateCheckoutSessionBody {
   artworkSlug: string;

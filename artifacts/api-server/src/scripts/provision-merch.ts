@@ -44,7 +44,7 @@ interface MerchItemConfig {
   category: "apparel" | "accessories" | "print";
   displayOrder: number;
   /** subset of variants to enable (all colors/sizes we support) */
-  variants: Array<{ id: number; color: string; size: string; areaW?: number; areaH?: number }>;
+  variants: Array<{ id: number; color: string; size: string; areaW?: number; areaH?: number; priceCents?: number }>;
   /**
    * Optional: secondary print area with a color-aware wordmark/signature.
    * When set, createMerchProduct builds two print_areas groups so dark
@@ -321,7 +321,7 @@ const MERCH_CONFIG: MerchItemConfig[] = [
     name: "Giclée Art Print",
     description:
       "Archival pigment inks on premium cotton-rag paper. Gallery-quality reproduction made to order — colors deepen in person.",
-    priceCents: 2800, // $28 — est cost ~$12 → ~57% margin
+    priceCents: 3500, // $35 — starting price for 8×11; per-variant prices set below
     estimatedCostCents: 1200,
     blueprintId: 494,
     printProviderId: 36,
@@ -332,16 +332,16 @@ const MERCH_CONFIG: MerchItemConfig[] = [
     displayOrder: 11,
     perVariantScale: true,
     variants: [
-      // Portrait sizes (areaH > areaW)
-      { id: 66037, color: "Matte", size: '8" × 11"',  areaW: 2400, areaH: 3300 },
-      { id: 66039, color: "Matte", size: '11" × 14"', areaW: 3300, areaH: 4200 },
-      { id: 66043, color: "Matte", size: '12" × 18"', areaW: 3600, areaH: 5400 },
-      { id: 66047, color: "Matte", size: '16" × 20"', areaW: 4800, areaH: 6000 },
-      // Landscape sizes (areaW > areaH)
-      { id: 66033, color: "Matte", size: '11" × 8"',  areaW: 3300, areaH: 2400 },
-      { id: 66041, color: "Matte", size: '14" × 11"', areaW: 4200, areaH: 3300 },
-      { id: 66045, color: "Matte", size: '18" × 12"', areaW: 5400, areaH: 3600 },
-      { id: 66232, color: "Matte", size: '20" × 16"', areaW: 6000, areaH: 4800 },
+      // Portrait sizes (areaH > areaW) — prices match lightbox: 8×11=$35, 11×14=$55, 12×18=$75, 16×20=$95
+      { id: 66037, color: "Matte", size: '8" × 11"',  areaW: 2400, areaH: 3300, priceCents: 3500 },
+      { id: 66039, color: "Matte", size: '11" × 14"', areaW: 3300, areaH: 4200, priceCents: 5500 },
+      { id: 66043, color: "Matte", size: '12" × 18"', areaW: 3600, areaH: 5400, priceCents: 7500 },
+      { id: 66047, color: "Matte", size: '16" × 20"', areaW: 4800, areaH: 6000, priceCents: 9500 },
+      // Landscape sizes (areaW > areaH) — same tier prices as portrait equivalents
+      { id: 66033, color: "Matte", size: '11" × 8"',  areaW: 3300, areaH: 2400, priceCents: 3500 },
+      { id: 66041, color: "Matte", size: '14" × 11"', areaW: 4200, areaH: 3300, priceCents: 5500 },
+      { id: 66045, color: "Matte", size: '18" × 12"', areaW: 5400, areaH: 3600, priceCents: 7500 },
+      { id: 66232, color: "Matte", size: '20" × 16"', areaW: 6000, areaH: 4800, priceCents: 9500 },
     ],
   },
 ];
@@ -607,7 +607,7 @@ async function createMerchProduct(
       print_provider_id: config.printProviderId,
       variants: config.variants.map((v) => ({
         id: v.id,
-        price: config.priceCents,
+        price: v.priceCents ?? config.priceCents,
         is_enabled: (config as MerchItemConfig & { _enabledVariantIds?: number[] })._enabledVariantIds
           ? (config as MerchItemConfig & { _enabledVariantIds?: number[] })._enabledVariantIds!.includes(v.id)
           : true,
@@ -736,6 +736,7 @@ async function main() {
           size: v.size,
           ...(v.areaW !== undefined ? { areaW: v.areaW } : {}),
           ...(v.areaH !== undefined ? { areaH: v.areaH } : {}),
+          ...(v.priceCents !== undefined ? { priceCents: v.priceCents } : {}),
         })),
         signatureConfig: config.signatureConfig ?? null,
         category: config.category,

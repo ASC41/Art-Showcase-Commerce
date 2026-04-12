@@ -17,6 +17,8 @@ export interface MerchVariant {
   /** Per-variant print area dimensions (used for giclée-style per-size scaling) */
   areaW?: number;
   areaH?: number;
+  /** Per-variant price in cents; overrides the product-level priceCents when set */
+  priceCents?: number;
 }
 
 /**

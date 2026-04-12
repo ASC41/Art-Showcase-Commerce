@@ -52,7 +52,7 @@ router.post("/checkout/merch-session", async (req: Request, res: Response) => {
     }
 
     // Validate the variantId belongs to this product
-    const variants = (merch.variants ?? []) as Array<{ id: number; title: string; color: string; size: string }>;
+    const variants = (merch.variants ?? []) as Array<{ id: number; title: string; color: string; size: string; priceCents?: number }>;
     const variant = variants.find((v) => v.id === variantId);
     if (!variant) {
       res.status(400).json({ error: "Invalid variant for this product" });
@@ -74,6 +74,9 @@ router.post("/checkout/merch-session", async (req: Request, res: Response) => {
     const productName = `${artwork.title} × ${merch.name}`;
     const description = `${variant.title} — Artwork by Ryan Cellar — Printed on demand`;
 
+    // Use per-variant price if available (e.g. giclée prints), else fall back to product price
+    const unitAmount = variant.priceCents ?? merch.priceCents;
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
@@ -83,7 +86,7 @@ router.post("/checkout/merch-session", async (req: Request, res: Response) => {
           quantity: 1,
           price_data: {
             currency: "usd",
-            unit_amount: merch.priceCents,
+            unit_amount: unitAmount,
             product_data: {
               name: productName,
               description,
