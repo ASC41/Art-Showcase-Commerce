@@ -39,18 +39,14 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
   const checkoutMutation = useCreateCheckoutSession();
   const [showInfo, setShowInfo] = useState(false);
   const [showPrintPicker, setShowPrintPicker] = useState(false);
-  const [pickerStep, setPickerStep] = useState<1 | 2>(1);
   const [selectedPrintSize, setSelectedPrintSize] = useState<PrintSize>("11x14");
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (showPrintPicker && pickerStep === 2) {
-          setPickerStep(1);
-        } else if (showPrintPicker) {
+        if (showPrintPicker) {
           setShowPrintPicker(false);
-          setPickerStep(1);
         } else {
           onClose();
         }
@@ -61,7 +57,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
           onNavigate(currentIndex + 1);
       }
     },
-    [currentIndex, artworks.length, onClose, onNavigate, showPrintPicker, pickerStep]
+    [currentIndex, artworks.length, onClose, onNavigate, showPrintPicker]
   );
 
   useEffect(() => {
@@ -77,6 +73,15 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
     setShowInfo(false);
     setShowPrintPicker(false);
   }, [currentIndex]);
+
+  const handleReviewOrder = () => {
+    const params = new URLSearchParams({
+      product: "giclee-print",
+      artwork: artwork.slug,
+      size: selectedPrintSize,
+    });
+    window.location.href = `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}/merch?${params.toString()}`;
+  };
 
   if (!artwork) return null;
 
@@ -105,32 +110,12 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
     }
   };
 
-  const handleBuyPrint = async () => {
-    try {
-      const result = await checkoutMutation.mutateAsync({
-        data: {
-          artworkSlug: artwork.slug,
-          purchaseType: "print",
-          printType: "matte",
-          printSize: selectedPrintSize,
-          customerEmail: null,
-          successUrl: `${window.location.origin}/order/success?session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${window.location.origin}/portfolio`,
-        },
-      });
-      if (result.url) window.location.href = result.url;
-    } catch (err) {
-      console.error("Checkout error:", err);
-      alert("Unable to start checkout. Please try again.");
-    }
-  };
 
   const isAvailable = artwork.status === "available";
   const hasPrints = artwork.hasMattePrint;
 
   const handleOpenPicker = () => {
     cancelHide();
-    setPickerStep(1);
     setShowPrintPicker(true);
     setShowInfo(true);
   };
@@ -172,7 +157,6 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
     }
   };
 
-  const selectedPrice = PRINT_PRICES[selectedPrintSize];
 
   return (
     <div
@@ -469,8 +453,8 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                 )}
               </div>
             </>
-          ) : pickerStep === 1 ? (
-            /* Step 1 — Select size */
+          ) : (
+            /* Print size picker */
             <div
               style={{
                 display: "flex",
@@ -480,11 +464,6 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                 minWidth: "290px",
               }}
             >
-              {/* Step indicator */}
-              <div style={{ fontFamily: "'Inter'", fontSize: "9px", color: "#444", letterSpacing: "0.14em", textTransform: "uppercase" }}>
-                Step 1 of 2 — Choose size
-              </div>
-
               {/* Product label */}
               <div style={{ width: "100%" }}>
                 <div style={{ fontFamily: "'Inter'", fontSize: "9px", letterSpacing: "0.16em", color: "#555", textTransform: "uppercase", marginBottom: "6px" }}>
@@ -533,10 +512,10 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                 </div>
               </div>
 
-              {/* Step 1 action row */}
+              {/* Action row */}
               <div style={{ display: "flex", gap: "8px", width: "100%", justifyContent: "flex-end" }}>
                 <button
-                  onClick={() => { setShowPrintPicker(false); setPickerStep(1); }}
+                  onClick={() => setShowPrintPicker(false)}
                   style={{
                     padding: "9px 16px",
                     background: "transparent",
@@ -556,7 +535,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                   Cancel
                 </button>
                 <button
-                  onClick={() => setPickerStep(2)}
+                  onClick={handleReviewOrder}
                   style={{
                     padding: "9px 22px",
                     background: "rgba(245,245,245,0.08)",
@@ -583,106 +562,6 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                   }}
                 >
                   Review Order →
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* Step 2 — Order summary + confirm */
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-end",
-                gap: "18px",
-                minWidth: "290px",
-              }}
-            >
-              {/* Step indicator */}
-              <div style={{ fontFamily: "'Inter'", fontSize: "9px", color: "#444", letterSpacing: "0.14em", textTransform: "uppercase" }}>
-                Step 2 of 2 — Confirm &amp; purchase
-              </div>
-
-              {/* Order summary card */}
-              <div
-                style={{
-                  width: "100%",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "4px",
-                  padding: "16px",
-                  background: "rgba(245,245,245,0.03)",
-                }}
-              >
-                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "17px", color: "#f5f5f5", marginBottom: "14px", fontWeight: 300, letterSpacing: "0.02em" }}>
-                  {artwork.title}
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#555", letterSpacing: "0.06em", textTransform: "uppercase" }}>Type</span>
-                    <span style={{ fontFamily: "'Inter'", fontSize: "11px", color: "#ccc" }}>
-                      Giclée Art Print
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#555", letterSpacing: "0.06em", textTransform: "uppercase" }}>Size</span>
-                    <span style={{ fontFamily: "'Inter'", fontSize: "11px", color: "#ccc" }}>{SIZE_LABELS[selectedPrintSize]}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "6px", paddingTop: "10px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                    <span style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#555", letterSpacing: "0.06em", textTransform: "uppercase" }}>Total</span>
-                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", color: "#f5f5f5", fontWeight: 300 }}>
-                      ${selectedPrice}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#444", letterSpacing: "0.03em", textAlign: "right" }}>
-                Free shipping · Printed to order · Ships in 5–7 days
-              </div>
-
-              {/* Step 2 action row */}
-              <div style={{ display: "flex", gap: "8px", width: "100%", justifyContent: "flex-end" }}>
-                <button
-                  onClick={() => setPickerStep(1)}
-                  style={{
-                    padding: "9px 16px",
-                    background: "transparent",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: "3px",
-                    color: "#555",
-                    fontFamily: "'Inter'",
-                    fontSize: "10px",
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                  }}
-                  onMouseEnter={(e) => { (e.target as HTMLElement).style.color = "#888"; }}
-                  onMouseLeave={(e) => { (e.target as HTMLElement).style.color = "#555"; }}
-                >
-                  ← Back
-                </button>
-                <button
-                  onClick={handleBuyPrint}
-                  disabled={checkoutMutation.isPending}
-                  style={{
-                    padding: "9px 22px",
-                    background: "#f5f5f5",
-                    color: "#080808",
-                    border: "none",
-                    borderRadius: "3px",
-                    fontFamily: "'Inter'",
-                    fontSize: "11px",
-                    fontWeight: 600,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    cursor: checkoutMutation.isPending ? "not-allowed" : "pointer",
-                    opacity: checkoutMutation.isPending ? 0.6 : 1,
-                    transition: "opacity 0.2s",
-                    whiteSpace: "nowrap",
-                    flex: 1,
-                  }}
-                >
-                  {checkoutMutation.isPending ? "Loading…" : "Proceed to Checkout"}
                 </button>
               </div>
             </div>

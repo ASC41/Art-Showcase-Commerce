@@ -29,11 +29,13 @@ interface MerchProduct {
 interface MerchLightboxProps {
   product: MerchProduct | null;
   onClose: () => void;
+  initialArtworkSlug?: string;
+  initialSize?: string;
 }
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-export default function MerchLightbox({ product, onClose }: MerchLightboxProps) {
+export default function MerchLightbox({ product, onClose, initialArtworkSlug, initialSize }: MerchLightboxProps) {
   const { data: artworks } = useListArtworks();
   const { toast } = useToast();
 
@@ -63,12 +65,26 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
     }
   }, [product?.slug]);
 
-  // Auto-select first available artwork
+  // Map portfolio PrintSize key ("8x11", "11x14") to normalized merch variant size strings
+  // for exact matching against variant size labels like '8" × 11"' and '11" × 14"'.
+  const PORTFOLIO_SIZE_TO_MERCH_SIZES: Record<string, string[]> = {
+    "8x11":  ['8"×11"', '11"×8"'],
+    "11x14": ['11"×14"', '14"×11"'],
+  };
+
+  const normalizeSize = (s: string) => s.replace(/\s/g, "");
+
+  // Auto-select artwork: prefer initialArtworkSlug if provided, else first artwork
   useEffect(() => {
-    if (artworks && artworks.length > 0 && !selectedArtwork) {
+    if (!artworks || artworks.length === 0) return;
+    if (selectedArtwork) return;
+    if (initialArtworkSlug) {
+      const match = artworks.find((a) => a.slug === initialArtworkSlug);
+      setSelectedArtwork(match ?? artworks[0]);
+    } else {
       setSelectedArtwork(artworks[0]);
     }
-  }, [artworks, selectedArtwork]);
+  }, [artworks, selectedArtwork, initialArtworkSlug]);
 
   // Auto-select first variant when color changes or on mount
   useEffect(() => {
@@ -87,6 +103,21 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
       }
     }
   }, [product, selectedColor, selectedVariantId]);
+
+  // Pre-select the variant matching initialSize once color is available
+  const initialSizeAppliedRef = useRef(false);
+  useEffect(() => {
+    if (!initialSize || !product || !selectedColor || initialSizeAppliedRef.current) return;
+    const variants = product.variants ?? [];
+    const candidateSizes = PORTFOLIO_SIZE_TO_MERCH_SIZES[initialSize] ?? [];
+    const match = variants.find(
+      (v) => v.color === selectedColor && candidateSizes.includes(normalizeSize(v.size))
+    );
+    if (match) {
+      setSelectedVariantId(match.id);
+      initialSizeAppliedRef.current = true;
+    }
+  }, [initialSize, product, selectedColor]);
 
   // Fetch artwork-specific mockup images when artwork changes
   useEffect(() => {

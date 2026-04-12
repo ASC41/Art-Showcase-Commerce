@@ -341,6 +341,8 @@ export default function Merch() {
   const [artworks, setArtworks] = useState<GalleryArtwork[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<MerchProduct | null>(null);
+  const [deepLinkArtworkSlug, setDeepLinkArtworkSlug] = useState<string | undefined>(undefined);
+  const [deepLinkSize, setDeepLinkSize] = useState<string | undefined>(undefined);
   const isMobile = useIsMobile();
   const px = isMobile ? "20px" : "40px";
 
@@ -356,6 +358,25 @@ export default function Merch() {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  // Handle deep-link query params: ?product=giclee-print&artwork=<slug>&size=<size>
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const productParam = params.get("product");
+    const artworkParam = params.get("artwork");
+    const sizeParam = params.get("size");
+    if (productParam === "giclee-print" && products.length > 0) {
+      const gicleeProduct = products.find((p) => p.slug === "giclee-print");
+      if (gicleeProduct) {
+        setDeepLinkArtworkSlug(artworkParam ?? undefined);
+        setDeepLinkSize(sizeParam ?? undefined);
+        setSelected(gicleeProduct);
+        // Clean the URL so a page refresh doesn't re-open the lightbox
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState(null, "", cleanUrl);
+      }
+    }
+  }, [products]);
 
   const apparel = products.filter((p) => p.category === "apparel");
   const accessories = products.filter((p) => p.category === "accessories");
@@ -570,7 +591,16 @@ export default function Merch() {
 
       {/* Lightbox */}
       {selected && (
-        <MerchLightbox product={selected} onClose={() => setSelected(null)} />
+        <MerchLightbox
+          product={selected}
+          onClose={() => {
+            setSelected(null);
+            setDeepLinkArtworkSlug(undefined);
+            setDeepLinkSize(undefined);
+          }}
+          initialArtworkSlug={deepLinkArtworkSlug}
+          initialSize={deepLinkSize}
+        />
       )}
     </div>
   );
