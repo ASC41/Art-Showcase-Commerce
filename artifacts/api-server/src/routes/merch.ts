@@ -353,10 +353,12 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
         chosen.push(best);
       }
 
+      // Keep only the 5 defined slots: back, person-1, collar, back-2, folded.
+      // Priority >= 5 means extra person shots (person-2+) or unknown — excluded.
       mockupImages = chosen
-        .filter((url) => sigCameraPriority(url) < 10)
+        .filter((url) => sigCameraPriority(url) < 5)
         .sort((a, b) => sigCameraPriority(a) - sigCameraPriority(b))
-        .slice(0, 6);
+        .slice(0, 5);
     } else {
       mockupImages = (product.images ?? [])
         .filter((img) => img.src)
