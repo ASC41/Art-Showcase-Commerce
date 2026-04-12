@@ -280,6 +280,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     // This ensures the lightbox carousel surfaces the artwork and chest signature
     // prominently regardless of Printify's default image ordering.
     const cameraLabel = (url: string) => url.match(/camera_label=([^&]+)/)?.[1] ?? "";
+    // Priority for non-signature products (standard ordering)
     const cameraPriority = (url: string) => {
       const label = cameraLabel(url);
       if (label === "back") return 0;
@@ -287,6 +288,22 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
       if (label === "front") return 2;
       if (label.startsWith("person")) return 3;
       if (label === "back-2") return 4;
+      return 5;
+    };
+
+    // Priority for signature products (e.g. hoodie): person shots surface before flat
+    // ghost front because Printify does NOT render front_left_chest in flat ghost front
+    // shots. Person/lifestyle shots (real person wearing the hoodie) DO render the
+    // left-chest print, making the wordmark visible. Flat "front" is excluded entirely
+    // (priority 99) so it doesn't consume a slot when better shots exist.
+    const sigCameraPriority = (url: string) => {
+      const label = cameraLabel(url);
+      if (label === "back") return 0;
+      if (label.includes("collar") || label === "front-collar-closeup") return 1;
+      if (label.startsWith("person")) return 2;
+      if (label === "back-2") return 3;
+      if (label === "folded") return 4;
+      if (label === "front") return 99; // excluded — never renders front_left_chest
       return 5;
     };
 
@@ -336,7 +353,8 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
       }
 
       mockupImages = chosen
-        .sort((a, b) => cameraPriority(a) - cameraPriority(b))
+        .filter((url) => sigCameraPriority(url) < 10)
+        .sort((a, b) => sigCameraPriority(a) - sigCameraPriority(b))
         .slice(0, 6);
     } else {
       mockupImages = (product.images ?? [])
