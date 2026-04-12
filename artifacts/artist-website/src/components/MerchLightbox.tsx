@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useListArtworks } from "@workspace/api-client-react";
 import type { Artwork } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MerchVariant {
   id: number;
@@ -41,6 +42,8 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
   const [mockupIndex, setMockupIndex] = useState(0);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
+  const isMobile = useIsMobile();
+  const displayMockupsLengthRef = useRef(0);
 
   // Artwork-specific mockup state
   const [artworkMockups, setArtworkMockups] = useState<string[] | null>(null);
@@ -149,14 +152,14 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
         if (e.key === "Escape") { setIsZoomed(false); return; }
         if (e.key === "ArrowLeft") setMockupIndex((i) => Math.max(0, i - 1));
         if (e.key === "ArrowRight")
-          setMockupIndex((i) => Math.min(displayMockups.length - 1, i + 1));
+          setMockupIndex((i) => Math.min(displayMockupsLengthRef.current - 1, i + 1));
       } else {
         if (e.key === "Escape") onClose();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [isZoomed, displayMockups.length, onClose]);
+  }, [isZoomed, onClose]);
 
   const handleCheckout = async () => {
     if (!product || !selectedVariantId || !selectedArtwork) return;
@@ -269,6 +272,7 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
     });
     return filtered.length > 0 ? filtered : rawMockups;
   })();
+  displayMockupsLengthRef.current = displayMockups.length;
   const currentMockup = displayMockups[mockupIndex] ?? displayMockups[0] ?? null;
 
   const isOneSize =
@@ -291,10 +295,10 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
           backdropFilter: "blur(12px)",
           zIndex: 200,
           display: "flex",
-          alignItems: "center",
+          alignItems: isMobile ? "flex-start" : "center",
           justifyContent: "center",
           overflowY: "auto",
-          padding: "24px",
+          padding: isMobile ? "0" : "24px",
         }}
       >
         <motion.div
@@ -305,12 +309,13 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
           onClick={(e) => e.stopPropagation()}
           style={{
             width: "100%",
-            maxWidth: "960px",
+            maxWidth: isMobile ? "100%" : "960px",
             display: "flex",
-            flexDirection: "row",
-            gap: "48px",
+            flexDirection: isMobile ? "column" : "row",
+            gap: isMobile ? "0" : "48px",
             alignItems: "flex-start",
             position: "relative",
+            minHeight: isMobile ? "100dvh" : undefined,
           }}
         >
           {/* Close button */}
@@ -334,7 +339,7 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
           </button>
 
           {/* LEFT: Product mockup (artwork-specific from Printify) */}
-          <div style={{ flex: "0 0 440px", maxWidth: "440px" }}>
+          <div style={isMobile ? { width: "100%", padding: "56px 0 0" } : { flex: "0 0 440px", maxWidth: "440px" }}>
             {/* Main mockup image */}
             <div
               style={{
@@ -469,7 +474,7 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
           </div>
 
           {/* RIGHT: Info + selectors */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={isMobile ? { width: "100%", padding: "24px 20px 48px", boxSizing: "border-box" } : { flex: 1, minWidth: 0 }}>
             {/* Category + Name */}
             <div
               style={{

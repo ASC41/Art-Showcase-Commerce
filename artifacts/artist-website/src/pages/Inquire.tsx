@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const INQUIRY_TYPES = ["Exhibition", "Sales", "Commission"] as const;
 type InquiryType = (typeof INQUIRY_TYPES)[number];
@@ -24,6 +25,7 @@ const DISPLAY_MS = 750;
 
 export default function Inquire() {
   const [slideIdx, setSlideIdx] = useState(0);
+  const isMobile = useIsMobile();
   const [type, setType] = useState<InquiryType>("Exhibition");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -166,7 +168,7 @@ export default function Inquire() {
       <div style={{ position: "relative", zIndex: 2 }}>
         <Navbar />
 
-        <div style={{ maxWidth: "600px", margin: "0 auto", padding: "140px 40px 100px" }}>
+        <div style={{ maxWidth: "600px", margin: "0 auto", padding: isMobile ? "90px 20px 80px" : "140px 40px 100px" }}>
           <h1
             style={{
               fontFamily: "'Cormorant Garamond', serif",

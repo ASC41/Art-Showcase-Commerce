@@ -5,6 +5,7 @@ import type { Artwork } from "@workspace/api-client-react";
 import Navbar from "@/components/Navbar";
 import ScrollGrid from "@/components/ScrollGrid";
 import ArtworkLightbox from "@/components/ArtworkLightbox";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Portfolio() {
   const search = useSearch();
@@ -13,6 +14,7 @@ export default function Portfolio() {
 
   const { data: artworks, isLoading } = useListArtworks();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (artworks && artworkSlug) {
@@ -40,12 +42,12 @@ export default function Portfolio() {
       {/* Header */}
       <div
         style={{
-          paddingTop: "120px",
-          paddingBottom: "40px",
-          paddingLeft: "40px",
-          paddingRight: "40px",
+          paddingTop: isMobile ? "80px" : "120px",
+          paddingBottom: "32px",
+          paddingLeft: isMobile ? "20px" : "40px",
+          paddingRight: isMobile ? "20px" : "40px",
           borderBottom: "1px solid rgba(255,255,255,0.06)",
-          marginBottom: "40px",
+          marginBottom: "32px",
         }}
       >
         <h1
@@ -100,7 +102,7 @@ export default function Portfolio() {
           </span>
         </div>
       ) : artworks ? (
-        <ScrollGrid artworks={artworks} columns={3} gap={20} onItemClick={handleItemClick} showAnimationBar={false} />
+        <ScrollGrid artworks={artworks} columns={isMobile ? 1 : 3} gap={isMobile ? 12 : 20} onItemClick={handleItemClick} showAnimationBar={false} />
       ) : null}
 
       {/* Lightbox */}

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import MerchLightbox from "@/components/MerchLightbox";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -324,6 +325,8 @@ export default function Merch() {
   const [products, setProducts] = useState<MerchProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<MerchProduct | null>(null);
+  const isMobile = useIsMobile();
+  const px = isMobile ? "20px" : "40px";
 
   useEffect(() => {
     fetch(`${BASE_URL}/api/merch`)
@@ -353,12 +356,12 @@ export default function Merch() {
       {/* Header */}
       <div
         style={{
-          paddingTop: "120px",
-          paddingBottom: "40px",
-          paddingLeft: "40px",
-          paddingRight: "40px",
+          paddingTop: isMobile ? "80px" : "120px",
+          paddingBottom: "32px",
+          paddingLeft: px,
+          paddingRight: px,
           borderBottom: "1px solid rgba(255,255,255,0.06)",
-          marginBottom: "56px",
+          marginBottom: "40px",
         }}
       >
         <h1
@@ -390,7 +393,7 @@ export default function Merch() {
 
       {/* Apparel section */}
       {(loading || apparel.length > 0) && (
-        <section style={{ padding: "0 40px 64px" }}>
+        <section style={{ padding: `0 ${px} 64px` }}>
           <div
             style={{
               fontFamily: "'Inter'",
@@ -429,7 +432,7 @@ export default function Merch() {
 
       {/* Accessories section */}
       {(loading || accessories.length > 0) && (
-        <section style={{ padding: "0 40px 80px" }}>
+        <section style={{ padding: `0 ${px} 80px` }}>
           <div
             style={{
               fontFamily: "'Inter'",
@@ -468,7 +471,7 @@ export default function Merch() {
 
       {/* Prints section */}
       {(loading || prints.length > 0) && (
-        <section style={{ padding: "0 40px 80px" }}>
+        <section style={{ padding: `0 ${px} 80px` }}>
           <div
             style={{
               fontFamily: "'Inter'",
