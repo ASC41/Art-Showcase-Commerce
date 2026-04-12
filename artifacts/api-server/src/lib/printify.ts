@@ -207,17 +207,20 @@ export function shippingCostForCountry(
   rates: BlueprintShippingRates,
   countryCode: string
 ): number {
+  // Use the cheapest matching profile (standard shipping tier).
+  // Printify returns multiple profiles per country (standard / priority / express);
+  // we always surface the lowest price so customers see standard shipping cost.
+  let minCost: number | null = null;
   let restOfWorld: number | null = null;
-  let maxCost = 0;
   for (const profile of rates.profiles) {
     if (profile.countries.includes(countryCode)) {
-      maxCost = Math.max(maxCost, profile.firstItemCents);
+      minCost = minCost === null ? profile.firstItemCents : Math.min(minCost, profile.firstItemCents);
     }
     if (profile.countries.includes("REST_OF_THE_WORLD")) {
-      restOfWorld = profile.firstItemCents;
+      restOfWorld = restOfWorld === null ? profile.firstItemCents : Math.min(restOfWorld, profile.firstItemCents);
     }
   }
-  if (maxCost > 0) return maxCost;
+  if (minCost !== null) return minCost;
   if (restOfWorld !== null) return restOfWorld;
   return 1299;
 }
