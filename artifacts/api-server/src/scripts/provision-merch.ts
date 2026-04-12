@@ -181,13 +181,15 @@ const MERCH_CONFIG: MerchItemConfig[] = [
       { id: 25489, color: "White", size: "XL" },
       { id: 25520, color: "White", size: "2XL" },
     ],
-    // Small centered wordmark on both wrists (left_wrist_dtf + right_wrist_dtf).
-    // Wrist DTF area: 1050×1050 (square) — same family as hoodie front_left_chest.
-    // signatureScale=0.5 → ~2" wide at ~248 DPI (tasteful cuff logo).
-    // signaturePositions covers both wrists; position="left_wrist_dtf" drives camera priority.
+    // Small centered wordmark on both sleeves (left_sleeve + right_sleeve).
+    // NOTE: left_wrist_dtf/right_wrist_dtf are in the Printify catalog but Printify does NOT
+    // render them in any mockup camera — the sleeve camera shots show the wrist DTF area as blank.
+    // left_sleeve/right_sleeve render correctly in the person-5-left/right-sleeve camera shots.
+    // signatureScale=0.3 → tasteful mid-sleeve logo, visible in sleeve mockup cameras.
+    // signaturePositions covers both sleeves; position="left_sleeve" drives camera priority.
     signatureConfig: {
-      position: "left_wrist_dtf",
-      signaturePositions: ["left_wrist_dtf", "right_wrist_dtf"],
+      position: "left_sleeve",
+      signaturePositions: ["left_sleeve", "right_sleeve"],
       whiteWordmarkUrl:
         "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@475907b09a0969a684bac008d7aca675f3138ef4/uploads/2026-04-12T05-30-52-237Z-pd2wptkwr.png",
       blackWordmarkUrl:
@@ -200,7 +202,7 @@ const MERCH_CONFIG: MerchItemConfig[] = [
       areaHeight: 1050,
       signatureX: 0.5,
       signatureY: 0.5,
-      signatureScale: 0.5,
+      signatureScale: 0.3,
     },
   },
   {

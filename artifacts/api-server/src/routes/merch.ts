@@ -317,7 +317,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     //   0=front(artwork), 1=back(wordmark), 2=person-1-front, 3=person-1-back, 4=folded.
     //   Sleeve/size-chart shots excluded.
     //
-    // Crewneck ("left_wrist_dtf"): artwork on front, wordmark on wrists.
+    // Crewneck ("left_sleeve"): artwork on front, wordmark on both sleeves.
     //   0=front(artwork), 1=person-5-left-sleeve, 2=person-5-right-sleeve,
     //   3=person-1, 4=folded. Back/lifestyle/size-chart shots excluded.
     const sigIsBackPos = sig.position === "back" || sig.position === "back-2";
@@ -325,7 +325,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     const sigCameraPriority = (url: string) => {
       const label = cameraLabel(url);
       if (sigIsWristPos) {
-        // Crewneck: artwork front, wordmark on wrists
+        // Crewneck: artwork front, wordmark on sleeves
         if (label === "front") return 0;
         if (label === "person-5-left-sleeve") return 1;
         if (label === "person-5-right-sleeve") return 2;
