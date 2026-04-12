@@ -84,19 +84,11 @@ export default function Inquire() {
 
   return (
     <div style={{ minHeight: "100vh", position: "relative", overflow: "hidden", color: "#f5f5f5" }}>
-      {/* ── Ken Burns keyframes ── */}
+      {/* ── Ken Burns keyframe — single continuous loop, never resets ── */}
       <style>{`
-        @keyframes kenBurns {
+        @keyframes kenBurnsGlobal {
           from { transform: scale(1.0) translate(0%, 0%); }
-          to   { transform: scale(1.10) translate(-0.75%, -0.5%); }
-        }
-        @keyframes kenBurnsAlt {
-          from { transform: scale(1.0) translate(0%, 0%); }
-          to   { transform: scale(1.10) translate(0.5%, -0.75%); }
-        }
-        @keyframes kenBurnsC {
-          from { transform: scale(1.0) translate(0%, 0%); }
-          to   { transform: scale(1.08) translate(-0.25%, 0.5%); }
+          to   { transform: scale(1.06) translate(-0.5%, -0.4%); }
         }
       `}</style>
 
@@ -109,30 +101,28 @@ export default function Inquire() {
           background: "#080808",
         }}
       >
-        <AnimatePresence>
-          <motion.div
-            key={slide.id}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
-            style={{ position: "absolute", inset: 0 }}
-          >
-            {/* Ken Burns inner wrapper — each slide uses a slightly different drift direction */}
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                animationName:
-                  slideIdx === 0
-                    ? "kenBurns"
-                    : slideIdx === 1
-                      ? "kenBurnsAlt"
-                      : "kenBurnsC",
-                animationDuration: "2s",
-                animationTimingFunction: "ease-in-out",
-                animationFillMode: "both",
-              }}
+        {/* Single continuously-animated wrapper — slides crossfade inside it.
+            Linear + alternate + infinite = constant speed in both directions, no restarts. */}
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            animationName: "kenBurnsGlobal",
+            animationDuration: "24s",
+            animationTimingFunction: "linear",
+            animationIterationCount: "infinite",
+            animationDirection: "alternate",
+            animationFillMode: "both",
+          }}
+        >
+          <AnimatePresence>
+            <motion.div
+              key={slide.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+              style={{ position: "absolute", inset: 0 }}
             >
               <img
                 src={slide.url}
@@ -148,9 +138,9 @@ export default function Inquire() {
                   pointerEvents: "none",
                 }}
               />
-            </div>
-          </motion.div>
-        </AnimatePresence>
+            </motion.div>
+          </AnimatePresence>
+        </div>
 
         {/* Dark vignette overlay — preserves readability */}
         <div
