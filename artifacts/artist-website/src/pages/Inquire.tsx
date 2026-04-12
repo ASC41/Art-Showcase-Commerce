@@ -1,10 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 
 const INQUIRY_TYPES = ["Exhibition", "Sales", "Commission"] as const;
 type InquiryType = (typeof INQUIRY_TYPES)[number];
 
+const SLIDES = [
+  {
+    id: "u08",
+    url: "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@87331cd0df3f16b19c5dd36d129847bdc08c7943/uploads/2026-03-30T21-15-53-287Z-q8l3g6634.JPG",
+  },
+  {
+    id: "u09",
+    url: "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@bd0905c1cd2366e717f55eec6430fa030886f156/uploads/2026-03-30T21-16-30-498Z-fiyt8otld.JPG",
+  },
+  {
+    id: "u10",
+    url: "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@a5a7948f105845838e8fb13d2c80257f07a71253/uploads/2026-03-30T21-16-48-168Z-3adbmnpq7.JPG",
+  },
+];
+
+const DISPLAY_MS = 750;
+
 export default function Inquire() {
+  const [slideIdx, setSlideIdx] = useState(0);
   const [type, setType] = useState<InquiryType>("Exhibition");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -12,11 +31,18 @@ export default function Inquire() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
+  useEffect(() => {
+    const id = setInterval(
+      () => setSlideIdx((i) => (i + 1) % SLIDES.length),
+      DISPLAY_MS
+    );
+    return () => clearInterval(id);
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus("sending");
     setErrorMsg("");
-
     try {
       const base = import.meta.env.BASE_URL.replace(/\/$/, "");
       const res = await fetch(`${base}/api/inquire`, {
@@ -39,8 +65,8 @@ export default function Inquire() {
 
   const inputStyle: React.CSSProperties = {
     width: "100%",
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.1)",
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.12)",
     borderRadius: "4px",
     padding: "14px 16px",
     fontFamily: "'Inter'",
@@ -52,247 +78,332 @@ export default function Inquire() {
     transition: "border-color 0.2s",
   };
 
+  const slide = SLIDES[slideIdx];
+
   return (
-    <div style={{ minHeight: "100vh", background: "#080808", color: "#f5f5f5" }}>
-      <Navbar />
+    <div style={{ minHeight: "100vh", position: "relative", overflow: "hidden", color: "#f5f5f5" }}>
+      {/* ── Ken Burns keyframes ── */}
+      <style>{`
+        @keyframes kenBurns {
+          from { transform: scale(1.0) translate(0%, 0%); }
+          to   { transform: scale(1.10) translate(-1.5%, -1%); }
+        }
+        @keyframes kenBurnsAlt {
+          from { transform: scale(1.0) translate(0%, 0%); }
+          to   { transform: scale(1.10) translate(1%, -1.5%); }
+        }
+        @keyframes kenBurnsC {
+          from { transform: scale(1.0) translate(0%, 0%); }
+          to   { transform: scale(1.08) translate(-0.5%, 1%); }
+        }
+      `}</style>
 
-      <div style={{ maxWidth: "600px", margin: "0 auto", padding: "140px 40px 100px" }}>
-        <h1
-          style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontSize: "clamp(40px, 5vw, 64px)",
-            fontWeight: 300,
-            letterSpacing: "0.05em",
-            color: "#f5f5f5",
-            margin: "0 0 8px",
-            lineHeight: 1,
-          }}
-        >
-          Inquire
-        </h1>
-
-        <p
-          style={{
-            fontFamily: "'Inter'",
-            fontSize: "13px",
-            fontWeight: 400,
-            letterSpacing: "0.22em",
-            textTransform: "uppercase",
-            color: "#555",
-            margin: "0 0 56px",
-          }}
-        >
-          Exhibition · Sales · Commission
-        </p>
-
-        {status === "sent" ? (
-          <div>
+      {/* ── Fixed background slideshow ── */}
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 0,
+          background: "#080808",
+        }}
+      >
+        <AnimatePresence>
+          <motion.div
+            key={slide.id}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            style={{ position: "absolute", inset: 0 }}
+          >
+            {/* Ken Burns inner wrapper — each slide uses a slightly different drift direction */}
             <div
               style={{
-                width: "40px",
-                height: "1px",
-                background: "rgba(255,255,255,0.3)",
-                marginBottom: "32px",
-              }}
-            />
-            <p
-              style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                fontSize: "24px",
-                fontWeight: 300,
-                lineHeight: 1.6,
-                color: "rgba(245,245,245,0.85)",
-                margin: "0 0 16px",
+                width: "100%",
+                height: "100%",
+                animationName:
+                  slideIdx === 0
+                    ? "kenBurns"
+                    : slideIdx === 1
+                      ? "kenBurnsAlt"
+                      : "kenBurnsC",
+                animationDuration: "2s",
+                animationTimingFunction: "ease-in-out",
+                animationFillMode: "both",
               }}
             >
-              Thank you for reaching out.
-            </p>
-            <p
-              style={{
-                fontFamily: "'Inter'",
-                fontSize: "15px",
-                lineHeight: 1.7,
-                color: "rgba(245,245,245,0.5)",
-              }}
-            >
-              Your inquiry has been received. Ryan will be in touch shortly.
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} noValidate>
-            {/* Inquiry type */}
-            <div style={{ marginBottom: "32px" }}>
-              <label
+              <img
+                src={slide.url}
+                alt=""
+                draggable={false}
                 style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  objectPosition: "center",
                   display: "block",
-                  fontFamily: "'Inter'",
-                  fontSize: "11px",
-                  letterSpacing: "0.18em",
-                  textTransform: "uppercase",
-                  color: "#555",
-                  marginBottom: "12px",
+                  userSelect: "none",
+                  pointerEvents: "none",
                 }}
-              >
-                Type of inquiry
-              </label>
-              <div style={{ display: "flex", gap: "10px" }}>
-                {INQUIRY_TYPES.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setType(t)}
-                    style={{
-                      padding: "9px 20px",
-                      background: type === t ? "rgba(245,245,245,0.1)" : "transparent",
-                      border: `1px solid ${type === t ? "rgba(245,245,245,0.25)" : "rgba(255,255,255,0.08)"}`,
-                      borderRadius: "4px",
-                      fontFamily: "'Inter'",
-                      fontSize: "12px",
-                      fontWeight: 400,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                      color: type === t ? "#f5f5f5" : "#666",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Name */}
-            <div style={{ marginBottom: "20px" }}>
-              <label
-                style={{
-                  display: "block",
-                  fontFamily: "'Inter'",
-                  fontSize: "11px",
-                  letterSpacing: "0.18em",
-                  textTransform: "uppercase",
-                  color: "#555",
-                  marginBottom: "10px",
-                }}
-              >
-                Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                placeholder="Your name"
-                style={inputStyle}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}
               />
             </div>
+          </motion.div>
+        </AnimatePresence>
 
-            {/* Email */}
-            <div style={{ marginBottom: "20px" }}>
-              <label
+        {/* Dark vignette overlay — preserves readability */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 1,
+            background:
+              "linear-gradient(to bottom, rgba(8,8,8,0.70) 0%, rgba(8,8,8,0.60) 40%, rgba(8,8,8,0.80) 100%)",
+          }}
+        />
+      </div>
+
+      {/* ── Foreground content ── */}
+      <div style={{ position: "relative", zIndex: 2 }}>
+        <Navbar />
+
+        <div style={{ maxWidth: "600px", margin: "0 auto", padding: "140px 40px 100px" }}>
+          <h1
+            style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "clamp(40px, 5vw, 64px)",
+              fontWeight: 300,
+              letterSpacing: "0.05em",
+              color: "#f5f5f5",
+              margin: "0 0 8px",
+              lineHeight: 1,
+            }}
+          >
+            Inquire
+          </h1>
+
+          <p
+            style={{
+              fontFamily: "'Inter'",
+              fontSize: "13px",
+              fontWeight: 400,
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              color: "rgba(245,245,245,0.45)",
+              margin: "0 0 56px",
+            }}
+          >
+            Exhibition · Sales · Commission
+          </p>
+
+          {status === "sent" ? (
+            <div>
+              <div
                 style={{
-                  display: "block",
-                  fontFamily: "'Inter'",
-                  fontSize: "11px",
-                  letterSpacing: "0.18em",
-                  textTransform: "uppercase",
-                  color: "#555",
-                  marginBottom: "10px",
+                  width: "40px",
+                  height: "1px",
+                  background: "rgba(255,255,255,0.3)",
+                  marginBottom: "32px",
+                }}
+              />
+              <p
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontSize: "24px",
+                  fontWeight: 300,
+                  lineHeight: 1.6,
+                  color: "rgba(245,245,245,0.85)",
+                  margin: "0 0 16px",
                 }}
               >
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="your@email.com"
-                style={inputStyle}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}
-              />
-            </div>
-
-            {/* Message */}
-            <div style={{ marginBottom: "36px" }}>
-              <label
-                style={{
-                  display: "block",
-                  fontFamily: "'Inter'",
-                  fontSize: "11px",
-                  letterSpacing: "0.18em",
-                  textTransform: "uppercase",
-                  color: "#555",
-                  marginBottom: "10px",
-                }}
-              >
-                Message
-              </label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                required
-                rows={6}
-                placeholder="Tell us about your inquiry…"
-                style={{
-                  ...inputStyle,
-                  resize: "vertical",
-                  minHeight: "140px",
-                  lineHeight: 1.65,
-                }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}
-              />
-            </div>
-
-            {errorMsg && (
+                Thank you for reaching out.
+              </p>
               <p
                 style={{
                   fontFamily: "'Inter'",
-                  fontSize: "13px",
-                  color: "rgba(248,113,113,0.9)",
-                  marginBottom: "20px",
+                  fontSize: "15px",
+                  lineHeight: 1.7,
+                  color: "rgba(245,245,245,0.5)",
                 }}
               >
-                {errorMsg}
+                Your inquiry has been received. Ryan will be in touch shortly.
               </p>
-            )}
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} noValidate>
+              {/* Inquiry type */}
+              <div style={{ marginBottom: "32px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontFamily: "'Inter'",
+                    fontSize: "11px",
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    color: "rgba(245,245,245,0.4)",
+                    marginBottom: "12px",
+                  }}
+                >
+                  Type of inquiry
+                </label>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  {INQUIRY_TYPES.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setType(t)}
+                      style={{
+                        padding: "9px 20px",
+                        background: type === t ? "rgba(245,245,245,0.10)" : "transparent",
+                        border: `1px solid ${type === t ? "rgba(245,245,245,0.28)" : "rgba(255,255,255,0.10)"}`,
+                        borderRadius: "4px",
+                        fontFamily: "'Inter'",
+                        fontSize: "12px",
+                        fontWeight: 400,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        color: type === t ? "#f5f5f5" : "rgba(245,245,245,0.45)",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            <button
-              type="submit"
-              disabled={status === "sending"}
-              style={{
-                padding: "14px 40px",
-                background: "transparent",
-                border: "1px solid rgba(245,245,245,0.3)",
-                borderRadius: "4px",
-                fontFamily: "'Inter'",
-                fontSize: "12px",
-                fontWeight: 400,
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                color: status === "sending" ? "#555" : "#f5f5f5",
-                cursor: status === "sending" ? "default" : "pointer",
-                transition: "all 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                if (status !== "sending") {
-                  e.currentTarget.style.background = "rgba(245,245,245,0.08)";
-                  e.currentTarget.style.borderColor = "rgba(245,245,245,0.5)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.borderColor = "rgba(245,245,245,0.3)";
-              }}
-            >
-              {status === "sending" ? "Sending…" : "Send Inquiry"}
-            </button>
-          </form>
-        )}
+              {/* Name */}
+              <div style={{ marginBottom: "20px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontFamily: "'Inter'",
+                    fontSize: "11px",
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    color: "rgba(245,245,245,0.4)",
+                    marginBottom: "10px",
+                  }}
+                >
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  placeholder="Your name"
+                  style={inputStyle}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)")}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)")}
+                />
+              </div>
+
+              {/* Email */}
+              <div style={{ marginBottom: "20px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontFamily: "'Inter'",
+                    fontSize: "11px",
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    color: "rgba(245,245,245,0.4)",
+                    marginBottom: "10px",
+                  }}
+                >
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="your@email.com"
+                  style={inputStyle}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)")}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)")}
+                />
+              </div>
+
+              {/* Message */}
+              <div style={{ marginBottom: "36px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontFamily: "'Inter'",
+                    fontSize: "11px",
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    color: "rgba(245,245,245,0.4)",
+                    marginBottom: "10px",
+                  }}
+                >
+                  Message
+                </label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  required
+                  rows={6}
+                  placeholder="Tell us about your inquiry…"
+                  style={{
+                    ...inputStyle,
+                    resize: "vertical",
+                    minHeight: "140px",
+                    lineHeight: 1.65,
+                  }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)")}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)")}
+                />
+              </div>
+
+              {errorMsg && (
+                <p
+                  style={{
+                    fontFamily: "'Inter'",
+                    fontSize: "13px",
+                    color: "rgba(248,113,113,0.9)",
+                    marginBottom: "20px",
+                  }}
+                >
+                  {errorMsg}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={status === "sending"}
+                style={{
+                  padding: "14px 40px",
+                  background: "transparent",
+                  border: "1px solid rgba(245,245,245,0.3)",
+                  borderRadius: "4px",
+                  fontFamily: "'Inter'",
+                  fontSize: "12px",
+                  fontWeight: 400,
+                  letterSpacing: "0.2em",
+                  textTransform: "uppercase",
+                  color: status === "sending" ? "rgba(245,245,245,0.4)" : "#f5f5f5",
+                  cursor: status === "sending" ? "default" : "pointer",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  if (status !== "sending") {
+                    e.currentTarget.style.background = "rgba(245,245,245,0.08)";
+                    e.currentTarget.style.borderColor = "rgba(245,245,245,0.5)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.borderColor = "rgba(245,245,245,0.3)";
+                }}
+              >
+                {status === "sending" ? "Sending…" : "Send Inquiry"}
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );
