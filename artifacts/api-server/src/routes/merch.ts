@@ -299,12 +299,13 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     const sigCameraPriority = (url: string) => {
       const label = cameraLabel(url);
       if (label === "back") return 0;
-      if (label.includes("collar") || label === "front-collar-closeup") return 1;
-      if (label.startsWith("person")) return 2;
+      if (label === "person-1") return 1;     // one model demo, second in carousel
+      if (label.includes("collar") || label === "front-collar-closeup") return 2;
       if (label === "back-2") return 3;
       if (label === "folded") return 4;
+      if (label.startsWith("person")) return 5; // extra person shots deprioritised
       if (label === "front") return 99; // excluded — never renders front_left_chest
-      return 5;
+      return 6;
     };
 
     // For signature products (e.g. hoodie), pick variant-aware images per angle:
