@@ -13,10 +13,12 @@ import { sendOrderNotification } from "../lib/mailer";
 import {
   createPrintOrder,
   getVariantId,
+  getBlueprintShippingRates,
   type PrintType,
   type PrintSize,
   type PrintOrientation,
 } from "../lib/printify";
+import { buildStripeShippingOptions } from "../lib/shipping";
 import { fulfillMerchOrder } from "./merch-checkout";
 
 const router: IRouter = Router();
@@ -456,12 +458,9 @@ router.post("/checkout/session", async (req, res) => {
     };
 
     if (purchaseType === "print") {
-      sessionParams.shipping_address_collection = {
-        allowed_countries: [
-          "US", "CA", "GB", "AU", "DE", "FR", "NL", "SE", "NO", "DK",
-          "FI", "BE", "AT", "CH", "IE", "NZ", "SG", "JP",
-        ],
-      };
+      // Giclée Art Print: blueprint 494, provider 36 (Print Pigeons)
+      const printShippingRates = await getBlueprintShippingRates(494, 36);
+      sessionParams.shipping_options = buildStripeShippingOptions(printShippingRates);
       sessionParams.phone_number_collection = { enabled: true };
     }
 

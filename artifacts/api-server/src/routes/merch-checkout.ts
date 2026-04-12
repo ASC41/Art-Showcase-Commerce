@@ -8,7 +8,8 @@ import {
 } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
-import { printifyRequest, getShopId } from "../lib/printify";
+import { printifyRequest, getShopId, getBlueprintShippingRates } from "../lib/printify";
+import { buildStripeShippingOptions } from "../lib/shipping";
 
 const router: IRouter = Router();
 
@@ -77,6 +78,13 @@ router.post("/checkout/merch-session", async (req: Request, res: Response) => {
     // Use per-variant price if available (e.g. giclée prints), else fall back to product price
     const unitAmount = variant.priceCents ?? merch.priceCents;
 
+    // Fetch real Printify shipping rates for this blueprint (cached 4 hrs)
+    const shippingRates = await getBlueprintShippingRates(
+      merch.blueprintId,
+      merch.printProviderId
+    );
+    const shippingOptions = buildStripeShippingOptions(shippingRates);
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
@@ -105,12 +113,7 @@ router.post("/checkout/merch-session", async (req: Request, res: Response) => {
         artworkId: String(artwork.id),
         artworkTitle: artwork.title,
       },
-      shipping_address_collection: {
-        allowed_countries: [
-          "US", "CA", "GB", "AU", "DE", "FR", "NL", "SE", "NO", "DK",
-          "FI", "BE", "AT", "CH", "IE", "NZ", "SG", "JP",
-        ],
-      },
+      shipping_options: shippingOptions,
       phone_number_collection: { enabled: false },
       success_url: successUrl,
       cancel_url: cancelUrl,

@@ -143,6 +143,84 @@ export function getVariantId(
   return cfg?.matte?.variantIds?.[orientation]?.[size] ?? null;
 }
 
+// ── Shipping rates ─────────────────────────────────────────────────────────────
+
+export interface ShippingProfile {
+  countries: string[];
+  firstItemCents: number;
+  additionalItemCents: number;
+}
+
+export interface BlueprintShippingRates {
+  profiles: ShippingProfile[];
+  cachedAt: number;
+}
+
+const shippingCache = new Map<string, BlueprintShippingRates>();
+const SHIPPING_CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours
+
+export async function getBlueprintShippingRates(
+  blueprintId: number,
+  printProviderId: number
+): Promise<BlueprintShippingRates> {
+  const key = `${blueprintId}-${printProviderId}`;
+  const cached = shippingCache.get(key);
+  if (cached && Date.now() - cached.cachedAt < SHIPPING_CACHE_TTL_MS) {
+    return cached;
+  }
+  try {
+    const data = (await printifyRequest(
+      `/catalog/blueprints/${blueprintId}/print_providers/${printProviderId}/shipping.json`
+    )) as {
+      profiles: Array<{
+        countries: string[];
+        first_item: { cost: number };
+        additional_items: { cost: number };
+      }>;
+    };
+    const rates: BlueprintShippingRates = {
+      profiles: (data.profiles ?? []).map((p) => ({
+        countries: p.countries ?? [],
+        firstItemCents: p.first_item?.cost ?? 0,
+        additionalItemCents: p.additional_items?.cost ?? 0,
+      })),
+      cachedAt: Date.now(),
+    };
+    shippingCache.set(key, rates);
+    return rates;
+  } catch {
+    const fallback: BlueprintShippingRates = {
+      profiles: [
+        { countries: ["US"], firstItemCents: 499, additionalItemCents: 0 },
+        { countries: ["CA"], firstItemCents: 999, additionalItemCents: 0 },
+        { countries: ["REST_OF_THE_WORLD"], firstItemCents: 1299, additionalItemCents: 0 },
+      ],
+      cachedAt: Date.now(),
+    };
+    shippingCache.set(key, fallback);
+    return fallback;
+  }
+}
+
+export function shippingCostForCountry(
+  rates: BlueprintShippingRates,
+  countryCode: string
+): number {
+  let restOfWorld: number | null = null;
+  let maxCost = 0;
+  for (const profile of rates.profiles) {
+    if (profile.countries.includes(countryCode)) {
+      maxCost = Math.max(maxCost, profile.firstItemCents);
+    }
+    if (profile.countries.includes("REST_OF_THE_WORLD")) {
+      restOfWorld = profile.firstItemCents;
+    }
+  }
+  if (maxCost > 0) return maxCost;
+  if (restOfWorld !== null) return restOfWorld;
+  return 1299;
+}
+
 // ── HTTP helper ───────────────────────────────────────────────────────────────
 export async function printifyRequest(path: string, options: RequestInit = {}) {
   const apiKey = process.env.PRINTIFY_API_KEY;
