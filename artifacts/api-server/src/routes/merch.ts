@@ -130,25 +130,30 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
 
     const shopId = await getShopId();
 
-    // Artwork scale on print area:
-    // – artRatio > areaRatio (artwork wider than area in ratio) → COVER (scale=1.0):
-    //   fills the entire area; sides of the artwork are lightly cropped.
-    //   Handles: landscape art on portrait areas, portrait art on very narrow areas
-    //   (e.g. phone cases), portrait art on poster/tote areas — all cases where the
-    //   artwork would otherwise leave white borders.
-    // – artRatio ≤ areaRatio (artwork narrower/taller than area) → CONTAIN:
-    //   fits the artwork without cropping. Handles standard portrait art on hoodies,
-    //   t-shirts, crewnecks; any art on the bucket hat's wide panel.
-    // Printify IGNORES width/height fields; at scale=1.0 it renders COVER.
+    // Artwork scale on print area — COVER formula:
+    //
+    // In Printify, scale=1.0 means the artwork fills 100% of the print-area WIDTH.
+    // The rendered height at scale s is: s × areaW / artRatio.
+    // For COVER (no white borders on any axis) we need rendered height ≥ areaH:
+    //   s × areaW / artRatio ≥ areaH  →  s ≥ artRatio / areaRatio
+    // Combined with the minimum of 1.0 (full width fill), the COVER scale is:
+    //   scale = max(1.0, artRatio / areaRatio)
+    //
+    // Examples:
+    //   Phone case (areaRatio=0.622), portrait art (artRatio=0.831):
+    //     scale = max(1.0, 0.831/0.622) = 1.336 → fills height, crops width slightly
+    //   Hoodie (areaRatio=0.876), portrait art (artRatio=0.664):
+    //     scale = max(1.0, 0.664/0.876) = 1.0 → fills width, artwork taller than area → COVER
+    //   Bucket hat (areaRatio=2.128), any portrait art:
+    //     scale = max(1.0, 0.8/2.128) = 1.0 → artwork fills width, narrower than area → CONTAIN
+    //     (bucket hat is a wide panel; portrait art doesn't fill it fully, which is intentional)
     const artW = artwork.imageWidth ?? 3000;
     const artH = artwork.imageHeight ?? 3000;
     const areaW = merch.printAreaWidth ?? 3000;
     const areaH = merch.printAreaHeight ?? 3000;
     const artRatio = artW / artH;
     const areaRatio = areaW / areaH;
-    const artworkScale = artRatio > areaRatio
-      ? 1.0
-      : Math.min(artRatio, areaRatio) / Math.max(artRatio, areaRatio);
+    const artworkScale = Math.max(1.0, artRatio / areaRatio);
 
     // Upload artwork image to Printify
     const uploadRes = await printifyRequest("/uploads/images.json", {
