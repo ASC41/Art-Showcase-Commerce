@@ -229,7 +229,7 @@ components:
           enum: [matte, framed]
         printSize:
           type: string
-          enum: ["11x14", "18x24", "24x36"]
+          enum: ["8x11", "11x14"]
       required:
         - artworkSlug
         - purchaseType

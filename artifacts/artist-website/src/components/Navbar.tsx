@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -58,7 +58,7 @@ function WaveLogo({ text }: { text: string }) {
 }
 
 function HamburgerIcon({ isOpen }: { isOpen: boolean }) {
-  const line = (rotate: string, y: number, opacity = 1) => ({
+  const line = (rotate: string, y: number, opacity = 1): CSSProperties => ({
     position: "absolute",
     left: 0,
     width: "22px",

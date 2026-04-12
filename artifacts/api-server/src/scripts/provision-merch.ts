@@ -321,8 +321,13 @@ const MERCH_CONFIG: MerchItemConfig[] = [
     name: "Giclée Art Print",
     description:
       "Archival pigment inks on premium cotton-rag paper. Gallery-quality reproduction made to order — colors deepen in person.",
-    priceCents: 3500, // $35 — starting price for 8×11; per-variant prices set below
-    estimatedCostCents: 1200,
+    // Retail prices based on Printify base costs (Print Pigeons, blueprint 494):
+    //   8×11: $9.26 cost → $45 retail (~79% margin)
+    //   11×14: $9.84 cost → $65 retail (~85% margin)
+    // 12×18 and 16×20 removed — source artwork images cannot reach 150 DPI
+    // minimum at those sizes; re-add when higher-resolution files are available.
+    priceCents: 4500, // starting price for 8×11; per-variant prices set below
+    estimatedCostCents: 984,  // ~$9.84 average (8×11=$9.26, 11×14=$9.84)
     blueprintId: 494,
     printProviderId: 36,
     printAreaPosition: "front",
@@ -332,16 +337,12 @@ const MERCH_CONFIG: MerchItemConfig[] = [
     displayOrder: 11,
     perVariantScale: true,
     variants: [
-      // Portrait sizes (areaH > areaW) — prices match lightbox: 8×11=$35, 11×14=$55, 12×18=$75, 16×20=$95
-      { id: 66037, color: "Matte", size: '8" × 11"',  areaW: 2400, areaH: 3300, priceCents: 3500 },
-      { id: 66039, color: "Matte", size: '11" × 14"', areaW: 3300, areaH: 4200, priceCents: 5500 },
-      { id: 66043, color: "Matte", size: '12" × 18"', areaW: 3600, areaH: 5400, priceCents: 7500 },
-      { id: 66047, color: "Matte", size: '16" × 20"', areaW: 4800, areaH: 6000, priceCents: 9500 },
-      // Landscape sizes (areaW > areaH) — same tier prices as portrait equivalents
-      { id: 66033, color: "Matte", size: '11" × 8"',  areaW: 3300, areaH: 2400, priceCents: 3500 },
-      { id: 66041, color: "Matte", size: '14" × 11"', areaW: 4200, areaH: 3300, priceCents: 5500 },
-      { id: 66045, color: "Matte", size: '18" × 12"', areaW: 5400, areaH: 3600, priceCents: 7500 },
-      { id: 66232, color: "Matte", size: '20" × 16"', areaW: 6000, areaH: 4800, priceCents: 9500 },
+      // Portrait sizes (areaH > areaW)
+      { id: 66037, color: "Matte", size: '8" × 11"',  areaW: 2400, areaH: 3300, priceCents: 4500 },
+      { id: 66039, color: "Matte", size: '11" × 14"', areaW: 3300, areaH: 4200, priceCents: 6500 },
+      // Landscape sizes (areaW > areaH)
+      { id: 66033, color: "Matte", size: '11" × 8"',  areaW: 3300, areaH: 2400, priceCents: 4500 },
+      { id: 66041, color: "Matte", size: '14" × 11"', areaW: 4200, areaH: 3300, priceCents: 6500 },
     ],
   },
 ];

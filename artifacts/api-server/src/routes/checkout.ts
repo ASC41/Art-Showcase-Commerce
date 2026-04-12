@@ -24,18 +24,15 @@ const router: IRouter = Router();
 const TERMINAL_STATUSES = ["paid", "fulfilled", "failed"] as const;
 
 // ── Giclée print pricing (cents) ─────────────────────────────────────────────
+// 12×18 and 16×20 removed — source artwork lacks resolution for those sizes.
 const PRINT_PRICES: Record<PrintSize, number> = {
-  "8x11":  3500,
-  "11x14": 5500,
-  "12x18": 7500,
-  "16x20": 9500,
+  "8x11":  4500,
+  "11x14": 6500,
 };
 
 const PRINT_SIZE_LABELS: Record<PrintSize, string> = {
   "8x11":  '8" × 11"',
   "11x14": '11" × 14"',
-  "12x18": '12" × 18"',
-  "16x20": '16" × 20"',
 };
 
 function getStripe(): Stripe | null {
