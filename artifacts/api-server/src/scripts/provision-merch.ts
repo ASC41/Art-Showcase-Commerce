@@ -13,7 +13,7 @@ import { db, artworksTable } from "@workspace/db";
 import { merchProductsTable, merchArtworkProductsTable } from "@workspace/db/schema";
 import type { SignatureConfig } from "@workspace/db/schema";
 import { printifyRequest, getShopId } from "../lib/printify";
-import { eq } from "drizzle-orm";
+import { eq, notInArray } from "drizzle-orm";
 
 const FORCE = process.argv.includes("--force");
 // --clear-cache: delete merch_artwork_products rows for the scoped slug before
@@ -767,6 +767,35 @@ async function main() {
   }
 
   console.log(`\n=== Done: ${success} created, ${skipped} skipped, ${failed} failed ===`);
+
+  // ── Retire products no longer in MERCH_CONFIG ─────────────────────────────
+  // When running without --slug, deactivate any DB rows whose slugs are not
+  // present in the current config (e.g. matte-poster was replaced by giclee-print).
+  // Also purges their per-artwork mockup cache so stale rows don't accumulate.
+  if (!SLUG_FILTER) {
+    const activeSlugs = MERCH_CONFIG.map((c) => c.slug);
+    const retiredRows = await db
+      .select({ id: merchProductsTable.id, slug: merchProductsTable.slug })
+      .from(merchProductsTable)
+      .where(notInArray(merchProductsTable.slug, activeSlugs));
+
+    if (retiredRows.length > 0) {
+      console.log(`\n=== Retiring ${retiredRows.length} products removed from config ===`);
+      for (const row of retiredRows) {
+        // Purge per-artwork mockup cache for this product
+        const deleted = await db
+          .delete(merchArtworkProductsTable)
+          .where(eq(merchArtworkProductsTable.merchProductId, row.id))
+          .returning({ id: merchArtworkProductsTable.id });
+        // Deactivate the product
+        await db
+          .update(merchProductsTable)
+          .set({ isActive: false })
+          .where(eq(merchProductsTable.id, row.id));
+        console.log(`  ✓ Retired ${row.slug} (cleared ${deleted.length} artwork cache rows)`);
+      }
+    }
+  }
 
   // Print margin summary
   console.log("\n=== Pricing & Margin Summary ===");
