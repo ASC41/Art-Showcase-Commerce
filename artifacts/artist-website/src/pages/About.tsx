@@ -225,10 +225,11 @@ export default function About() {
             letterSpacing: "0.01em",
           }}
         >
-          Ryan Cellar is a Nashville-born contemporary artist and lifelong member of the city's
-          arts community, working in acrylic across surrealist and figurative traditions. His
-          figures exist in spaces that feel both intimate and otherworldly, grounded in lived
-          experience but pushed into something stranger and more resonant.
+          Ryan Cellar (b. Nashville, Tennessee) is a contemporary painter working primarily in
+          acrylic. His practice engages surrealist and figurative approaches to the human figure,
+          situating bodies in constructed spaces that register as both familiar and nonliteral.
+          Cellar's recent work focuses on distilled, emotionally charged scenes that emphasize
+          compositional clarity and controlled color.
         </p>
 
         <p
@@ -241,8 +242,9 @@ export default function About() {
             margin: 0,
           }}
         >
-          Cellar is an emerging voice in Nashville's contemporary art scene, building a body of
-          work that is as emotionally precise as it is visually arresting.
+          He is an emerging artist within Nashville's contemporary art community, developing a
+          focused body of work that reflects a consistent investigation of interior states,
+          narrative suggestion, and the slippage between observation and imagination.
         </p>
       </div>
 
