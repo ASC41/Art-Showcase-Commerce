@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useListArtworks } from "@workspace/api-client-react";
 import type { Artwork } from "@workspace/api-client-react";
@@ -40,6 +40,7 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [mockupIndex, setMockupIndex] = useState(0);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false);
 
   // Artwork-specific mockup state
   const [artworkMockups, setArtworkMockups] = useState<string[] | null>(null);
@@ -138,17 +139,24 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
     return () => controller.abort();
   }, [product?.slug, selectedArtwork?.slug]);
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    },
-    [onClose]
-  );
+  // Close zoom when product/artwork changes
+  useEffect(() => { setIsZoomed(false); }, [product?.slug, selectedArtwork?.slug]);
 
+  // Unified keyboard handler — zoom intercepts Escape and arrows; lightbox handles Escape when not zoomed
   useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
+    const handler = (e: KeyboardEvent) => {
+      if (isZoomed) {
+        if (e.key === "Escape") { setIsZoomed(false); return; }
+        if (e.key === "ArrowLeft") setMockupIndex((i) => Math.max(0, i - 1));
+        if (e.key === "ArrowRight")
+          setMockupIndex((i) => Math.min(displayMockups.length - 1, i + 1));
+      } else {
+        if (e.key === "Escape") onClose();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isZoomed, displayMockups.length, onClose]);
 
   const handleCheckout = async () => {
     if (!product || !selectedVariantId || !selectedArtwork) return;
@@ -391,11 +399,13 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
                   transition={{ duration: 0.35 }}
                   src={currentMockup}
                   alt={`${product.name} mockup`}
+                  onClick={() => setIsZoomed(true)}
                   style={{
                     width: "100%",
                     height: "100%",
                     objectFit: "contain",
                     display: "block",
+                    cursor: "zoom-in",
                   }}
                 />
               ) : (
@@ -726,6 +736,161 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
           }
         `}</style>
       </motion.div>
+
+      {/* ── Fullscreen image zoom overlay ─────────────────────────────────── */}
+      <AnimatePresence>
+        {isZoomed && currentMockup && (
+          <motion.div
+            key="zoom-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={() => setIsZoomed(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 400,
+              background: "rgba(0,0,0,0.97)",
+              backdropFilter: "blur(24px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setIsZoomed(false)}
+              style={{
+                position: "fixed",
+                top: "24px",
+                right: "24px",
+                background: "rgba(255,255,255,0.07)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: "50%",
+                width: "40px",
+                height: "40px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#aaa",
+                fontSize: "18px",
+                cursor: "pointer",
+                zIndex: 1,
+                lineHeight: 1,
+                transition: "background 0.2s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.14)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.07)")}
+            >
+              ✕
+            </button>
+
+            {/* Image counter */}
+            {displayMockups.length > 1 && (
+              <div
+                style={{
+                  position: "fixed",
+                  top: "28px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  fontFamily: "'Inter'",
+                  fontSize: "11px",
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  color: "rgba(255,255,255,0.35)",
+                  pointerEvents: "none",
+                }}
+              >
+                {mockupIndex + 1} / {displayMockups.length}
+              </div>
+            )}
+
+            {/* Prev arrow */}
+            {mockupIndex > 0 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setMockupIndex((i) => i - 1); }}
+                style={{
+                  position: "fixed",
+                  left: "24px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "rgba(255,255,255,0.07)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: "50%",
+                  width: "48px",
+                  height: "48px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#f5f5f5",
+                  fontSize: "20px",
+                  cursor: "pointer",
+                  transition: "background 0.2s",
+                  zIndex: 1,
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.14)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.07)")}
+              >
+                ←
+              </button>
+            )}
+
+            {/* Next arrow */}
+            {mockupIndex < displayMockups.length - 1 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setMockupIndex((i) => i + 1); }}
+                style={{
+                  position: "fixed",
+                  right: "24px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "rgba(255,255,255,0.07)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: "50%",
+                  width: "48px",
+                  height: "48px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#f5f5f5",
+                  fontSize: "20px",
+                  cursor: "pointer",
+                  transition: "background 0.2s",
+                  zIndex: 1,
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.14)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.07)")}
+              >
+                →
+              </button>
+            )}
+
+            {/* Full-resolution image — stops click propagation so only the backdrop dismisses */}
+            <motion.img
+              key={`zoom-${mockupIndex}`}
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              src={displayMockups[mockupIndex]}
+              alt={`${product.name} mockup fullscreen`}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: "90vw",
+                maxHeight: "90vh",
+                width: "auto",
+                height: "auto",
+                objectFit: "contain",
+                display: "block",
+                borderRadius: "4px",
+                cursor: "zoom-out",
+                userSelect: "none",
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 }
