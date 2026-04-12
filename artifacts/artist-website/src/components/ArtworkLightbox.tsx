@@ -10,26 +10,26 @@ interface Props {
   onNavigate: (index: number) => void;
 }
 
-// 12×18 and 16×20 removed — source artwork images lack the resolution needed
-// to print at acceptable quality (150 DPI min) at those sizes.
-const PRINT_SIZES: PrintSize[] = ["8x11", "11x14"];
+// Three size tiers — labels flip by artwork orientation.
+const PRINT_SIZES: PrintSize[] = ["8x11", "12x18", "16x20"];
 
 const SIZE_LABELS_PORTRAIT: Record<PrintSize, string> = {
   "8x11":  '8" × 11"',
-  "11x14": '11" × 14"',
+  "12x18": '12" × 18"',
+  "16x20": '16" × 20"',
 };
 
 const SIZE_LABELS_LANDSCAPE: Record<PrintSize, string> = {
   "8x11":  '11" × 8"',
-  "11x14": '14" × 11"',
+  "12x18": '18" × 12"',
+  "16x20": '20" × 16"',
 };
 
-// Pricing based on Printify base costs (Print Pigeons, blueprint 494):
-//   8×11: $9.26 cost → $45 retail (~79% margin)
-//   11×14: $9.84 cost → $65 retail (~85% margin)
+// Pricing: small $45 · medium $75 · large $95
 const PRINT_PRICES: Record<PrintSize, number> = {
   "8x11":  45,
-  "11x14": 65,
+  "12x18": 75,
+  "16x20": 95,
 };
 
 export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNavigate }: Props) {
@@ -39,7 +39,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
   const checkoutMutation = useCreateCheckoutSession();
   const [showInfo, setShowInfo] = useState(false);
   const [showPrintPicker, setShowPrintPicker] = useState(false);
-  const [selectedPrintSize, setSelectedPrintSize] = useState<PrintSize>("11x14");
+  const [selectedPrintSize, setSelectedPrintSize] = useState<PrintSize>("8x11");
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleKeyDown = useCallback(

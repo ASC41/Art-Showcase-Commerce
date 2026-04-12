@@ -3,26 +3,28 @@ import path from "path";
 
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 
-// 12x18 and 16x20 removed: artwork image resolution insufficient (< 150 DPI at those sizes).
-// Re-add once higher-resolution source files are available.
-export type PrintSize = "8x11" | "11x14";
+// Three tiers: small (8×11), medium (12×18), large (16×20).
+// Labels flip by orientation (e.g. 16×20 portrait → 20×16 landscape).
+export type PrintSize = "8x11" | "12x18" | "16x20";
 export type PrintType = "matte";
 export type PrintOrientation = "portrait" | "landscape";
 
 // Canonical size list — all offered sizes must be present for a product to be valid.
-export const REQUIRED_PRINT_SIZES: PrintSize[] = ["8x11", "11x14"];
+export const REQUIRED_PRINT_SIZES: PrintSize[] = ["8x11", "12x18", "16x20"];
 
 // Maps each PrintSize to the inch dimensions used to match Printify variant titles.
 // Portrait orientation (width < height).
 export const PRINT_SIZE_INCHES_PORTRAIT: Record<PrintSize, { w: number; h: number }> = {
   "8x11":  { w: 8,  h: 11 },
-  "11x14": { w: 11, h: 14 },
+  "12x18": { w: 12, h: 18 },
+  "16x20": { w: 16, h: 20 },
 };
 
-// Landscape orientation (width > height) — same size tier, different orientation.
+// Landscape orientation (width > height) — same size tier, flipped dimensions.
 export const PRINT_SIZE_INCHES_LANDSCAPE: Record<PrintSize, { w: number; h: number }> = {
   "8x11":  { w: 11, h: 8  },
-  "11x14": { w: 14, h: 11 },
+  "12x18": { w: 18, h: 12 },
+  "16x20": { w: 20, h: 16 },
 };
 
 // Giclée Art Print Blueprint 494, provider 36 (Print Pigeons)
@@ -31,8 +33,8 @@ export const GICLEE_VARIANT_IDS: {
   portrait: Record<PrintSize, number>;
   landscape: Record<PrintSize, number>;
 } = {
-  portrait:  { "8x11": 66037, "11x14": 66039 },
-  landscape: { "8x11": 66033, "11x14": 66041 },
+  portrait:  { "8x11": 66037, "12x18": 66043, "16x20": 66047 },
+  landscape: { "8x11": 66033, "12x18": 66045, "16x20": 66232 },
 };
 
 export interface PrintifyBlueprintConfig {

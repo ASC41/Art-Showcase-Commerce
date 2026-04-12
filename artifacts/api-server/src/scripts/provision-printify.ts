@@ -7,12 +7,12 @@
  *
  * Also clears printifyFramedProductId for all artworks.
  *
- * Sizes available (12×18 and 16×20 removed — source artwork resolution insufficient):
- *   Portrait:  8×11, 11×14
- *   Landscape: 11×8, 14×11
+ * Sizes available — three tiers:
+ *   Portrait:  8×11, 12×18, 16×20
+ *   Landscape: 11×8, 18×12, 20×16
  *
  * Pricing (cents):
- *   8×11  → $45  |  11×14 → $65
+ *   8×11 → $45  |  12×18 → $75  |  16×20 → $95
  *
  * Run once per artwork (idempotent — skips artworks that already have a product ID):
  *   pnpm --filter @workspace/api-server run provision-printify
@@ -42,18 +42,20 @@ const GICLEE_PROVIDER_ID = 36;
 
 const SIZE_LABELS_PORTRAIT: Record<PrintSize, string> = {
   "8x11":  '8" × 11"',
-  "11x14": '11" × 14"',
+  "12x18": '12" × 18"',
+  "16x20": '16" × 20"',
 };
 
 const SIZE_LABELS_LANDSCAPE: Record<PrintSize, string> = {
   "8x11":  '11" × 8"',
-  "11x14": '14" × 11"',
+  "12x18": '18" × 12"',
+  "16x20": '20" × 16"',
 };
 
-// 12×18 and 16×20 removed — source artwork lacks sufficient resolution (< 150 DPI).
 const GICLEE_PRICES_CENTS: Record<PrintSize, number> = {
   "8x11":  4500,
-  "11x14": 6500,
+  "12x18": 7500,
+  "16x20": 9500,
 };
 
 // ── Image dimension detection ─────────────────────────────────────────────────
@@ -119,12 +121,14 @@ function gicleeScaleFor(artW: number, artH: number, areaW: number, areaH: number
 // ── Print area dimensions for each variant (Giclée Blueprint 494) ─────────────
 const GICLEE_AREA_PORTRAIT: Record<PrintSize, { w: number; h: number }> = {
   "8x11":  { w: 2400, h: 3300 },
-  "11x14": { w: 3300, h: 4200 },
+  "12x18": { w: 3600, h: 5400 },
+  "16x20": { w: 4800, h: 6000 },
 };
 
 const GICLEE_AREA_LANDSCAPE: Record<PrintSize, { w: number; h: number }> = {
   "8x11":  { w: 3300, h: 2400 },
-  "11x14": { w: 4200, h: 3300 },
+  "12x18": { w: 5400, h: 3600 },
+  "16x20": { w: 6000, h: 4800 },
 };
 
 // ── Image upload ──────────────────────────────────────────────────────────────

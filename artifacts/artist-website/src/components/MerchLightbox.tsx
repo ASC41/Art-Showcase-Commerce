@@ -65,11 +65,11 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
     }
   }, [product?.slug]);
 
-  // Map portfolio PrintSize key ("8x11", "11x14") to normalized merch variant size strings
-  // for exact matching against variant size labels like '8" × 11"' and '11" × 14"'.
+  // Map portfolio PrintSize key to normalized merch variant size strings for exact matching.
   const PORTFOLIO_SIZE_TO_MERCH_SIZES: Record<string, string[]> = {
-    "8x11":  ['8"×11"', '11"×8"'],
-    "11x14": ['11"×14"', '14"×11"'],
+    "8x11":  ['8"×11"',  '11"×8"'],
+    "12x18": ['12"×18"', '18"×12"'],
+    "16x20": ['16"×20"', '20"×16"'],
   };
 
   const normalizeSize = (s: string) => s.replace(/\s/g, "");
