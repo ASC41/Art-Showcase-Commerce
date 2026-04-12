@@ -154,7 +154,9 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     const dispH = artRotation === 90 || artRotation === -90 ? artW : artH;
     const areaW = merch.printAreaWidth ?? 3000;
     const areaH = merch.printAreaHeight ?? 3000;
-    const artRatio = artW / artH;
+    // Use display-space dimensions so rotated images pick the correct scale/orientation.
+    // For a -90° portrait file displayed landscape: dispW > dispH, giving a landscape artRatio.
+    const artRatio = dispW / dispH;
     const areaRatio = areaW / areaH;
     // Artwork scale on the print area.
     // phone-case uses COVER: the case is designed to be fully wrapped, so the
@@ -222,7 +224,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
                   //     portrait art (artRatio<1): height-constrained, height=0.85×2175=1849px, side margins vary
                   //     landscape art (artRatio>1): width-constrained, width=0.85×2175=1849px, top/bottom margins vary
                   scale: 0.85 * Math.min(1.0, artRatio),
-                  angle: 0,
+                  angle: artRotation,
                 },
                 {
                   id: wmUpload.id,
@@ -283,7 +285,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
             x: 0.5,
             y: 0.5,
             scale: artworkScale,
-            angle: 0,
+            angle: artRotation,
           },
         ],
       };
@@ -363,7 +365,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
             x: 0.5,
             y: 0.5,
             scale: artworkScale,
-            angle: 0,
+            angle: artRotation,
           },
           {
             id: wmId,
@@ -428,7 +430,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
             x: 0.5,
             y: 0.5,
             scale: artworkScale,
-            angle: 0,
+            angle: artRotation,
           },
           {
             id: wmId,
@@ -523,7 +525,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
                   x: 0.5,
                   y: 0.5,
                   scale: artworkScale,
-                  angle: 0,
+                  angle: artRotation,
                 },
               ],
             },
