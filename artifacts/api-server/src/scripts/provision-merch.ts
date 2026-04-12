@@ -80,12 +80,12 @@ const MERCH_CONFIG: MerchItemConfig[] = [
       { id: 73200, color: "Black", size: "M" },
       { id: 73204, color: "Black", size: "L" },
       { id: 73208, color: "Black", size: "XL" },
-      { id: 73212, color: "Black", size: "2XL" },
+      { id: 73212, color: "Black", size: "2XL", priceCents: 3700 }, // 2XL upcharge: cost $27.89 → 24.6% margin
       { id: 73199, color: "White", size: "S" },
       { id: 73203, color: "White", size: "M" },
       { id: 73207, color: "White", size: "L" },
       { id: 73211, color: "White", size: "XL" },
-      { id: 73215, color: "White", size: "2XL" },
+      { id: 73215, color: "White", size: "2XL", priceCents: 3700 },
     ],
     // Small centered-top wordmark on the back.
     // Back print area: 3461×3955 (same as front).
@@ -129,17 +129,17 @@ const MERCH_CONFIG: MerchItemConfig[] = [
       { id: 32919, color: "Black", size: "M" },
       { id: 32920, color: "Black", size: "L" },
       { id: 32921, color: "Black", size: "XL" },
-      { id: 32922, color: "Black", size: "2XL" },
+      { id: 32922, color: "Black", size: "2XL", priceCents: 6200 }, // 2XL upcharge: cost $38.08 → 38.6% margin
       { id: 32894, color: "Navy", size: "S" },
       { id: 32895, color: "Navy", size: "M" },
       { id: 32896, color: "Navy", size: "L" },
       { id: 32897, color: "Navy", size: "XL" },
-      { id: 32898, color: "Navy", size: "2XL" },
+      { id: 32898, color: "Navy", size: "2XL", priceCents: 6200 },
       { id: 32910, color: "White", size: "S" },
       { id: 32911, color: "White", size: "M" },
       { id: 32912, color: "White", size: "L" },
       { id: 32913, color: "White", size: "XL" },
-      { id: 32914, color: "White", size: "2XL" },
+      { id: 32914, color: "White", size: "2XL", priceCents: 6200 },
     ],
     // Color-aware signature: white wordmark on dark garments, black on white.
     signatureConfig: {
@@ -175,17 +175,17 @@ const MERCH_CONFIG: MerchItemConfig[] = [
       { id: 25428, color: "Black", size: "M" },
       { id: 25459, color: "Black", size: "L" },
       { id: 25490, color: "Black", size: "XL" },
-      { id: 25521, color: "Black", size: "2XL" },
+      { id: 25521, color: "Black", size: "2XL", priceCents: 5100 }, // 2XL upcharge: cost $36.67 → 28.1% margin
       { id: 25388, color: "Navy", size: "S" },
       { id: 25419, color: "Navy", size: "M" },
       { id: 25450, color: "Navy", size: "L" },
       { id: 25481, color: "Navy", size: "XL" },
-      { id: 25512, color: "Navy", size: "2XL" },
+      { id: 25512, color: "Navy", size: "2XL", priceCents: 5100 },
       { id: 25396, color: "White", size: "S" },
       { id: 25427, color: "White", size: "M" },
       { id: 25458, color: "White", size: "L" },
       { id: 25489, color: "White", size: "XL" },
-      { id: 25520, color: "White", size: "2XL" },
+      { id: 25520, color: "White", size: "2XL", priceCents: 5100 },
     ],
     // Small centered wordmark on both sleeves (left_sleeve + right_sleeve).
     // NOTE: left_wrist_dtf/right_wrist_dtf are in the Printify catalog but Printify does NOT
