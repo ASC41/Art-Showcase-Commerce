@@ -1,18 +1,18 @@
 /**
- * Printify Provisioning Script (v3 — Giclée Art Print only)
+ * Printify Provisioning Script (v3 — Fine Art Print only)
  *
- * Creates Giclée Art Print products (Blueprint 494, Provider 36) in Printify
+ * Creates Fine Art Print products (Blueprint 804, Provider 72 — Print Clever) in Printify
  * for every artwork in the database, then stores the resulting product IDs back
- * in the DB under printifyMatteProductId (repurposed for Giclée).
+ * in the DB under printifyMatteProductId (repurposed for Fine Art Print).
  *
  * Also clears printifyFramedProductId for all artworks.
  *
  * Sizes available — three tiers:
- *   Portrait:  8×11, 12×18, 16×20
- *   Landscape: 11×8, 18×12, 20×16
+ *   Portrait:  8×10, 12×18, 16×20
+ *   Landscape: 10×8, 18×12, 20×16
  *
  * Pricing (cents):
- *   8×11 → $45  |  12×18 → $75  |  16×20 → $95
+ *   8×10 → $45  |  12×18 → $75  |  16×20 → $95
  *
  * Run once per artwork (idempotent — skips artworks that already have a product ID):
  *   pnpm --filter @workspace/api-server run provision-printify
@@ -37,23 +37,23 @@ import {
 
 const FORCE = process.argv.includes("--force");
 
-const GICLEE_BLUEPRINT_ID = 494;
-const GICLEE_PROVIDER_ID = 36;
+const GICLEE_BLUEPRINT_ID = 804;
+const GICLEE_PROVIDER_ID = 72;
 
 const SIZE_LABELS_PORTRAIT: Record<PrintSize, string> = {
-  "8x11":  '8" × 11"',
+  "8x10":  '8" × 10"',
   "12x18": '12" × 18"',
   "16x20": '16" × 20"',
 };
 
 const SIZE_LABELS_LANDSCAPE: Record<PrintSize, string> = {
-  "8x11":  '11" × 8"',
+  "8x10":  '10" × 8"',
   "12x18": '18" × 12"',
   "16x20": '20" × 16"',
 };
 
 const GICLEE_PRICES_CENTS: Record<PrintSize, number> = {
-  "8x11":  4500,
+  "8x10":  4500,
   "12x18": 7500,
   "16x20": 9500,
 };
@@ -118,17 +118,17 @@ function gicleeScaleFor(artW: number, artH: number, areaW: number, areaH: number
   return Math.max(Math.min(equalBorderS, containS * 0.90), containS * 0.70);
 }
 
-// ── Print area dimensions for each variant (Giclée Blueprint 494) ─────────────
+// ── Print area dimensions for each variant (Fine Art Print — Blueprint 804, Print Clever) ──
 const GICLEE_AREA_PORTRAIT: Record<PrintSize, { w: number; h: number }> = {
-  "8x11":  { w: 2400, h: 3300 },
-  "12x18": { w: 3600, h: 5400 },
-  "16x20": { w: 4800, h: 6000 },
+  "8x10":  { w: 2398, h: 3000 },
+  "12x18": { w: 3591, h: 5398 },
+  "16x20": { w: 4795, h: 6000 },
 };
 
 const GICLEE_AREA_LANDSCAPE: Record<PrintSize, { w: number; h: number }> = {
-  "8x11":  { w: 3300, h: 2400 },
-  "12x18": { w: 5400, h: 3600 },
-  "16x20": { w: 6000, h: 4800 },
+  "8x10":  { w: 3000, h: 2398 },
+  "12x18": { w: 5398, h: 3591 },
+  "16x20": { w: 6000, h: 4795 },
 };
 
 // ── Image upload ──────────────────────────────────────────────────────────────
@@ -182,11 +182,11 @@ async function createGicleeProduct(
   const product = (await printifyRequest(`/shops/${shopId}/products.json`, {
     method: "POST",
     body: JSON.stringify({
-      title: `${artworkTitle} — Giclée Art Print`,
+      title: `${artworkTitle} — Fine Art Print`,
       description:
-        `Fine art Giclée print by Ryan Cellar. ` +
-        `Archival pigment inks on premium cotton-rag paper. Gallery-quality reproduction made to order. ` +
-        `Available in two sizes: ` +
+        `Fine art print by Ryan Cellar. ` +
+        `Archival pigment inks on 220gsm gallery-grade archival paper. Gallery-quality reproduction made to order. ` +
+        `Available in three sizes: ` +
         REQUIRED_PRINT_SIZES.map((s) => sizeLabels[s]).join(", ") + `.`,
       blueprint_id: GICLEE_BLUEPRINT_ID,
       print_provider_id: GICLEE_PROVIDER_ID,
@@ -195,7 +195,7 @@ async function createGicleeProduct(
     }),
   })) as { id: string };
 
-  console.log(`  Created "${artworkTitle}" Giclée Art Print (${orientation}) → product ID: ${product.id}`);
+  console.log(`  Created "${artworkTitle}" Fine Art Print (${orientation}) → product ID: ${product.id}`);
 
   try {
     await printifyRequest(`/shops/${shopId}/products/${product.id}/publish.json`, {
@@ -223,14 +223,14 @@ async function createGicleeProduct(
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log("=== Printify Provisioning Script v3 (Giclée Art Print — Blueprint 494) ===\n");
+  console.log("=== Printify Provisioning Script v3 (Fine Art Print — Blueprint 804, Print Clever) ===\n");
 
   if (!process.env.PRINTIFY_API_KEY) {
     throw new Error("PRINTIFY_API_KEY is not set");
   }
 
-  console.log(`Blueprint: ${GICLEE_BLUEPRINT_ID} (Giclée Art Print)`);
-  console.log(`Provider:  ${GICLEE_PROVIDER_ID} (Print Pigeons)`);
+  console.log(`Blueprint: ${GICLEE_BLUEPRINT_ID} (Fine Art Print — Print Clever)`);
+  console.log(`Provider:  ${GICLEE_PROVIDER_ID} (Print Clever)`);
   console.log(`Sizes:     ${REQUIRED_PRINT_SIZES.join(", ")}`);
   console.log(`Pricing:   ${REQUIRED_PRINT_SIZES.map((s) => `${s}=$${GICLEE_PRICES_CENTS[s] / 100}`).join("  ")}\n`);
 

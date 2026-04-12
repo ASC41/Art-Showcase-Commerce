@@ -28,7 +28,7 @@ const TERMINAL_STATUSES = ["paid", "fulfilled", "failed"] as const;
 // ── Giclée print pricing (cents) ─────────────────────────────────────────────
 // Three tiers: small ($45), medium ($75), large ($95).
 const PRINT_PRICES: Record<PrintSize, number> = {
-  "8x11":  4500,
+  "8x10":  4500,
   "12x18": 7500,
   "16x20": 9500,
 };
@@ -36,7 +36,7 @@ const PRINT_PRICES: Record<PrintSize, number> = {
 // Labels are portrait-canonical; checkout.ts receives the size key and uses it
 // for Stripe line-item naming regardless of actual print orientation.
 const PRINT_SIZE_LABELS: Record<PrintSize, string> = {
-  "8x11":  '8" × 11"',
+  "8x10":  '8" × 10"',
   "12x18": '12" × 18"',
   "16x20": '16" × 20"',
 };
@@ -407,7 +407,7 @@ router.post("/checkout/session", async (req, res) => {
         : "";
     const typeLabel =
       purchaseType === "print"
-        ? "Giclée Art Print"
+        ? "Fine Art Print"
         : "Fine Art Print";
 
     const productName =
@@ -458,8 +458,8 @@ router.post("/checkout/session", async (req, res) => {
     };
 
     if (purchaseType === "print") {
-      // Giclée Art Print: blueprint 494, provider 36 (Print Pigeons)
-      const printShippingRates = await getBlueprintShippingRates(494, 36);
+      // Fine Art Print: blueprint 804, provider 72 (Print Clever)
+      const printShippingRates = await getBlueprintShippingRates(804, 72);
       sessionParams.shipping_options = buildStripeShippingOptions(printShippingRates);
       sessionParams.phone_number_collection = { enabled: true };
     }

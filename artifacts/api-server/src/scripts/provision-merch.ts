@@ -311,39 +311,40 @@ const MERCH_CONFIG: MerchItemConfig[] = [
       { id: 116659, color: "Ecru", size: "One size" },
     ],
   },
-  // ── GICLÉE ART PRINT ─────────────────────────────────────────────────────────
-  // Blueprint 494 (Giclée Art Print), provider 36 (Print Pigeons).
+  // ── FINE ART PRINT ───────────────────────────────────────────────────────────
+  // Blueprint 804 (Fine Art Posters), provider 72 (Print Clever — US-accessible).
+  // 220gsm gallery-grade archival paper, giclée pigment ink technique.
   // Each size variant has a different aspect ratio → per-variant scale is required.
   // Portrait artworks get portrait variants enabled; landscape artworks get landscape.
   // areaW × areaH are the actual Printify placeholder dimensions for each variant.
   {
     slug: "giclee-print",
-    name: "Giclée Art Print",
+    name: "Fine Art Print",
     description:
-      "Archival pigment inks on premium cotton-rag paper. Gallery-quality reproduction made to order — colors deepen in person.",
+      "Archival pigment inks on 220gsm gallery-grade archival paper. Gallery-quality reproduction made to order — colors deepen in person.",
     // Retail prices — three tiers: small · medium · large
-    //   8×11:  $9.26 Printify cost → $45 retail (~79% margin)
-    //   12×18: $9.84 Printify cost → $75 retail (~87% margin)
-    //   16×20: est. $12   cost     → $95 retail (~87% margin)
-    priceCents: 4500, // starting price (8×11); per-variant prices set below
-    estimatedCostCents: 984,
-    blueprintId: 494,
-    printProviderId: 36,
+    //   8×10:  $45 retail (~79% margin)
+    //   12×18: $75 retail (~87% margin)
+    //   16×20: $95 retail (~87% margin)
+    priceCents: 4500, // starting price (8×10); per-variant prices set below
+    estimatedCostCents: 1000,
+    blueprintId: 804,
+    printProviderId: 72,
     printAreaPosition: "front",
-    printAreaWidth: 3600,  // fallback only — per-variant scale takes precedence
-    printAreaHeight: 5400, // fallback only
+    printAreaWidth: 3591,  // fallback only — per-variant scale takes precedence
+    printAreaHeight: 5398, // fallback only
     category: "print",
     displayOrder: 11,
     perVariantScale: true,
     variants: [
       // Portrait sizes (areaH > areaW)
-      { id: 66037, color: "Matte", size: '8" × 11"',  areaW: 2400, areaH: 3300, priceCents: 4500 },
-      { id: 66043, color: "Matte", size: '12" × 18"', areaW: 3600, areaH: 5400, priceCents: 7500 },
-      { id: 66047, color: "Matte", size: '16" × 20"', areaW: 4800, areaH: 6000, priceCents: 9500 },
+      { id: 75288, color: "Matte", size: '8" × 10"',  areaW: 2398, areaH: 3000, priceCents: 4500 },
+      { id: 75291, color: "Matte", size: '12" × 18"', areaW: 3591, areaH: 5398, priceCents: 7500 },
+      { id: 75292, color: "Matte", size: '16" × 20"', areaW: 4795, areaH: 6000, priceCents: 9500 },
       // Landscape sizes (areaW > areaH) — same tiers, flipped dimensions
-      { id: 66033, color: "Matte", size: '11" × 8"',  areaW: 3300, areaH: 2400, priceCents: 4500 },
-      { id: 66045, color: "Matte", size: '18" × 12"', areaW: 5400, areaH: 3600, priceCents: 7500 },
-      { id: 66232, color: "Matte", size: '20" × 16"', areaW: 6000, areaH: 4800, priceCents: 9500 },
+      { id: 75299, color: "Matte", size: '10" × 8"',  areaW: 3000, areaH: 2398, priceCents: 4500 },
+      { id: 75302, color: "Matte", size: '18" × 12"', areaW: 5398, areaH: 3591, priceCents: 7500 },
+      { id: 75304, color: "Matte", size: '20" × 16"', areaW: 6000, areaH: 4795, priceCents: 9500 },
     ],
   },
 ];

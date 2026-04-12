@@ -3,38 +3,38 @@ import path from "path";
 
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 
-// Three tiers: small (8×11), medium (12×18), large (16×20).
+// Three tiers: small (8×10), medium (12×18), large (16×20).
 // Labels flip by orientation (e.g. 16×20 portrait → 20×16 landscape).
-export type PrintSize = "8x11" | "12x18" | "16x20";
+export type PrintSize = "8x10" | "12x18" | "16x20";
 export type PrintType = "matte";
 export type PrintOrientation = "portrait" | "landscape";
 
 // Canonical size list — all offered sizes must be present for a product to be valid.
-export const REQUIRED_PRINT_SIZES: PrintSize[] = ["8x11", "12x18", "16x20"];
+export const REQUIRED_PRINT_SIZES: PrintSize[] = ["8x10", "12x18", "16x20"];
 
 // Maps each PrintSize to the inch dimensions used to match Printify variant titles.
 // Portrait orientation (width < height).
 export const PRINT_SIZE_INCHES_PORTRAIT: Record<PrintSize, { w: number; h: number }> = {
-  "8x11":  { w: 8,  h: 11 },
+  "8x10":  { w: 8,  h: 10 },
   "12x18": { w: 12, h: 18 },
   "16x20": { w: 16, h: 20 },
 };
 
 // Landscape orientation (width > height) — same size tier, flipped dimensions.
 export const PRINT_SIZE_INCHES_LANDSCAPE: Record<PrintSize, { w: number; h: number }> = {
-  "8x11":  { w: 11, h: 8  },
+  "8x10":  { w: 10, h: 8  },
   "12x18": { w: 18, h: 12 },
   "16x20": { w: 20, h: 16 },
 };
 
-// Giclée Art Print Blueprint 494, provider 36 (Print Pigeons)
-// Variant IDs sourced from the Printify catalog
+// Fine Art Print — Blueprint 804 (Fine Art Posters), provider 72 (Print Clever, US-accessible)
+// Variant IDs sourced from the Printify catalog — 220gsm archival matte paper, giclée technique
 export const GICLEE_VARIANT_IDS: {
   portrait: Record<PrintSize, number>;
   landscape: Record<PrintSize, number>;
 } = {
-  portrait:  { "8x11": 66037, "12x18": 66043, "16x20": 66047 },
-  landscape: { "8x11": 66033, "12x18": 66045, "16x20": 66232 },
+  portrait:  { "8x10": 75288, "12x18": 75291, "16x20": 75292 },
+  landscape: { "8x10": 75299, "12x18": 75302, "16x20": 75304 },
 };
 
 export interface PrintifyBlueprintConfig {
@@ -54,15 +54,16 @@ export interface PrintifyConfig {
 let _config: PrintifyConfig | null = null;
 let _configLoadAttempted = false;
 
-// Returns null if the config is missing required Giclée sizes or uses a legacy blueprint.
+// Returns null if the config is missing required print sizes or uses an unrecognized blueprint.
 function validateGicleeConfig(cfg: PrintifyConfig): PrintifyConfig | null {
   const matte = cfg?.matte;
   if (!matte) return null;
 
-  // Reject legacy Blueprint 983 (old matte poster) or Blueprint 1236 (framed)
-  if (matte.blueprintId !== 494) {
+  // Accept Blueprint 804 (Print Clever Fine Art Posters, current) and legacy 494 (Print Pigeons).
+  // Reject any other blueprint IDs that may be stale config.
+  if (matte.blueprintId !== 804 && matte.blueprintId !== 494) {
     console.warn(
-      `[printify] Config rejected: blueprintId ${matte.blueprintId} is not Giclée Blueprint 494. ` +
+      `[printify] Config rejected: blueprintId ${matte.blueprintId} is not a recognised fine art print blueprint. ` +
         "Falling through to hardcoded defaults."
     );
     return null;
@@ -122,15 +123,15 @@ export function loadPrintifyConfig(): PrintifyConfig | null {
     // file not found — fall through
   }
 
-  // 3. Always fall back to hardcoded Giclée blueprint config
+  // 3. Always fall back to hardcoded Fine Art Print blueprint config
   _config = {
     matte: {
-      blueprintId: 494,
-      printProviderId: 36,
+      blueprintId: 804,
+      printProviderId: 72,
       variantIds: GICLEE_VARIANT_IDS,
     },
   };
-  console.log("[printify] Using hardcoded Giclée blueprint config (Blueprint 494, Provider 36)");
+  console.log("[printify] Using hardcoded Fine Art Print config (Blueprint 804, Provider 72 — Print Clever)");
   return _config;
 }
 

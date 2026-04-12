@@ -68,7 +68,7 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
 
   // Map portfolio PrintSize key to normalized merch variant size strings for exact matching.
   const PORTFOLIO_SIZE_TO_MERCH_SIZES: Record<string, string[]> = {
-    "8x11":  ['8"×11"',  '11"×8"'],
+    "8x10":  ['8"×10"',  '10"×8"'],
     "12x18": ['12"×18"', '18"×12"'],
     "16x20": ['16"×20"', '20"×16"'],
   };
@@ -236,8 +236,8 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
 
   // For giclée prints, only show the 3 sizes that match the artwork's displayed orientation.
   // The product has 6 variants total (3 portrait + 3 landscape); we filter to the right 3.
-  const GICLEE_PORTRAIT_SIZES = new Set(['8"×11"', '12"×18"', '16"×20"']);
-  const GICLEE_LANDSCAPE_SIZES = new Set(['11"×8"', '18"×12"', '20"×16"']);
+  const GICLEE_PORTRAIT_SIZES = new Set(['8"×10"', '12"×18"', '16"×20"']);
+  const GICLEE_LANDSCAPE_SIZES = new Set(['10"×8"', '18"×12"', '20"×16"']);
   const isGiclee = product?.slug === "giclee-print";
   const artworkAr = selectedArtwork?.slug ? (ARTWORK_ASPECT[selectedArtwork.slug] ?? 1.33) : 1.33;
   const artworkIsLandscape = artworkAr < 1;

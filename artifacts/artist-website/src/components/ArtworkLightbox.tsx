@@ -11,22 +11,22 @@ interface Props {
   onNavigate: (index: number) => void;
 }
 
-const PRINT_SIZES: PrintSize[] = ["8x11", "12x18", "16x20"];
+const PRINT_SIZES: PrintSize[] = ["8x10", "12x18", "16x20"];
 
 const SIZE_LABELS_PORTRAIT: Record<PrintSize, string> = {
-  "8x11":  '8" × 11"',
+  "8x10":  '8" × 10"',
   "12x18": '12" × 18"',
   "16x20": '16" × 20"',
 };
 
 const SIZE_LABELS_LANDSCAPE: Record<PrintSize, string> = {
-  "8x11":  '11" × 8"',
+  "8x10":  '10" × 8"',
   "12x18": '18" × 12"',
   "16x20": '20" × 16"',
 };
 
 const PRINT_PRICES: Record<PrintSize, number> = {
-  "8x11":  45,
+  "8x10":  45,
   "12x18": 75,
   "16x20": 95,
 };
@@ -46,7 +46,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
 
   // Shared: print picker
   const [showPrintPicker, setShowPrintPicker] = useState(false);
-  const [selectedPrintSize, setSelectedPrintSize] = useState<PrintSize>("8x11");
+  const [selectedPrintSize, setSelectedPrintSize] = useState<PrintSize>("8x10");
 
   // Mobile-only: bottom sheet expanded state + description expanded
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -468,8 +468,8 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   <div>
                     <div style={{ fontFamily: "'Inter'", fontSize: "9px", letterSpacing: "0.16em", color: "#555", textTransform: "uppercase" as const, marginBottom: "4px" }}>Print Type</div>
-                    <div style={{ fontFamily: "'Inter'", fontSize: "12px", color: "#aaa" }}>Giclée Art Print</div>
-                    <div style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#444", marginTop: "2px" }}>Archival pigment inks · Premium cotton-rag paper</div>
+                    <div style={{ fontFamily: "'Inter'", fontSize: "12px", color: "#aaa" }}>Fine Art Print</div>
+                    <div style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#444", marginTop: "2px" }}>Archival pigment inks · 220gsm gallery-grade paper</div>
                   </div>
                   <div>
                     <div style={{ fontFamily: "'Inter'", fontSize: "9px", letterSpacing: "0.16em", color: "#555", textTransform: "uppercase" as const, marginBottom: "8px" }}>Size</div>
@@ -692,8 +692,8 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "16px", minWidth: "290px" }}>
               <div style={{ width: "100%" }}>
                 <div style={{ fontFamily: "'Inter'", fontSize: "9px", letterSpacing: "0.16em", color: "#555", textTransform: "uppercase", marginBottom: "6px" }}>Print Type</div>
-                <div style={{ fontFamily: "'Inter'", fontSize: "11px", color: "#aaa", letterSpacing: "0.04em" }}>Giclée Art Print</div>
-                <div style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#444", marginTop: "3px" }}>Archival pigment inks · Premium cotton-rag paper</div>
+                <div style={{ fontFamily: "'Inter'", fontSize: "11px", color: "#aaa", letterSpacing: "0.04em" }}>Fine Art Print</div>
+                <div style={{ fontFamily: "'Inter'", fontSize: "10px", color: "#444", marginTop: "3px" }}>Archival pigment inks · 220gsm gallery-grade paper</div>
               </div>
               <div style={{ width: "100%" }}>
                 <div style={{ fontFamily: "'Inter'", fontSize: "9px", letterSpacing: "0.16em", color: "#555", textTransform: "uppercase", marginBottom: "8px" }}>Size</div>
