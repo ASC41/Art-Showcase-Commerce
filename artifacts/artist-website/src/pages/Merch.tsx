@@ -47,8 +47,13 @@ function MerchCard({
   // globalIndex=0 (first t-shirt) → always the clean front product shot.
   // All other cards → prefer a lifestyle/person shot so the grid has variety.
   // Avoid back/folded/size-chart angles where the art isn't visible.
+  // Per-slug overrides pin specific products to the image index that best shows the artwork.
+  const THUMBNAIL_INDEX: Record<string, number> = {
+    "bucket-hat": 0, // front is the only angle that shows the full artwork
+  };
   const images = product.mockupImages ?? [];
   const mockup = (() => {
+    if (product.slug in THUMBNAIL_INDEX) return images[THUMBNAIL_INDEX[product.slug]];
     if (globalIndex === 0 || images.length <= 1) return images[0];
     const getLabel = (url: string) =>
       url.match(/camera_label=([^&]+)/)?.[1] ?? "";
