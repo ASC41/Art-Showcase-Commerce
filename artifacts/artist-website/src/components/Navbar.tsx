@@ -29,7 +29,12 @@ function WaveLogo({ text }: { text: string }) {
     <span
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={{ cursor: "pointer", display: "inline-block" }}
+      style={{
+        cursor: "pointer",
+        display: "inline-block",
+        letterSpacing: hovered ? "0.13em" : "0.08em",
+        transition: "letter-spacing 0.55s cubic-bezier(0.16, 1, 0.3, 1)",
+      }}
     >
       {chars.map((char, i) => (
         <span
@@ -40,14 +45,14 @@ function WaveLogo({ text }: { text: string }) {
             fontFamily: "'Cormorant Garamond', serif",
             fontSize: "20px",
             fontWeight: 500,
-            letterSpacing: "0.08em",
-            color: "#f5f5f5",
-            transition: "transform 0.45s ease, opacity 0.45s ease",
+            color: hovered ? "#ffffff" : "#b8b8b8",
+            textShadow: hovered
+              ? "0 0 18px rgba(255,255,255,0.45), 0 0 4px rgba(255,255,255,0.2)"
+              : "none",
+            transition: "color 0.5s ease, text-shadow 0.5s ease",
             transitionDelay: hovered
-              ? `${i * 30}ms`
-              : `${(chars.length - 1 - i) * 18}ms`,
-            transform: hovered ? "translateY(-3px)" : "translateY(0px)",
-            opacity: hovered ? 1 : 0.82,
+              ? `${i * 28}ms`
+              : `${(chars.length - 1 - i) * 16}ms`,
           }}
         >
           {char}
