@@ -270,28 +270,6 @@ const MERCH_CONFIG: MerchItemConfig[] = [
     ],
   },
 
-  // ── 4 ADDITIONS FOR 18-35 INSTAGRAM/TIKTOK AUDIENCE ────────────────────────
-  {
-    slug: "cuff-beanie",
-    name: "Cuff Beanie",
-    description:
-      "A winter essential with artwork embroidered across the front. One size fits all.",
-    priceCents: 3200, // $32 — est cost ~$11 → ~66% margin
-    estimatedCostCents: 1100,
-    blueprintId: 1689,
-    printProviderId: 217,
-    printAreaPosition: "front",
-    printAreaWidth: 1500,
-    printAreaHeight: 526,
-    category: "accessories",
-    displayOrder: 7,
-    variants: [
-      { id: 116203, color: "Black", size: "One size" },
-      { id: 116211, color: "Navy", size: "One size" },
-      { id: 116206, color: "Ecru", size: "One size" },
-      { id: 116201, color: "Army", size: "One size" },
-    ],
-  },
   {
     slug: "crew-socks",
     name: "Art Crew Socks",
