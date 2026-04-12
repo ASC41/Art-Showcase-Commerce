@@ -258,8 +258,7 @@ export default function About() {
             left: 0,
             right: 0,
             zIndex: 10,
-            background:
-              "linear-gradient(to bottom, transparent 0%, rgba(6,6,6,0.75) 30%, rgba(6,6,6,0.96) 60%, rgba(6,6,6,1) 100%)",
+            background: "transparent",
             padding: "80px 40px 64px",
           }}
         >
