@@ -6,6 +6,10 @@
 --          show a blank white hoodie. The wordmark is invisible.
 --
 -- Fix:    Swap front/collar/person images to use Black variant (32920=Black/L).
+--         Note: task doc mentioned 32918 (Black/S) but Printify's API returns variant 32920
+--         (Black/L) in the CDN mockup URLs for the Black color group — both are in the same
+--         darkVariantIds set and render the same image. 32920 is used here because it is
+--         the representative variant ID that Printify embeds in the CDN URL path.
 --         The white wordmark on black fabric is clearly visible at high contrast.
 --         Back images remain White variant (32912=White/L) — artwork shows best there.
 --
