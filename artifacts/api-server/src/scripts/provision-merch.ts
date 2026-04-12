@@ -325,29 +325,6 @@ const MERCH_CONFIG: MerchItemConfig[] = [
       { id: 116659, color: "Ecru", size: "One size" },
     ],
   },
-  {
-    slug: "sweat-shorts",
-    name: "Sponge Fleece Sweat Shorts",
-    description:
-      "Athleisure made for content. Soft sponge fleece, elastic waistband, artwork on the left leg.",
-    priceCents: 4800, // $48 — est cost ~$19 → ~60% margin
-    estimatedCostCents: 1900,
-    blueprintId: 2048,
-    printProviderId: 29,
-    printAreaPosition: "left_leg_front",
-    printAreaWidth: 1200,
-    printAreaHeight: 1920,
-    category: "apparel",
-    displayOrder: 10,
-    variants: [
-      { id: 125500, color: "Black", size: "S" },
-      { id: 125498, color: "Black", size: "M" },
-      { id: 125496, color: "Black", size: "L" },
-      { id: 125502, color: "Black", size: "XL" },
-      { id: 125494, color: "Black", size: "2XL" },
-    ],
-  },
-
   // ── MATTE ART POSTER ─────────────────────────────────────────────────────────
   {
     slug: "matte-poster",

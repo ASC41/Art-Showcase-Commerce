@@ -101,7 +101,6 @@ A full-stack contemporary art gallery website for artist Ryan Cellar (ryancellar
 | tote-bag | All-Over Print Tote Bag | $45 | accessories |
 | cuff-beanie | Cuff Beanie | $32 | accessories |
 | bucket-hat | Bucket Hat | $32 | accessories |
-| sweat-shorts | Sponge Fleece Sweat Shorts | $48 | apparel |
 | matte-poster | Matte Art Poster | $20 | print |
 
 ## Merch Provisioning

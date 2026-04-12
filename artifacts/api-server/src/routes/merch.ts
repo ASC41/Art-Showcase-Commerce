@@ -130,17 +130,24 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
 
     const shopId = await getShopId();
 
-    // Scale-to-contain for the artwork: prevents cropping regardless of orientation.
-    // Printify IGNORES width/height fields (normalises to actual file dims).
-    // At scale=1.0 Printify COVERS (crops). CONTAIN = min(r,ar)/max(r,ar).
-    // Using actual artwork pixel dims honours portrait/landscape/square paintings.
+    // Artwork scale on print area:
+    // – Landscape artwork (artW > artH) on a portrait/square print area → COVER (scale=1.0):
+    //   fills the entire area, cropping the left/right edges of the painting.
+    //   This is the correct look for wide paintings on tall garments/media.
+    // – All other cases → CONTAIN (min ratio / max ratio): no cropping.
+    //   Portrait areas with landscape print areas (e.g. bucket hat) fall here naturally.
+    // Printify IGNORES width/height fields; at scale=1.0 it renders COVER.
     const artW = artwork.imageWidth ?? 3000;
     const artH = artwork.imageHeight ?? 3000;
     const areaW = merch.printAreaWidth ?? 3000;
     const areaH = merch.printAreaHeight ?? 3000;
     const artRatio = artW / artH;
     const areaRatio = areaW / areaH;
-    const artworkScale = Math.min(artRatio, areaRatio) / Math.max(artRatio, areaRatio);
+    const isLandscapeArt = artW > artH;
+    const isPortraitArea = areaH >= areaW;
+    const artworkScale = (isLandscapeArt && isPortraitArea)
+      ? 1.0
+      : Math.min(artRatio, areaRatio) / Math.max(artRatio, areaRatio);
 
     // Upload artwork image to Printify
     const uploadRes = await printifyRequest("/uploads/images.json", {
