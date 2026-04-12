@@ -159,12 +159,14 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
   };
 
   // ── Shared image ───────────────────────────────────────────────────────────
+  // For rotated artworks the wrapper must have an explicit width — its only child
+  // is position:absolute (out of flow) so without a width the div collapses to 0×0.
+  const displayAr = 1 / (ARTWORK_ASPECT[artwork.slug] ?? 1);
   const image = rotation !== undefined ? (
     <div style={{
       position: "relative",
-      aspectRatio: `${1 / (ARTWORK_ASPECT[artwork.slug] ?? 1)}`,
-      maxWidth: "100%",
-      maxHeight: "100%",
+      aspectRatio: `${displayAr}`,
+      width: `min(90vw, calc(85vh * ${displayAr.toFixed(4)}))`,
       overflow: "hidden",
     }}>
       <img
