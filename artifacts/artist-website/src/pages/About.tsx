@@ -150,6 +150,8 @@ function TreatmentPhoto() {
           mixBlendMode: "screen",
         }}
       />
+
+      {/* Grain texture */}
       <div
         style={{
           position: "absolute",
@@ -162,6 +164,19 @@ function TreatmentPhoto() {
           mixBlendMode: "overlay",
         }}
       />
+
+      {/* Top fade — bio text dissolves into the image */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "linear-gradient(to bottom, rgba(6,6,6,1) 0%, rgba(6,6,6,0) 35%)",
+          zIndex: 3,
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Radial edge vignette */}
       <div
         style={{
           position: "absolute",
@@ -231,72 +246,86 @@ export default function About() {
         </p>
       </div>
 
-      {/* Second photo treatment */}
-      <TreatmentPhoto />
+      {/* Second image + contact footer — footer is pinned to the bottom of the image */}
+      <div style={{ position: "relative" }}>
+        <TreatmentPhoto />
 
-      {/* Contact */}
-      <div
-        style={{
-          maxWidth: "760px",
-          margin: "0 auto",
-          padding: "80px 40px 100px",
-        }}
-      >
+        {/* Contact — overlays the bottom of the image */}
         <div
           style={{
-            width: "48px",
-            height: "1px",
-            background: "rgba(255,255,255,0.12)",
-            marginBottom: "48px",
-          }}
-        />
-
-        <p
-          style={{
-            fontFamily: "'Inter'",
-            fontSize: "12px",
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            color: "#555",
-            marginBottom: "12px",
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 10,
+            background:
+              "linear-gradient(to bottom, transparent 0%, rgba(6,6,6,0.75) 30%, rgba(6,6,6,0.96) 60%, rgba(6,6,6,1) 100%)",
+            padding: "80px 40px 64px",
           }}
         >
-          Contact
-        </p>
-        <a
-          href="mailto:ryancellart@gmail.com"
-          style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontSize: "20px",
-            fontWeight: 400,
-            color: "#f5f5f5",
-            textDecoration: "none",
-            letterSpacing: "0.03em",
-            borderBottom: "1px solid rgba(255,255,255,0.2)",
-            paddingBottom: "2px",
-            transition: "border-color 0.2s",
-          }}
-        >
-          ryancellart@gmail.com
-        </a>
+          <div
+            style={{
+              maxWidth: "760px",
+              margin: "0 auto",
+            }}
+          >
+            <div
+              style={{
+                width: "48px",
+                height: "1px",
+                background: "rgba(255,255,255,0.12)",
+                marginBottom: "48px",
+              }}
+            />
 
-        <div style={{ marginTop: "64px" }}>
-          <Link href="/portfolio" style={{ textDecoration: "none" }}>
-            <span
+            <p
               style={{
                 fontFamily: "'Inter'",
-                fontSize: "13px",
-                letterSpacing: "0.15em",
+                fontSize: "12px",
+                letterSpacing: "0.2em",
                 textTransform: "uppercase",
-                color: "#888",
-                cursor: "pointer",
-                borderBottom: "1px solid rgba(255,255,255,0.15)",
-                paddingBottom: "2px",
+                color: "#555",
+                marginBottom: "12px",
               }}
             >
-              View Portfolio →
-            </span>
-          </Link>
+              Contact
+            </p>
+            <a
+              href="mailto:ryancellart@gmail.com"
+              style={{
+                fontFamily: "'Cormorant Garamond', serif",
+                fontSize: "20px",
+                fontWeight: 400,
+                color: "#f5f5f5",
+                textDecoration: "none",
+                letterSpacing: "0.03em",
+                borderBottom: "1px solid rgba(255,255,255,0.2)",
+                paddingBottom: "2px",
+                transition: "border-color 0.2s",
+              }}
+            >
+              ryancellart@gmail.com
+            </a>
+
+            <div style={{ marginTop: "64px" }}>
+              <Link href="/portfolio" style={{ textDecoration: "none" }}>
+                <span
+                  style={{
+                    fontFamily: "'Inter'",
+                    fontSize: "13px",
+                    letterSpacing: "0.15em",
+                    textTransform: "uppercase",
+                    color: "#888",
+                    cursor: "pointer",
+                    borderBottom: "1px solid rgba(255,255,255,0.15)",
+                    paddingBottom: "2px",
+                  }}
+                >
+                  View Portfolio →
+                </span>
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>
