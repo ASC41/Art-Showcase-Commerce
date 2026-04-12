@@ -289,11 +289,62 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
       if (label === "back-2") return 4;
       return 5;
     };
-    const mockupImages = (product.images ?? [])
-      .filter((img) => img.src)
-      .map((img) => img.src)
-      .sort((a, b) => cameraPriority(a) - cameraPriority(b))
-      .slice(0, 6);
+
+    // For signature products (e.g. hoodie), pick variant-aware images per angle:
+    //   front-facing angles → dark variant (Black) so the WHITE wordmark is clearly
+    //   visible on dark fabric; back angles → light variant (White) so the artwork
+    //   prints on a neutral background and pops.
+    // We extract the variant ID embedded in Printify's CDN URL pattern:
+    //   https://images-api.printify.com/mockup/{productId}/{variantId}/{cameraId}/...
+    const variantIdFromUrl = (url: string): number | null => {
+      const m = url.match(/\/mockup\/[^/]+\/(\d+)\//);
+      return m ? parseInt(m[1], 10) : null;
+    };
+
+    let mockupImages: string[];
+    if (sig) {
+      const darkIds = new Set(sig.darkVariantIds);
+      const lightIds = new Set(sig.lightVariantIds);
+      const isFrontAngle = (label: string) =>
+        label === "front" || label.includes("collar") || label.startsWith("person");
+      const isBackAngle = (label: string) =>
+        label === "back" || label === "back-2" || label === "folded";
+
+      // Group all candidate URLs by camera label
+      const byLabel = new Map<string, string[]>();
+      for (const img of product.images ?? []) {
+        if (!img.src) continue;
+        const label = cameraLabel(img.src);
+        const arr = byLabel.get(label) ?? [];
+        arr.push(img.src);
+        byLabel.set(label, arr);
+      }
+
+      // For each label group, pick the best-variant image
+      const chosen: string[] = [];
+      for (const [label, urls] of byLabel) {
+        const preferDark = isFrontAngle(label);
+        const preferLight = isBackAngle(label);
+        let best = urls[0];
+        for (const url of urls) {
+          const vid = variantIdFromUrl(url);
+          if (vid === null) continue;
+          if (preferDark && darkIds.has(vid)) { best = url; break; }
+          if (preferLight && lightIds.has(vid)) { best = url; break; }
+        }
+        chosen.push(best);
+      }
+
+      mockupImages = chosen
+        .sort((a, b) => cameraPriority(a) - cameraPriority(b))
+        .slice(0, 6);
+    } else {
+      mockupImages = (product.images ?? [])
+        .filter((img) => img.src)
+        .map((img) => img.src)
+        .sort((a, b) => cameraPriority(a) - cameraPriority(b))
+        .slice(0, 6);
+    }
 
     // Upsert into cache
     if (cached) {
