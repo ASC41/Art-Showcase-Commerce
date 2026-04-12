@@ -444,6 +444,47 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
           placeholders: [buildFrontPlaceholder(wmBlack.id)],
         },
       ].filter((pa) => pa.variant_ids.length > 0);
+    } else if (merch.slug === "giclee-print") {
+      // Giclée Art Print — per-variant scale:
+      //   Each size has a different aspect ratio, so scale is computed individually.
+      //   Orientation filtering ensures portrait art only shows on portrait sizes, etc.
+      const artOrient = artH > artW * 1.05 ? "portrait" : artW > artH * 1.05 ? "landscape" : "square";
+      const containScaleFor = (vAreaW: number, vAreaH: number) => {
+        const ar = artW / artH;
+        const vr = vAreaW / vAreaH;
+        return Math.min(ar, vr) / Math.max(ar, vr);
+      };
+      const enabledVariantIds: number[] = [];
+      printAreas = variants.map((v) => {
+        const vAreaW = v.areaW ?? (merch.printAreaWidth ?? 3300);
+        const vAreaH = v.areaH ?? (merch.printAreaHeight ?? 4200);
+        const vOrient = vAreaH > vAreaW * 1.05 ? "portrait" : vAreaW > vAreaH * 1.05 ? "landscape" : "square";
+        const enabled = artOrient === "square" || artOrient === vOrient;
+        if (enabled) enabledVariantIds.push(v.id);
+        return {
+          variant_ids: [v.id],
+          placeholders: [
+            {
+              position: merch.printAreaPosition,
+              images: [
+                {
+                  id: imageId,
+                  name: `${artwork.title} — ${merch.name}`,
+                  type: "image/jpeg",
+                  width: artW,
+                  height: artH,
+                  x: 0.5,
+                  y: 0.5,
+                  scale: containScaleFor(vAreaW, vAreaH),
+                  angle: 0,
+                },
+              ],
+            },
+          ],
+        };
+      });
+      // Promote enabledVariantIds for use in the variants list below
+      (merch as typeof merch & { _enabledVariantIds?: number[] })._enabledVariantIds = enabledVariantIds;
     } else {
       printAreas = [
         {
@@ -471,6 +512,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     }
 
     // Create the product on Printify
+    const enabledVariantIds = (merch as typeof merch & { _enabledVariantIds?: number[] })._enabledVariantIds;
     const product = await printifyRequest(`/shops/${shopId}/products.json`, {
       method: "POST",
       body: JSON.stringify({
@@ -480,7 +522,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
         variants: variants.map((v) => ({
           id: v.id,
           price: merch.priceCents,
-          is_enabled: true,
+          is_enabled: enabledVariantIds ? enabledVariantIds.includes(v.id) : true,
         })),
         print_areas: printAreas,
       }),

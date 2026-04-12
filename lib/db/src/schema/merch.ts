@@ -14,6 +14,9 @@ export interface MerchVariant {
   title: string;
   color: string;
   size: string;
+  /** Per-variant print area dimensions (used for giclée-style per-size scaling) */
+  areaW?: number;
+  areaH?: number;
 }
 
 /**

@@ -44,13 +44,19 @@ interface MerchItemConfig {
   category: "apparel" | "accessories" | "print";
   displayOrder: number;
   /** subset of variants to enable (all colors/sizes we support) */
-  variants: Array<{ id: number; color: string; size: string }>;
+  variants: Array<{ id: number; color: string; size: string; areaW?: number; areaH?: number }>;
   /**
    * Optional: secondary print area with a color-aware wordmark/signature.
    * When set, createMerchProduct builds two print_areas groups so dark
    * garments get the white wordmark and light garments get the black one.
    */
   signatureConfig?: SignatureConfig;
+  /**
+   * When true, each variant gets its own print_areas group with scale computed
+   * from that variant's areaW/areaH. Used for giclée prints where each size
+   * has a different aspect ratio. Variants with orientation mismatch are disabled.
+   */
+  perVariantScale?: boolean;
 }
 
 const MERCH_CONFIG: MerchItemConfig[] = [
@@ -327,26 +333,37 @@ const MERCH_CONFIG: MerchItemConfig[] = [
       { id: 116659, color: "Ecru", size: "One size" },
     ],
   },
-  // ── MATTE ART POSTER ─────────────────────────────────────────────────────────
+  // ── GICLÉE ART PRINT ─────────────────────────────────────────────────────────
+  // Blueprint 494 (Giclée Art Print), provider 36 (Print Pigeons).
+  // Each size variant has a different aspect ratio → per-variant scale is required.
+  // Portrait artworks get portrait variants enabled; landscape artworks get landscape.
+  // areaW × areaH are the actual Printify placeholder dimensions for each variant.
   {
-    slug: "matte-poster",
-    name: "Matte Art Poster",
+    slug: "giclee-print",
+    name: "Giclée Art Print",
     description:
-      "Museum-quality matte finish. Deep blacks, vivid color. Each print is made to order — artwork looks better in person.",
-    priceCents: 2000, // $20 — est cost ~$6 → ~70% margin
-    estimatedCostCents: 600,
-    blueprintId: 282,
-    printProviderId: 2,
+      "Archival pigment inks on premium cotton-rag paper. Gallery-quality reproduction made to order — colors deepen in person.",
+    priceCents: 2800, // $28 — est cost ~$12 → ~57% margin
+    estimatedCostCents: 1200,
+    blueprintId: 494,
+    printProviderId: 36,
     printAreaPosition: "front",
-    printAreaWidth: 3300,
-    printAreaHeight: 4200,
+    printAreaWidth: 3300,  // fallback only — per-variant scale takes precedence
+    printAreaHeight: 4200, // fallback only
     category: "print",
     displayOrder: 11,
+    perVariantScale: true,
     variants: [
-      { id: 43135, color: "Matte", size: '11" × 14"' },
-      { id: 43138, color: "Matte", size: '12" × 18"' },
-      { id: 43141, color: "Matte", size: '16" × 20"' },
-      { id: 43144, color: "Matte", size: '18" × 24"' },
+      // Portrait sizes (areaH > areaW)
+      { id: 66037, color: "Matte", size: '8" × 11"',  areaW: 2400, areaH: 3300 },
+      { id: 66039, color: "Matte", size: '11" × 14"', areaW: 3300, areaH: 4200 },
+      { id: 66043, color: "Matte", size: '12" × 18"', areaW: 3600, areaH: 5400 },
+      { id: 66047, color: "Matte", size: '16" × 20"', areaW: 4800, areaH: 6000 },
+      // Landscape sizes (areaW > areaH)
+      { id: 66033, color: "Matte", size: '11" × 8"',  areaW: 3300, areaH: 2400 },
+      { id: 66041, color: "Matte", size: '14" × 11"', areaW: 4200, areaH: 3300 },
+      { id: 66045, color: "Matte", size: '18" × 12"', areaW: 5400, areaH: 3600 },
+      { id: 66232, color: "Matte", size: '20" × 16"', areaW: 6000, areaH: 4800 },
     ],
   },
 ];
@@ -375,6 +392,14 @@ function computeScale(
   const artRatio = artworkW / artworkH;
   const areaRatio = areaW / areaH;
   return Math.min(artRatio, areaRatio) / Math.max(artRatio, areaRatio);
+}
+
+// ── Orientation helper ────────────────────────────────────────────────────────
+// Returns "portrait", "landscape", or "square".
+function orientation(w: number, h: number): "portrait" | "landscape" | "square" {
+  if (h > w * 1.05) return "portrait";
+  if (w > h * 1.05) return "landscape";
+  return "square";
 }
 
 // ── Create a Printify product for a merch item ────────────────────────────────
@@ -501,6 +526,55 @@ async function createMerchProduct(
         ],
       },
     ];
+  } else if (config.perVariantScale) {
+    // Per-variant scale products (e.g. giclée print):
+    //   Each size variant has its own print area dimensions and aspect ratio.
+    //   Artwork orientation determines which variants are enabled:
+    //     portrait art → portrait variants (areaH > areaW)
+    //     landscape art → landscape variants (areaW > areaH)
+    //     square art → all variants
+    const artOrient = orientation(artW, artH);
+    const makeVariantGroup = (v: typeof config.variants[0]) => {
+      const vAreaW = v.areaW ?? config.printAreaWidth;
+      const vAreaH = v.areaH ?? config.printAreaHeight;
+      const variantOrient = orientation(vAreaW, vAreaH);
+      const enabled =
+        artOrient === "square" ||
+        artOrient === variantOrient;
+      const scale = computeScale(artW, artH, vAreaW, vAreaH);
+      return {
+        variantId: v.id,
+        enabled,
+        printArea: {
+          variant_ids: [v.id],
+          placeholders: [
+            {
+              position: config.printAreaPosition,
+              images: [
+                {
+                  id: imageId,
+                  name: `${artwork.title} — ${config.name}`,
+                  type: "image/jpeg",
+                  width: artW,
+                  height: artH,
+                  x: 0.5,
+                  y: 0.5,
+                  scale,
+                  angle: 0,
+                },
+              ],
+            },
+          ],
+        },
+      };
+    };
+    const variantGroups = config.variants.map(makeVariantGroup);
+    printAreasWithId = variantGroups.map((g) => g.printArea);
+    // Override which variants Printify enables (re-applied to the product.variants list below)
+    config = {
+      ...config,
+      _enabledVariantIds: variantGroups.filter((g) => g.enabled).map((g) => g.variantId),
+    } as MerchItemConfig & { _enabledVariantIds?: number[] };
   } else {
     // Standard products: single group covering all variants, one or more positions.
     const positions = config.allPrintAreaPositions ?? [config.printAreaPosition];
@@ -536,7 +610,9 @@ async function createMerchProduct(
       variants: config.variants.map((v) => ({
         id: v.id,
         price: config.priceCents,
-        is_enabled: true,
+        is_enabled: (config as MerchItemConfig & { _enabledVariantIds?: number[] })._enabledVariantIds
+          ? (config as MerchItemConfig & { _enabledVariantIds?: number[] })._enabledVariantIds!.includes(v.id)
+          : true,
       })),
       print_areas: printAreasWithId,
     }),
@@ -660,6 +736,8 @@ async function main() {
           title: `${v.color} / ${v.size}`,
           color: v.color,
           size: v.size,
+          ...(v.areaW !== undefined ? { areaW: v.areaW } : {}),
+          ...(v.areaH !== undefined ? { areaH: v.areaH } : {}),
         })),
         signatureConfig: config.signatureConfig ?? null,
         category: config.category,
