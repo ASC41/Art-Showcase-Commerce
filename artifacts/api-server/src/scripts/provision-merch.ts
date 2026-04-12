@@ -597,14 +597,9 @@ async function main() {
       .from(merchProductsTable)
       .where(eq(merchProductsTable.slug, config.slug));
 
-    if (existing?.printifyProductId && !FORCE) {
-      console.log(`  ✓ Already provisioned (product ID: ${existing.printifyProductId}) — skipping`);
-      skipped++;
-      continue;
-    }
-
-    // Evict stale per-artwork mockup cache rows before re-provisioning so the
-    // next customer request regenerates fresh mockups with the updated layout.
+    // Evict stale per-artwork mockup cache rows so the next customer request
+    // regenerates fresh mockups with the updated layout.
+    // Runs before the skip check so --clear-cache works even in incremental mode.
     if (CLEAR_CACHE && existing) {
       const deleted = await db
         .delete(merchArtworkProductsTable)
@@ -613,6 +608,12 @@ async function main() {
       if (deleted.length > 0) {
         console.log(`  ↻ Cleared ${deleted.length} stale artwork-product cache row(s)`);
       }
+    }
+
+    if (existing?.printifyProductId && !FORCE) {
+      console.log(`  ✓ Already provisioned (product ID: ${existing.printifyProductId}) — skipping`);
+      skipped++;
+      continue;
     }
 
     try {
