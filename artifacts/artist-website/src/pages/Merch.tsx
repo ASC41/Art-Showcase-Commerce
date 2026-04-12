@@ -11,6 +11,7 @@ interface MerchVariant {
   title: string;
   color: string;
   size: string;
+  priceCents?: number;
 }
 
 interface MerchProduct {

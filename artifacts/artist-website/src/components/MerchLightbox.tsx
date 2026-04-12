@@ -88,6 +88,7 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
   }, [artworks, selectedArtwork, initialArtworkSlug]);
 
   // Auto-select first variant when color changes or on mount
+  const SIZE_SORT_ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
   useEffect(() => {
     if (!product) return;
     const variants = product.variants ?? [];
@@ -100,7 +101,21 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
     if (selectedColor) {
       const colorVariants = variants.filter((v) => v.color === selectedColor);
       if (colorVariants.length > 0 && !colorVariants.find((v) => v.id === selectedVariantId)) {
-        setSelectedVariantId(colorVariants[0].id);
+        // For apparel: pick smallest size (S before M before L before XL; 2XL last).
+        // For prints/accessories: keep the DB insertion order so orientation filtering
+        // in the render picks the right portrait/landscape variant naturally.
+        const isApparelProduct = product?.category === "apparel";
+        const first = isApparelProduct
+          ? [...colorVariants].sort((a, b) => {
+              const ai = SIZE_SORT_ORDER.indexOf(a.size);
+              const bi = SIZE_SORT_ORDER.indexOf(b.size);
+              if (ai === -1 && bi === -1) return a.size.localeCompare(b.size);
+              if (ai === -1) return 1;
+              if (bi === -1) return -1;
+              return ai - bi;
+            })[0]
+          : colorVariants[0];
+        setSelectedVariantId(first.id);
       }
     }
   }, [product, selectedColor, selectedVariantId]);
@@ -242,17 +257,33 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
   const artworkAr = selectedArtwork?.slug ? (ARTWORK_ASPECT[selectedArtwork.slug] ?? 1.33) : 1.33;
   const artworkIsLandscape = artworkAr < 1;
 
+  const APPAREL_SIZE_ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+  const PRINT_SIZE_ORDER = ['8" × 10"', '10" × 8"', '12" × 18"', '18" × 12"', '16" × 20"', '20" × 16"'];
+
   const sizesForColor = selectedColor
-    ? variants
-        .filter((v) => {
-          if (v.color !== selectedColor) return false;
-          if (isGiclee) {
-            const n = normalizeSize(v.size);
-            return artworkIsLandscape ? GICLEE_LANDSCAPE_SIZES.has(n) : GICLEE_PORTRAIT_SIZES.has(n);
-          }
-          return true;
-        })
-        .map((v) => v.size)
+    ? (() => {
+        const seen = new Set<string>();
+        const filtered = variants
+          .filter((v) => {
+            if (v.color !== selectedColor) return false;
+            if (isGiclee) {
+              const n = normalizeSize(v.size);
+              return artworkIsLandscape ? GICLEE_LANDSCAPE_SIZES.has(n) : GICLEE_PORTRAIT_SIZES.has(n);
+            }
+            return true;
+          })
+          .map((v) => v.size)
+          .filter((s) => { if (seen.has(s)) return false; seen.add(s); return true; });
+        const sizeOrder = isGiclee ? PRINT_SIZE_ORDER : APPAREL_SIZE_ORDER;
+        return filtered.sort((a, b) => {
+          const ai = sizeOrder.indexOf(a);
+          const bi = sizeOrder.indexOf(b);
+          if (ai === -1 && bi === -1) return a.localeCompare(b);
+          if (ai === -1) return 1;
+          if (bi === -1) return -1;
+          return ai - bi;
+        });
+      })()
     : [];
 
   const selectedVariant = variants.find((v) => v.id === selectedVariantId);
@@ -689,7 +720,7 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
                     const isSelected = variant?.id === selectedVariantId;
                     return (
                       <button
-                        key={size}
+                        key={variant?.id ?? size}
                         onClick={() => variant && setSelectedVariantId(variant.id)}
                         style={{
                           padding: "6px 14px",
