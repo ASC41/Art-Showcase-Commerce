@@ -39,21 +39,23 @@ function WaveLogo({ text }: { text: string }) {
       {chars.map((char, i) => (
         <span
           key={i}
-          style={{
-            display: "inline-block",
-            whiteSpace: "pre",
-            fontFamily: "'Cormorant Garamond', serif",
-            fontSize: "20px",
-            fontWeight: 500,
-            color: hovered ? "#ffffff" : "#b8b8b8",
-            textShadow: hovered
-              ? "0 0 18px rgba(255,255,255,0.45), 0 0 4px rgba(255,255,255,0.2)"
-              : "none",
-            transition: "color 0.5s ease, text-shadow 0.5s ease",
-            transitionDelay: hovered
+          style={(() => {
+            const delay = hovered
               ? `${i * 28}ms`
-              : `${(chars.length - 1 - i) * 16}ms`,
-          }}
+              : `${(chars.length - 1 - i) * 16}ms`;
+            return {
+              display: "inline-block",
+              whiteSpace: "pre" as const,
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "20px",
+              fontWeight: 500,
+              color: hovered ? "#ffffff" : "#b8b8b8",
+              textShadow: hovered
+                ? "0 0 18px rgba(255,255,255,0.45), 0 0 4px rgba(255,255,255,0.2)"
+                : "none",
+              transition: `color 0.5s ease ${delay}, text-shadow 0.5s ease ${delay}`,
+            };
+          })()}
         >
           {char}
         </span>

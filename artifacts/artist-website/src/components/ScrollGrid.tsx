@@ -88,7 +88,9 @@ function GridItem({ artwork, type, index, columns, onClick }: GridItemProps) {
         filter,
         position: "relative",
         aspectRatio: `${1} / ${ar}`,
-        gridColumn: isLandscape ? "span 2" : undefined,
+        // Only span 2 columns on multi-column grids — on mobile (columns=1)
+        // a span-2 item falls into the implicit grid and overflows the viewport.
+        gridColumn: isLandscape && columns >= 2 ? "span 2" : undefined,
         borderRadius: "8px",
         overflow: "hidden",
         backgroundColor: "#111",
