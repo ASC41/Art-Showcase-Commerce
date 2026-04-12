@@ -42,32 +42,20 @@ export default function Landing() {
     >
       <Navbar />
 
-      {/* Signature — full-screen, centered behind the gallery */}
+      {/* Signature — full-bleed background behind the gallery */}
       <div
         style={{
           position: "absolute",
           inset: 0,
           zIndex: 2,
           pointerEvents: "none",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "10vh 10vw",
+          backgroundImage: `url("https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@300ac61782bfa80cf3bbe6b42b6a80ce29bb0883/uploads/2026-04-12T04-19-22-288Z-6egjzgyys.png")`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          mixBlendMode: "screen",
         }}
-      >
-        <img
-          src="https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@300ac61782bfa80cf3bbe6b42b6a80ce29bb0883/uploads/2026-04-12T04-19-22-288Z-6egjzgyys.png"
-          alt="Ryan Cellar signature"
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-            mixBlendMode: "screen",
-            userSelect: "none",
-            draggable: false,
-          }}
-        />
-      </div>
+      />
 
       {/* Drag hint */}
       <div
