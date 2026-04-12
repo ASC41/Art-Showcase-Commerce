@@ -199,8 +199,9 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
                   width: artW,
                   height: artH,
                   x: 0.5,
-                  y: 0.25,  // Center of Side A (front face)
-                  scale: 1.0, // Fills full face width; portrait art overflows slightly into Side B top
+                  y: 0.25,   // Center of Side A (top half of AOP template)
+                  scale: artRatio, // CONTAIN within Side A: fills height exactly, slight side margins
+                  // scale=artRatio ensures artwork height = 2175px = Side A height → zero bleed into Side B
                   angle: 0,
                 },
                 {
@@ -210,9 +211,9 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
                   width: wmUpload.width,
                   height: wmUpload.height,
                   x: 0.5,
-                  y: 0.75,  // Center of Side B (back face)
+                  y: 0.75,   // Center of Side B (bottom half of AOP template)
                   scale: 0.7, // ~70% of bag face width — clearly legible wordmark on the back
-                  angle: 0,
+                  angle: 180, // Side B is physically flipped when bag folds → rotate 180° to appear right-side up
                 },
               ],
             },
