@@ -195,8 +195,36 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
 
   const selectedVariant = variants.find((v) => v.id === selectedVariantId);
 
-  // Use artwork-specific mockups if loaded, else fall back to template mockups
-  const displayMockups = artworkMockups ?? product.mockupImages ?? [];
+  // ── Color-aware mockup images ─────────────────────────────────────────────
+  // Printify CDN URLs embed the variant ID:
+  //   https://images-api.printify.com/mockup/{productId}/{variantId}/{cameraId}/…
+  // When the user picks a color, we swap every URL's variant ID to the
+  // representative variant for that color (prefer L, fall back to M, then first).
+  // This makes the entire carousel update cohesively on color change.
+  const representativeVariantId = (color: string | null): number | null => {
+    if (!color) return null;
+    const colorVars = variants.filter((v) => v.color === color);
+    return (
+      colorVars.find((v) => v.size === "L")?.id ??
+      colorVars.find((v) => v.size === "M")?.id ??
+      colorVars[0]?.id ?? null
+    );
+  };
+
+  const recolorMockupUrl = (url: string, targetVariantId: number): string =>
+    url.replace(/\/mockup\/([^/]+)\/\d+\//, `/mockup/$1/${targetVariantId}/`);
+
+  const colorizedMockups = (urls: string[]): string[] => {
+    const targetId = representativeVariantId(selectedColor);
+    if (!targetId) return urls;
+    return urls.map((url) =>
+      url.includes("/mockup/") ? recolorMockupUrl(url, targetId) : url
+    );
+  };
+
+  // Use artwork-specific mockups if loaded, else fall back to template mockups;
+  // then apply color substitution so every image shows the selected color.
+  const displayMockups = colorizedMockups(artworkMockups ?? product.mockupImages ?? []);
   const currentMockup = displayMockups[mockupIndex] ?? displayMockups[0] ?? null;
 
   const isOneSize =
@@ -321,7 +349,7 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
 
               {currentMockup ? (
                 <motion.img
-                  key={`${selectedArtwork?.slug ?? "default"}-${mockupIndex}`}
+                  key={`${selectedArtwork?.slug ?? "default"}-${selectedColor ?? ""}-${mockupIndex}`}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.35 }}
@@ -364,9 +392,9 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
                   flexWrap: "wrap",
                 }}
               >
-                {artworkMockups.slice(0, 6).map((src, i) => (
+                {displayMockups.slice(0, 6).map((src, i) => (
                   <button
-                    key={`${selectedArtwork?.slug ?? "default"}-${i}`}
+                    key={`${selectedArtwork?.slug ?? "default"}-${selectedColor ?? ""}-${i}`}
                     onClick={() => setMockupIndex(i)}
                     style={{
                       width: "56px",
@@ -521,6 +549,7 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
                       onClick={() => {
                         setSelectedColor(color);
                         setSelectedVariantId(null);
+                        setMockupIndex(0);
                       }}
                       style={{
                         padding: "6px 14px",
