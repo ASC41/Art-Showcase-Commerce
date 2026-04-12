@@ -50,6 +50,10 @@ function MerchCard({
   // Per-slug overrides pin specific products to the image index that best shows the artwork.
   const THUMBNAIL_INDEX: Record<string, number> = {
     "bucket-hat": 0, // front is the only angle that shows the full artwork
+    // Hoodies have artwork on the back — use that as the card hero image.
+    // Front-collar-closeup (idx 1 after reorder) shows the signature; the
+    // back artwork (idx 0) is the primary selling point for the grid card.
+    "hoodie": 0,
   };
   const images = product.mockupImages ?? [];
   const mockup = (() => {

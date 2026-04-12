@@ -544,10 +544,23 @@ async function createMerchProduct(
     images: Array<{ src: string; position: string; is_default: boolean }>;
   };
 
+  // Sort mockup images so the most informative angles come first:
+  //   back (artwork) → front-collar-closeup (signature) → front → person → others
+  const getCameraLabel = (url: string) => url.match(/camera_label=([^&]+)/)?.[1] ?? "";
+  const cameraPriority = (url: string) => {
+    const label = getCameraLabel(url);
+    if (label === "back") return 0;
+    if (label.includes("collar") || label === "front-collar-closeup") return 1;
+    if (label === "front") return 2;
+    if (label.startsWith("person")) return 3;
+    if (label === "back-2") return 4;
+    return 5;
+  };
   const mockupImages = (product.images ?? [])
     .filter((img) => img.src)
     .map((img) => img.src)
-    .slice(0, 6); // keep up to 6 mockup images
+    .sort((a, b) => cameraPriority(a) - cameraPriority(b))
+    .slice(0, 6);
 
   return { productId: product.id, mockupImages };
 }

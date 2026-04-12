@@ -275,9 +275,24 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
       }),
     }) as { id: string; images: Array<{ src: string; is_default?: boolean }> };
 
+    // Sort mockup images so the most informative angles come first:
+    //   back (artwork) → front-collar-closeup (signature) → front → person → others
+    // This ensures the lightbox carousel surfaces the artwork and chest signature
+    // prominently regardless of Printify's default image ordering.
+    const cameraLabel = (url: string) => url.match(/camera_label=([^&]+)/)?.[1] ?? "";
+    const cameraPriority = (url: string) => {
+      const label = cameraLabel(url);
+      if (label === "back") return 0;
+      if (label.includes("collar") || label === "front-collar-closeup") return 1;
+      if (label === "front") return 2;
+      if (label.startsWith("person")) return 3;
+      if (label === "back-2") return 4;
+      return 5;
+    };
     const mockupImages = (product.images ?? [])
       .filter((img) => img.src)
       .map((img) => img.src)
+      .sort((a, b) => cameraPriority(a) - cameraPriority(b))
       .slice(0, 6);
 
     // Upsert into cache

@@ -6,3 +6,15 @@ id = "fHiVsyMWgW-xnXMbg1xTk"
 uri = "file://.local/gallery-guide.md"
 type = "text"
 title = "Draggable Infinite Gallery — Build Guide"
+
+[[outputs]]
+id = "A_fyd9kpOCj-U-6RQgtSw"
+uri = "file://screenshots/hoodie-front-mockup.jpg"
+type = "image"
+title = "Hoodie front view (white/L)"
+
+[[outputs]]
+id = "d__RV5j7OogIeFkBwGA-6"
+uri = "file://screenshots/hoodie-collar-closeup.jpg"
+type = "image"
+title = "Hoodie collar closeup — should show chest signature"
