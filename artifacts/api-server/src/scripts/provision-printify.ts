@@ -7,12 +7,12 @@
  *
  * Also clears printifyFramedProductId for all artworks.
  *
- * Sizes available:
- *   Portrait:  8×11, 11×14, 12×18, 16×20
- *   Landscape: 11×8, 14×11, 18×12, 20×16
+ * Sizes available (12×18 and 16×20 removed — source artwork resolution insufficient):
+ *   Portrait:  8×11, 11×14
+ *   Landscape: 11×8, 14×11
  *
  * Pricing (cents):
- *   8×11  → $35  |  11×14 → $55  |  12×18 → $75  |  16×20 → $95
+ *   8×11  → $45  |  11×14 → $65
  *
  * Run once per artwork (idempotent — skips artworks that already have a product ID):
  *   pnpm --filter @workspace/api-server run provision-printify
@@ -182,7 +182,7 @@ async function createGicleeProduct(
       description:
         `Fine art Giclée print by Ryan Cellar. ` +
         `Archival pigment inks on premium cotton-rag paper. Gallery-quality reproduction made to order. ` +
-        `Available in four sizes: ` +
+        `Available in two sizes: ` +
         REQUIRED_PRINT_SIZES.map((s) => sizeLabels[s]).join(", ") + `.`,
       blueprint_id: GICLEE_BLUEPRINT_ID,
       print_provider_id: GICLEE_PROVIDER_ID,

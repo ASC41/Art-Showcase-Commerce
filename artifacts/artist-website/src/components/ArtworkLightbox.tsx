@@ -1,11 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useCreateCheckoutSession } from "@workspace/api-client-react";
-import type { Artwork } from "@workspace/api-client-react";
+import type { Artwork, PrintSize } from "@workspace/api-client-react";
 import { ARTWORK_ASPECT, ARTWORK_ROTATION } from "@/lib/artworkDimensions";
-
-// Local type — the generated api-client-react PrintSize type is stale.
-// Keep in sync with PrintSize in artifacts/api-server/src/lib/printify.ts.
-type PrintSize = "8x11" | "11x14";
 
 interface Props {
   artworks: Artwork[];
@@ -18,12 +14,12 @@ interface Props {
 // to print at acceptable quality (150 DPI min) at those sizes.
 const PRINT_SIZES: PrintSize[] = ["8x11", "11x14"];
 
-const SIZE_LABELS_PORTRAIT: Partial<Record<PrintSize, string>> = {
+const SIZE_LABELS_PORTRAIT: Record<PrintSize, string> = {
   "8x11":  '8" × 11"',
   "11x14": '11" × 14"',
 };
 
-const SIZE_LABELS_LANDSCAPE: Partial<Record<PrintSize, string>> = {
+const SIZE_LABELS_LANDSCAPE: Record<PrintSize, string> = {
   "8x11":  '11" × 8"',
   "11x14": '14" × 11"',
 };
@@ -31,7 +27,7 @@ const SIZE_LABELS_LANDSCAPE: Partial<Record<PrintSize, string>> = {
 // Pricing based on Printify base costs (Print Pigeons, blueprint 494):
 //   8×11: $9.26 cost → $45 retail (~79% margin)
 //   11×14: $9.84 cost → $65 retail (~85% margin)
-const PRINT_PRICES: Record<string, number> = {
+const PRINT_PRICES: Record<PrintSize, number> = {
   "8x11":  45,
   "11x14": 65,
 };
