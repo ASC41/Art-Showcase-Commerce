@@ -32,6 +32,25 @@ interface GalleryArtwork {
   imageUrl: string;
 }
 
+function pickThumbnail(slug: string, images: string[], globalIndex: number): string | undefined {
+  const THUMBNAIL_INDEX: Record<string, number> = {
+    "bucket-hat": 0,
+    "hoodie": 0,
+  };
+  if (slug in THUMBNAIL_INDEX) return images[THUMBNAIL_INDEX[slug]];
+  if (globalIndex === 0 || images.length <= 1) return images[0];
+  const getLabel = (url: string) => url.match(/camera_label=([^&]+)/)?.[1] ?? "";
+  const preferred = ["person", "context", "collar", "detail"];
+  const avoided = ["back", "folded", "size-chart"];
+  for (const pref of preferred) {
+    const hit = images.find((u) => getLabel(u).includes(pref));
+    if (hit) return hit;
+  }
+  const fallback = images.slice(1).find((u) => !avoided.some((a) => getLabel(u).includes(a)));
+  if (fallback) return fallback;
+  return images[0];
+}
+
 function MerchCard({
   product,
   globalIndex,
@@ -52,39 +71,27 @@ function MerchCard({
   const opacity = useTransform(scrollYProgress, [0, 0.6], [0, 1]);
   const y = useTransform(scrollYProgress, [0, 0.6], [60, 0]);
 
-  // Pick the best mockup image for this card.
-  // globalIndex=0 (first t-shirt) → always the clean front product shot.
-  // All other cards → prefer a lifestyle/person shot so the grid has variety.
-  // Avoid back/folded/size-chart angles where the art isn't visible.
-  // Per-slug overrides pin specific products to the image index that best shows the artwork.
-  const THUMBNAIL_INDEX: Record<string, number> = {
-    "bucket-hat": 0, // front is the only angle that shows the full artwork
-    // Hoodies have artwork on the back — use that as the card hero image.
-    // Front-collar-closeup (idx 1 after reorder) shows the signature; the
-    // back artwork (idx 0) is the primary selling point for the grid card.
-    "hoodie": 0,
-  };
+  // Per-artwork mockup: fetched lazily, falls back to template while loading.
+  const [artworkMockupUrl, setArtworkMockupUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!featuredArtwork) return;
+    setArtworkMockupUrl(null);
+    let cancelled = false;
+    fetch(`${BASE_URL}/api/merch/${product.slug}/artwork/${featuredArtwork.slug}/mockups`)
+      .then((r) => r.json())
+      .then((data: { mockupImages?: string[] }) => {
+        if (cancelled) return;
+        const imgs = data.mockupImages ?? [];
+        const picked = pickThumbnail(product.slug, imgs, globalIndex);
+        if (picked) setArtworkMockupUrl(picked);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [product.slug, featuredArtwork?.slug, globalIndex]);
+
+  // Template mockup (shown immediately while per-artwork one loads)
   const images = product.mockupImages ?? [];
-  const mockup = (() => {
-    if (product.slug in THUMBNAIL_INDEX) return images[THUMBNAIL_INDEX[product.slug]];
-    if (globalIndex === 0 || images.length <= 1) return images[0];
-    const getLabel = (url: string) =>
-      url.match(/camera_label=([^&]+)/)?.[1] ?? "";
-    const preferred = ["person", "context", "collar", "detail"];
-    const avoided = ["back", "folded", "size-chart"];
-    // Try preferred labels first
-    for (const pref of preferred) {
-      const hit = images.find((u) => getLabel(u).includes(pref));
-      if (hit) return hit;
-    }
-    // Fall back to any non-avoided shot after index 0
-    const fallback = images.slice(1).find(
-      (u) => !avoided.some((a) => getLabel(u).includes(a))
-    );
-    if (fallback) return fallback;
-    // Always prefer index 0 (front shot with art) over index 1 (back — no art)
-    return images[0];
-  })();
+  const mockup = artworkMockupUrl ?? pickThumbnail(product.slug, images, globalIndex);
   const colors = [...new Set((product.variants ?? []).map((v) => v.color))];
   const minPrice = product.priceCents;
 
@@ -112,7 +119,7 @@ function MerchCard({
           (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.06)";
         }}
       >
-        {/* Card image: featured artwork cycles across products */}
+        {/* Card image: product mockup with rotating artwork */}
         <div
           style={{
             width: "100%",
@@ -122,27 +129,7 @@ function MerchCard({
             overflow: "hidden",
           }}
         >
-          {featuredArtwork ? (
-            <img
-              src={featuredArtwork.imageUrl}
-              alt={featuredArtwork.title}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                objectPosition: "center",
-                display: "block",
-                transition: "transform 0.5s ease",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLImageElement).style.transform = "scale(1.05)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLImageElement).style.transform = "scale(1)";
-              }}
-              loading="lazy"
-            />
-          ) : mockup ? (
+          {mockup ? (
             <img
               src={mockup}
               alt={product.name}
@@ -299,7 +286,7 @@ function MerchCard({
               color: "#555",
             }}
           >
-            {featuredArtwork ? `${featuredArtwork.title} →` : "Your artwork →"}
+            Your artwork →
           </div>
         </div>
       </div>
