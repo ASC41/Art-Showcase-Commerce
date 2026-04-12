@@ -130,30 +130,30 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
 
     const shopId = await getShopId();
 
-    // Artwork scale on print area — COVER formula:
+    // Artwork scale on print area:
     //
     // In Printify, scale=1.0 means the artwork fills 100% of the print-area WIDTH.
     // The rendered height at scale s is: s × areaW / artRatio.
-    // For COVER (no white borders on any axis) we need rendered height ≥ areaH:
-    //   s × areaW / artRatio ≥ areaH  →  s ≥ artRatio / areaRatio
-    // Combined with the minimum of 1.0 (full width fill), the COVER scale is:
+    //
+    // COVER (default — used by tees, hoodies, phone cases, crewnecks):
+    //   Fills every pixel with artwork, may crop edges.
     //   scale = max(1.0, artRatio / areaRatio)
     //
-    // Examples:
-    //   Phone case (areaRatio=0.622), portrait art (artRatio=0.831):
-    //     scale = max(1.0, 0.831/0.622) = 1.336 → fills height, crops width slightly
-    //   Hoodie (areaRatio=0.876), portrait art (artRatio=0.664):
-    //     scale = max(1.0, 0.664/0.876) = 1.0 → fills width, artwork taller than area → COVER
-    //   Bucket hat (areaRatio=2.128), any portrait art:
-    //     scale = max(1.0, 0.8/2.128) = 1.0 → artwork fills width, narrower than area → CONTAIN
-    //     (bucket hat is a wide panel; portrait art doesn't fill it fully, which is intentional)
+    // CONTAIN (bucket hat only — wide 1500×705 panel where COVER crops portrait art badly):
+    //   Full artwork always visible, may have margins.
+    //   scale = min(1.0, artRatio / areaRatio)
+    //   For portrait art (ratio 0.664): scale=0.312 → fills panel height exactly, side margins
+    //   For landscape art (ratio 1.531): scale=0.720 → fills panel height exactly, side margins
+    //   For very wide art (ratio > 2.128): scale=1.0 → fills panel width, top/bottom margins
     const artW = artwork.imageWidth ?? 3000;
     const artH = artwork.imageHeight ?? 3000;
     const areaW = merch.printAreaWidth ?? 3000;
     const areaH = merch.printAreaHeight ?? 3000;
     const artRatio = artW / artH;
     const areaRatio = areaW / areaH;
-    const artworkScale = Math.max(1.0, artRatio / areaRatio);
+    const artworkScale = merch.slug === "bucket-hat"
+      ? Math.min(1.0, artRatio / areaRatio)   // CONTAIN: full artwork visible in wide panel
+      : Math.max(1.0, artRatio / areaRatio);  // COVER: fills area edge-to-edge
 
     // Upload artwork image to Printify
     const uploadRes = await printifyRequest("/uploads/images.json", {
@@ -311,6 +311,71 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
           ],
         },
       ];
+    } else if (merch.slug === "bucket-hat") {
+      // Bucket hat: front-panel only (provider doesn't support back-panel printing).
+      // Layout: artwork CONTAINED at full height (CONTAIN formula above), centered on the
+      // front patch. A small wordmark badge sits in the lower-right corner of the patch.
+      //   - Dark variants (Black, Navy): white wordmark on dark fabric
+      //   - Light variants (Bone, Ecru): black wordmark on light fabric
+      const WORDMARK_WHITE_URL =
+        "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@475907b09a0969a684bac008d7aca675f3138ef4/uploads/2026-04-12T05-30-52-237Z-pd2wptkwr.png";
+      const WORDMARK_BLACK_URL =
+        "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@232b3d5040a133da0e8c0c29a46a9dc28016d2f8/uploads/2026-04-12T05-31-45-372Z-upz8q5hd4.png";
+
+      const [wmWhite, wmBlack] = await Promise.all([
+        printifyRequest("/uploads/images.json", {
+          method: "POST",
+          body: JSON.stringify({ file_name: "wordmark-white.png", url: WORDMARK_WHITE_URL }),
+        }) as Promise<{ id: string; width: number; height: number }>,
+        printifyRequest("/uploads/images.json", {
+          method: "POST",
+          body: JSON.stringify({ file_name: "wordmark-black.png", url: WORDMARK_BLACK_URL }),
+        }) as Promise<{ id: string; width: number; height: number }>,
+      ]);
+
+      // Wordmark: small badge at bottom-right of the front panel (x=0.88, y=0.88).
+      // scale=0.10 → ~150px wide on 1500px panel — visible but subordinate to artwork.
+      const DARK_VARIANT_IDS = [116654, 116660]; // Black, Navy
+      const LIGHT_VARIANT_IDS = [116655, 116659]; // Bone, Ecru
+
+      const buildFrontPlaceholder = (wmId: string) => ({
+        position: "front",
+        images: [
+          {
+            id: imageId,
+            name: `${artwork.title} — ${merch.name}`,
+            type: "image/jpeg",
+            width: artW,
+            height: artH,
+            x: 0.5,
+            y: 0.5,
+            scale: artworkScale,
+            angle: 0,
+          },
+          {
+            id: wmId,
+            name: "Artist Wordmark",
+            type: "image/png",
+            width: wmWhite.width,
+            height: wmWhite.height,
+            x: 0.88,
+            y: 0.88,
+            scale: 0.10,
+            angle: 0,
+          },
+        ],
+      });
+
+      printAreas = [
+        {
+          variant_ids: variants.filter((v) => DARK_VARIANT_IDS.includes(v.id)).map((v) => v.id),
+          placeholders: [buildFrontPlaceholder(wmWhite.id)],
+        },
+        {
+          variant_ids: variants.filter((v) => LIGHT_VARIANT_IDS.includes(v.id)).map((v) => v.id),
+          placeholders: [buildFrontPlaceholder(wmBlack.id)],
+        },
+      ].filter((pa) => pa.variant_ids.length > 0);
     } else {
       printAreas = [
         {
@@ -515,6 +580,42 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
       mockupImages = [...byVariant.entries()]
         .sort(([a], [b]) => (variantOrder.get(a) ?? 999) - (variantOrder.get(b) ?? 999))
         .map(([, url]) => url);
+    } else if (merch.slug === "bucket-hat") {
+      // Bucket hat: 4 colors × 4 angles = 16 images.
+      // The frontend uses per-variant filtering (isPerVariant=true), so we store ALL
+      // variant URLs for the desired camera angles (front + back + person only).
+      // When the user picks a color, the frontend filters to show only that color's images.
+      //
+      // Storage order: all fronts first, then all backs, then all person shots.
+      // Within each group, preserve the variant order (Black, Navy, Bone, Ecru).
+      const BUCKET_HAT_VARIANT_ORDER = [116654, 116660, 116655, 116659]; // Black, Navy, Bone, Ecru
+      const bucketHatCamPriority = (label: string) => {
+        if (label === "front") return 0;
+        if (label === "back") return 1;
+        if (label.startsWith("person")) return 2;
+        return 99; // skip left, right
+      };
+
+      // Build map: cameraLabel → sorted list of (variantOrder, url)
+      const byLabelAndVariant = new Map<string, Array<{ order: number; url: string }>>();
+      for (const img of product.images ?? []) {
+        if (!img.src) continue;
+        const label = cameraLabel(img.src);
+        if (bucketHatCamPriority(label) === 99) continue;
+        const vid = variantIdFromUrl(img.src);
+        const order = vid !== null ? (BUCKET_HAT_VARIANT_ORDER.indexOf(vid) + 1 || 999) : 999;
+        const arr = byLabelAndVariant.get(label) ?? [];
+        arr.push({ order, url: img.src });
+        byLabelAndVariant.set(label, arr);
+      }
+
+      // For each camera group, sort by variant order
+      const sortedGroups = [...byLabelAndVariant.entries()]
+        .sort((a, b) => bucketHatCamPriority(a[0]) - bucketHatCamPriority(b[0]));
+
+      mockupImages = sortedGroups.flatMap(([, entries]) =>
+        entries.sort((a, b) => a.order - b.order).map((e) => e.url)
+      );
     } else if (merch.slug === "tote-bag") {
       // Tote bag: front (Side A = artwork) → back (Side B = wordmark) → person shots.
       // The AOP blueprint generates 6 variants × 8 camera labels = 48 images.
