@@ -26,13 +26,21 @@ interface MerchProduct {
   printAreaHeight: number | null;
 }
 
+interface GalleryArtwork {
+  slug: string;
+  title: string;
+  imageUrl: string;
+}
+
 function MerchCard({
   product,
   globalIndex,
+  featuredArtwork,
   onSelect,
 }: {
   product: MerchProduct;
   globalIndex: number;
+  featuredArtwork: GalleryArtwork | null;
   onSelect: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -104,7 +112,7 @@ function MerchCard({
           (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.06)";
         }}
       >
-        {/* Card image: show the product template mockup — each product type is unique */}
+        {/* Card image: featured artwork cycles across products */}
         <div
           style={{
             width: "100%",
@@ -114,7 +122,27 @@ function MerchCard({
             overflow: "hidden",
           }}
         >
-          {mockup ? (
+          {featuredArtwork ? (
+            <img
+              src={featuredArtwork.imageUrl}
+              alt={featuredArtwork.title}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center",
+                display: "block",
+                transition: "transform 0.5s ease",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLImageElement).style.transform = "scale(1.05)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLImageElement).style.transform = "scale(1)";
+              }}
+              loading="lazy"
+            />
+          ) : mockup ? (
             <img
               src={mockup}
               alt={product.name}
@@ -271,7 +299,7 @@ function MerchCard({
               color: "#555",
             }}
           >
-            Your artwork →
+            {featuredArtwork ? `${featuredArtwork.title} →` : "Your artwork →"}
           </div>
         </div>
       </div>
@@ -323,16 +351,20 @@ function SkeletonCard() {
 
 export default function Merch() {
   const [products, setProducts] = useState<MerchProduct[]>([]);
+  const [artworks, setArtworks] = useState<GalleryArtwork[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<MerchProduct | null>(null);
   const isMobile = useIsMobile();
   const px = isMobile ? "20px" : "40px";
 
   useEffect(() => {
-    fetch(`${BASE_URL}/api/merch`)
-      .then((r) => r.json())
-      .then((merch: MerchProduct[]) => {
+    Promise.all([
+      fetch(`${BASE_URL}/api/merch`).then((r) => r.json()),
+      fetch(`${BASE_URL}/api/artworks`).then((r) => r.json()),
+    ])
+      .then(([merch, arts]) => {
         setProducts(Array.isArray(merch) ? merch : []);
+        setArtworks(Array.isArray(arts) ? arts : []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -423,6 +455,7 @@ export default function Merch() {
                     key={product.slug}
                     product={product}
                     globalIndex={i}
+                    featuredArtwork={artworks.length > 0 ? artworks[i % artworks.length] : null}
                     onSelect={() => setSelected(product)}
                   />
                 ))}
@@ -462,6 +495,7 @@ export default function Merch() {
                     key={product.slug}
                     product={product}
                     globalIndex={apparel.length + i}
+                    featuredArtwork={artworks.length > 0 ? artworks[(apparel.length + i) % artworks.length] : null}
                     onSelect={() => setSelected(product)}
                   />
                 ))}
@@ -501,6 +535,7 @@ export default function Merch() {
                     key={product.slug}
                     product={product}
                     globalIndex={apparel.length + accessories.length + i}
+                    featuredArtwork={artworks.length > 0 ? artworks[(apparel.length + accessories.length + i) % artworks.length] : null}
                     onSelect={() => setSelected(product)}
                   />
                 ))}
