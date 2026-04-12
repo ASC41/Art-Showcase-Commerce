@@ -263,10 +263,10 @@ const MERCH_CONFIG: MerchItemConfig[] = [
     variants: [
       { id: 103599, color: "Black", size: '13" × 13"', priceCents: 4500 }, // cost $12.38
       { id: 103600, color: "Black", size: '16" × 16"', priceCents: 5500 }, // cost $15.14
-      { id: 103601, color: "Black", size: '18" × 18"', priceCents: 6500 }, // cost $16.89
+      { id: 103601, color: "Black", size: '18" × 18"', priceCents: 6100 }, // cost $16.89 → ~72.5% margin
       { id: 103605, color: "White", size: '13" × 13"', priceCents: 4500 },
       { id: 103606, color: "White", size: '16" × 16"', priceCents: 5500 },
-      { id: 103607, color: "White", size: '18" × 18"', priceCents: 6500 },
+      { id: 103607, color: "White", size: '18" × 18"', priceCents: 6100 },
     ],
   },
 
