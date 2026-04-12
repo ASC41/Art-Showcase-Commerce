@@ -42,44 +42,31 @@ export default function Landing() {
     >
       <Navbar />
 
-      {/* Artist wordmark — centered, fixed behind the gallery */}
+      {/* Signature — full-screen, centered behind the gallery */}
       <div
         style={{
           position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
+          inset: 0,
           zIndex: 2,
           pointerEvents: "none",
-          textAlign: "center",
-          opacity: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "10vh 10vw",
         }}
       >
-        <div
+        <img
+          src="https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@300ac61782bfa80cf3bbe6b42b6a80ce29bb0883/uploads/2026-04-12T04-19-22-288Z-6egjzgyys.png"
+          alt="Ryan Cellar signature"
           style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontSize: "clamp(52px, 7vw, 96px)",
-            fontWeight: 300,
-            letterSpacing: "0.1em",
-            color: "rgba(245,245,245,1)",
-            lineHeight: 1,
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            mixBlendMode: "screen",
+            userSelect: "none",
+            draggable: false,
           }}
-        >
-          Ryan Cellar
-        </div>
-        <div
-          style={{
-            fontFamily: "'Inter'",
-            fontSize: "13px",
-            fontWeight: 400,
-            letterSpacing: "0.35em",
-            textTransform: "uppercase",
-            color: "rgba(245,245,245,0.7)",
-            marginTop: "12px",
-          }}
-        >
-          Contemporary Surrealist Figurative Artist
-        </div>
+        />
       </div>
 
       {/* Drag hint */}
