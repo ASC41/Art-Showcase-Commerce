@@ -1,7 +1,7 @@
 import { useListArtworks } from "@workspace/api-client-react";
 import DraggableGallery, { DraggableGalleryItem } from "@/framer/draggable-gallery";
 import Navbar from "@/components/Navbar";
-import { ARTWORK_ASPECT } from "@/lib/artworkDimensions";
+import { ARTWORK_ASPECT, ARTWORK_ROTATION } from "@/lib/artworkDimensions";
 import { useLocation } from "wouter";
 
 export default function Landing() {
@@ -24,6 +24,7 @@ export default function Landing() {
         slug: a.slug,
         aspectRatio: ar,
         wide: ar < 1,
+        rotation: ARTWORK_ROTATION[a.slug],
       });
       if ((i + 1) % 2 === 0) result.push(SPACER);
     });

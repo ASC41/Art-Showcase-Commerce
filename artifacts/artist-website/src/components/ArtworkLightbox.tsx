@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useCreateCheckoutSession } from "@workspace/api-client-react";
 import type { Artwork, PrintType, PrintSize } from "@workspace/api-client-react";
-import { ARTWORK_ROTATION } from "@/lib/artworkDimensions";
+import { ARTWORK_ASPECT, ARTWORK_ROTATION } from "@/lib/artworkDimensions";
 
 interface Props {
   artworks: Artwork[];
@@ -203,19 +203,47 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
           padding: "60px 80px",
         }}
       >
-        <img
-          src={artwork.imageUrl}
-          alt={artwork.title}
-          style={{
-            // For rotated images, swap the max-dimension constraints so the
-            // rotated (landscape) image fills the viewport correctly.
-            maxWidth: rotation !== undefined ? "calc(100vh - 120px)" : "100%",
-            maxHeight: rotation !== undefined ? "calc(100vw - 160px)" : "100%",
-            objectFit: "contain",
-            display: "block",
-            transform: rotation !== undefined ? `rotate(${rotation}deg)` : undefined,
-          }}
-        />
+        {rotation !== undefined ? (
+          // Wrapper sized to the DISPLAYED (landscape) aspect ratio so the
+          // browser constrains the visual dimensions correctly. The source
+          // image is portrait; after rotate(Ndeg) it fills this landscape box.
+          <div
+            style={{
+              position: "relative",
+              // aspect-ratio = display width / display height = 1/ar (landscape)
+              aspectRatio: `${1 / (ARTWORK_ASPECT[artwork.slug] ?? 1)}`,
+              maxWidth: "100%",
+              maxHeight: "100%",
+              overflow: "hidden",
+            }}
+          >
+            <img
+              src={artwork.imageUrl}
+              alt={artwork.title}
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                width: "100%",
+                height: "auto",
+                transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${ARTWORK_ASPECT[artwork.slug] ?? 1})`,
+                transformOrigin: "center center",
+                display: "block",
+              }}
+            />
+          </div>
+        ) : (
+          <img
+            src={artwork.imageUrl}
+            alt={artwork.title}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: "contain",
+              display: "block",
+            }}
+          />
+        )}
       </div>
 
       {/* Close button */}
