@@ -49,7 +49,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
   const [selectedPrintSize, setSelectedPrintSize] = useState<PrintSize>("8x10");
 
   // Mobile-only: bottom sheet expanded state + description expanded
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(true);
   const [descExpanded, setDescExpanded] = useState(false);
 
   const handleKeyDown = useCallback(
@@ -84,7 +84,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
   useEffect(() => {
     setShowInfo(false);
     setShowPrintPicker(false);
-    setSheetOpen(false);
+    setSheetOpen(true);
     setDescExpanded(false);
   }, [currentIndex]);
 
