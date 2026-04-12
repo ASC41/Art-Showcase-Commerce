@@ -67,8 +67,8 @@ export default function Inquire() {
 
   const inputStyle: React.CSSProperties = {
     width: "100%",
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.12)",
+    background: "rgba(8,8,8,0.72)",
+    border: "1px solid rgba(255,255,255,0.14)",
     borderRadius: "4px",
     padding: "14px 16px",
     fontFamily: "'Inter'",
@@ -245,8 +245,8 @@ export default function Inquire() {
                       onClick={() => setType(t)}
                       style={{
                         padding: "9px 20px",
-                        background: type === t ? "rgba(245,245,245,0.10)" : "transparent",
-                        border: `1px solid ${type === t ? "rgba(245,245,245,0.28)" : "rgba(255,255,255,0.10)"}`,
+                        background: type === t ? "rgba(60,60,60,0.85)" : "rgba(8,8,8,0.60)",
+                        border: `1px solid ${type === t ? "rgba(245,245,245,0.35)" : "rgba(255,255,255,0.14)"}`,
                         borderRadius: "4px",
                         fontFamily: "'Inter'",
                         fontSize: "12px",
