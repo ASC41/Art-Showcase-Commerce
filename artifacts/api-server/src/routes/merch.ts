@@ -200,8 +200,15 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
                   height: artH,
                   x: 0.5,
                   y: 0.25,   // Center of Side A (top half of AOP template)
-                  scale: artRatio, // CONTAIN within Side A: fills height exactly, slight side margins
-                  // scale=artRatio ensures artwork height = 2175px = Side A height → zero bleed into Side B
+                  // CONTAIN with breathing room on all sides:
+                  //   scale=artRatio fills Side A height exactly (2175px), but the bag's visible face
+                  //   starts ~5-8% below y=0 (strap attachment area hides the very top of the template),
+                  //   causing top/bottom crop on taller artworks. Scaling to 85% of the contain size
+                  //   gives a consistent ~7.5% white border top & bottom (clearing the strap zone)
+                  //   and proportional side margins. Works for all aspect ratios via Math.min clamp:
+                  //     portrait art (artRatio<1): height-constrained, height=0.85×2175=1849px, side margins vary
+                  //     landscape art (artRatio>1): width-constrained, width=0.85×2175=1849px, top/bottom margins vary
+                  scale: 0.85 * Math.min(1.0, artRatio),
                   angle: 0,
                 },
                 {
