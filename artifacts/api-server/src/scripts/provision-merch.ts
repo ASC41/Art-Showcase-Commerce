@@ -251,8 +251,8 @@ const MERCH_CONFIG: MerchItemConfig[] = [
     name: "All-Over Print Tote Bag",
     description:
       "Full artwork coverage on every surface. Heavy-duty canvas straps. 13″, 16″, or 18″ sizes.",
-    priceCents: 4500, // $45 — est cost ~$18 → ~60% margin
-    estimatedCostCents: 1800,
+    priceCents: 4500, // starting price (13″×13″); per-variant prices set below
+    estimatedCostCents: 1238,
     blueprintId: 1389,
     printProviderId: 10,
     printAreaPosition: "front",
@@ -261,12 +261,12 @@ const MERCH_CONFIG: MerchItemConfig[] = [
     category: "accessories",
     displayOrder: 6,
     variants: [
-      { id: 103599, color: "Black", size: '13" × 13"' },
-      { id: 103600, color: "Black", size: '16" × 16"' },
-      { id: 103601, color: "Black", size: '18" × 18"' },
-      { id: 103605, color: "White", size: '13" × 13"' },
-      { id: 103606, color: "White", size: '16" × 16"' },
-      { id: 103607, color: "White", size: '18" × 18"' },
+      { id: 103599, color: "Black", size: '13" × 13"', priceCents: 4500 }, // cost $12.38
+      { id: 103600, color: "Black", size: '16" × 16"', priceCents: 5500 }, // cost $15.14
+      { id: 103601, color: "Black", size: '18" × 18"', priceCents: 6500 }, // cost $16.89
+      { id: 103605, color: "White", size: '13" × 13"', priceCents: 4500 },
+      { id: 103606, color: "White", size: '16" × 16"', priceCents: 5500 },
+      { id: 103607, color: "White", size: '18" × 18"', priceCents: 6500 },
     ],
   },
 

@@ -24,7 +24,7 @@ function mapMerchProduct(p: typeof merchProductsTable.$inferSelect) {
     printAreaHeight: p.printAreaHeight ?? null,
     printifyProductId: p.printifyProductId ?? null,
     mockupImages: p.mockupImages ?? [],
-    variants: (p.variants as Array<{ id: number; title: string; color: string; size: string }>) ?? [],
+    variants: (p.variants as Array<{ id: number; title: string; color: string; size: string; priceCents?: number }>) ?? [],
     category: p.category,
     displayOrder: p.displayOrder,
     isActive: p.isActive,
@@ -542,7 +542,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
         print_provider_id: merch.printProviderId,
         variants: variants.map((v) => ({
           id: v.id,
-          price: merch.priceCents,
+          price: v.priceCents ?? merch.priceCents,
           is_enabled: enabledVariantIds ? enabledVariantIds.includes(v.id) : true,
         })),
         print_areas: printAreas,
