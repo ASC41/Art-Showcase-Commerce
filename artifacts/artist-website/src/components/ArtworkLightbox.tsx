@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useCreateCheckoutSession } from "@workspace/api-client-react";
 import type { Artwork, PrintType, PrintSize } from "@workspace/api-client-react";
+import { ARTWORK_ROTATION } from "@/lib/artworkDimensions";
 
 interface Props {
   artworks: Artwork[];
@@ -76,6 +77,8 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
   }, [currentIndex]);
 
   if (!artwork) return null;
+
+  const rotation = ARTWORK_ROTATION[artwork.slug];
 
   const formatPrice = (cents: number | null) => {
     if (!cents) return null;
@@ -204,10 +207,13 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
           src={artwork.imageUrl}
           alt={artwork.title}
           style={{
-            maxWidth: "100%",
-            maxHeight: "100%",
+            // For rotated images, swap the max-dimension constraints so the
+            // rotated (landscape) image fills the viewport correctly.
+            maxWidth: rotation !== undefined ? "calc(100vh - 120px)" : "100%",
+            maxHeight: rotation !== undefined ? "calc(100vw - 160px)" : "100%",
             objectFit: "contain",
             display: "block",
+            transform: rotation !== undefined ? `rotate(${rotation}deg)` : undefined,
           }}
         />
       </div>

@@ -1,7 +1,7 @@
 import { useRef, useMemo, startTransition, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import type { Artwork } from "@workspace/api-client-react";
-import { ARTWORK_ASPECT } from "@/lib/artworkDimensions";
+import { ARTWORK_ASPECT, ARTWORK_ROTATION } from "@/lib/artworkDimensions";
 
 type AnimationType =
   | "perspective-slide"
@@ -70,6 +70,7 @@ function GridItem({ artwork, type, index, columns, onClick }: GridItemProps) {
   );
 
   const ar = ARTWORK_ASPECT[artwork.slug] ?? 1.33;
+  const rotation = ARTWORK_ROTATION[artwork.slug];
   const isLandscape = ar < 1;
 
   return (
@@ -101,7 +102,20 @@ function GridItem({ artwork, type, index, columns, onClick }: GridItemProps) {
       <img
         src={artwork.imageUrl}
         alt={artwork.title}
-        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        style={
+          rotation !== undefined
+            ? {
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                width: "100%",
+                height: "auto",
+                transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${ar})`,
+                transformOrigin: "center center",
+                pointerEvents: "none",
+              }
+            : { width: "100%", height: "100%", objectFit: "cover" }
+        }
         loading="lazy"
       />
       {/* Hover overlay */}
