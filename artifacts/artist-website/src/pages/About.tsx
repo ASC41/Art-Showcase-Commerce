@@ -6,7 +6,7 @@ import { Link } from "wouter";
 const IMAGE_A =
   "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@990d8c2ae129855c329db463e8506e8344dd8e21/uploads/2026-04-01T01-02-14-259Z-plfdrd2mp.jpg";
 const IMAGE_B =
-  "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@9945ae1994b6366c3943e8e125bb3700e7336b83/uploads/2026-03-31T01-53-19-925Z-y59y2l4f4.jpg";
+  "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@300ac61782bfa80cf3bbe6b42b6a80ce29bb0883/uploads/2026-04-12T04-19-22-288Z-6egjzgyys.png";
 
 function ParallaxHero() {
   const ref = useRef<HTMLDivElement>(null);
@@ -143,19 +143,11 @@ function TreatmentPhoto() {
           position: "absolute",
           inset: "-10% 0",
           backgroundImage: `url(${IMAGE_B})`,
-          backgroundSize: "cover",
+          backgroundSize: "contain",
           backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
           y,
-          filter: "brightness(0.6) saturate(0.85) contrast(1.15)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "rgba(20, 30, 60, 0.22)",
-          mixBlendMode: "multiply",
-          pointerEvents: "none",
+          mixBlendMode: "screen",
         }}
       />
       <div
