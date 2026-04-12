@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import { Link } from "wouter";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const IMAGE_A =
   "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@990d8c2ae129855c329db463e8506e8344dd8e21/uploads/2026-04-01T01-02-14-259Z-plfdrd2mp.jpg";
@@ -189,7 +190,79 @@ function TreatmentPhoto() {
   );
 }
 
+// Shared contact footer content — used in both mobile (below image) and desktop (over image)
+function ContactFooter({ mobile }: { mobile: boolean }) {
+  return (
+    <div
+      style={{
+        maxWidth: "760px",
+        margin: "0 auto",
+        padding: mobile ? "48px 24px 64px" : undefined,
+      }}
+    >
+      <div
+        style={{
+          width: "48px",
+          height: "1px",
+          background: "rgba(255,255,255,0.12)",
+          marginBottom: "48px",
+        }}
+      />
+
+      <p
+        style={{
+          fontFamily: "'Inter'",
+          fontSize: "12px",
+          letterSpacing: "0.2em",
+          textTransform: "uppercase",
+          color: "#555",
+          marginBottom: "12px",
+        }}
+      >
+        Contact
+      </p>
+      <a
+        href="mailto:ryancellart@gmail.com"
+        style={{
+          fontFamily: "'Cormorant Garamond', serif",
+          fontSize: "20px",
+          fontWeight: 400,
+          color: "#f5f5f5",
+          textDecoration: "none",
+          letterSpacing: "0.03em",
+          borderBottom: "1px solid rgba(255,255,255,0.2)",
+          paddingBottom: "2px",
+          transition: "border-color 0.2s",
+        }}
+      >
+        ryancellart@gmail.com
+      </a>
+
+      <div style={{ marginTop: "64px" }}>
+        <Link href="/portfolio" style={{ textDecoration: "none" }}>
+          <span
+            style={{
+              fontFamily: "'Inter'",
+              fontSize: "13px",
+              letterSpacing: "0.15em",
+              textTransform: "uppercase",
+              color: "#888",
+              cursor: "pointer",
+              borderBottom: "1px solid rgba(255,255,255,0.15)",
+              paddingBottom: "2px",
+            }}
+          >
+            View Portfolio →
+          </span>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default function About() {
+  const isMobile = useIsMobile();
+
   return (
     <div style={{ minHeight: "100vh", background: "#060606", color: "#f5f5f5" }}>
       <Navbar />
@@ -202,7 +275,7 @@ export default function About() {
         style={{
           maxWidth: "760px",
           margin: "0 auto",
-          padding: "96px 40px 80px",
+          padding: isMobile ? "64px 24px 60px" : "96px 40px 80px",
         }}
       >
         <div
@@ -248,87 +321,32 @@ export default function About() {
         </p>
       </div>
 
-      {/* Second image + contact footer — footer is pinned to the bottom of the image */}
-      <div style={{ position: "relative" }}>
-        <TreatmentPhoto />
-
-        {/* Contact — overlays the bottom of the image */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: 10,
-            background: "transparent",
-            padding: "80px 40px 64px",
-          }}
-        >
+      {/* Second image — desktop: footer overlaid on image bottom; mobile: footer below image */}
+      {isMobile ? (
+        // Mobile: stack image then footer below it
+        <div>
+          <TreatmentPhoto />
+          <ContactFooter mobile />
+        </div>
+      ) : (
+        // Desktop: footer pinned to bottom of image as an overlay
+        <div style={{ position: "relative" }}>
+          <TreatmentPhoto />
           <div
             style={{
-              maxWidth: "760px",
-              margin: "0 auto",
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              zIndex: 10,
+              background: "transparent",
+              padding: "80px 40px 64px",
             }}
           >
-            <div
-              style={{
-                width: "48px",
-                height: "1px",
-                background: "rgba(255,255,255,0.12)",
-                marginBottom: "48px",
-              }}
-            />
-
-            <p
-              style={{
-                fontFamily: "'Inter'",
-                fontSize: "12px",
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                color: "#555",
-                marginBottom: "12px",
-              }}
-            >
-              Contact
-            </p>
-            <a
-              href="mailto:ryancellart@gmail.com"
-              style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                fontSize: "20px",
-                fontWeight: 400,
-                color: "#f5f5f5",
-                textDecoration: "none",
-                letterSpacing: "0.03em",
-                borderBottom: "1px solid rgba(255,255,255,0.2)",
-                paddingBottom: "2px",
-                transition: "border-color 0.2s",
-              }}
-            >
-              ryancellart@gmail.com
-            </a>
-
-            <div style={{ marginTop: "64px" }}>
-              <Link href="/portfolio" style={{ textDecoration: "none" }}>
-                <span
-                  style={{
-                    fontFamily: "'Inter'",
-                    fontSize: "13px",
-                    letterSpacing: "0.15em",
-                    textTransform: "uppercase",
-                    color: "#888",
-                    cursor: "pointer",
-                    borderBottom: "1px solid rgba(255,255,255,0.15)",
-                    paddingBottom: "2px",
-                  }}
-                >
-                  View Portfolio →
-                </span>
-              </Link>
-            </div>
+            <ContactFooter mobile={false} />
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
