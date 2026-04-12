@@ -215,7 +215,12 @@ export default function MerchLightbox({ product, onClose }: MerchLightboxProps) 
     url.replace(/\/mockup\/([^/]+)\/\d+\//, `/mockup/$1/${targetVariantId}/`);
 
   const colorizedMockups = (urls: string[]): string[] => {
-    const targetId = representativeVariantId(selectedColor);
+    // Prefer the exact selected variant — this makes phone case mockups show the
+    // correct phone model when the user picks a size (e.g. iPhone 15 Pro shows an
+    // iPhone 15 Pro shape, not always the default iPhone 12).
+    // Falls back to the color representative (size L) for products where size
+    // doesn't visually change the mockup shape (clothing).
+    const targetId = selectedVariantId ?? representativeVariantId(selectedColor);
     if (!targetId) return urls;
     return urls.map((url) =>
       url.includes("/mockup/") ? recolorMockupUrl(url, targetId) : url
