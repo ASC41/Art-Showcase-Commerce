@@ -4,6 +4,7 @@ import { useListArtworks } from "@workspace/api-client-react";
 import type { Artwork } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ARTWORK_ASPECT } from "@/lib/artworkDimensions";
 
 interface MerchVariant {
   id: number;
@@ -232,8 +233,26 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
 
   const variants = product.variants ?? [];
   const uniqueColors = [...new Set(variants.map((v) => v.color))];
+
+  // For giclée prints, only show the 3 sizes that match the artwork's displayed orientation.
+  // The product has 6 variants total (3 portrait + 3 landscape); we filter to the right 3.
+  const GICLEE_PORTRAIT_SIZES = new Set(['8"×11"', '12"×18"', '16"×20"']);
+  const GICLEE_LANDSCAPE_SIZES = new Set(['11"×8"', '18"×12"', '20"×16"']);
+  const isGiclee = product?.slug === "giclee-print";
+  const artworkAr = selectedArtwork?.slug ? (ARTWORK_ASPECT[selectedArtwork.slug] ?? 1.33) : 1.33;
+  const artworkIsLandscape = artworkAr < 1;
+
   const sizesForColor = selectedColor
-    ? variants.filter((v) => v.color === selectedColor).map((v) => v.size)
+    ? variants
+        .filter((v) => {
+          if (v.color !== selectedColor) return false;
+          if (isGiclee) {
+            const n = normalizeSize(v.size);
+            return artworkIsLandscape ? GICLEE_LANDSCAPE_SIZES.has(n) : GICLEE_PORTRAIT_SIZES.has(n);
+          }
+          return true;
+        })
+        .map((v) => v.size)
     : [];
 
   const selectedVariant = variants.find((v) => v.id === selectedVariantId);
