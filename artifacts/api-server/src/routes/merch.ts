@@ -299,12 +299,13 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     const sigCameraPriority = (url: string) => {
       const label = cameraLabel(url);
       if (label === "back") return 0;
-      if (label === "person-1") return 1;     // one model demo, second in carousel
+      if (label === "person-1") return 1;       // model front — wordmark visible on chest
       if (label.includes("collar") || label === "front-collar-closeup") return 2;
-      if (label === "back-2") return 3;
+      if (label === "person-4-back") return 3;  // model back — artwork visible; no cuff issue
       if (label === "folded") return 4;
-      if (label.startsWith("person")) return 5; // extra person shots deprioritised
-      if (label === "front") return 99; // excluded — never renders front_left_chest
+      if (label === "back-2") return 99;        // excluded — shows sleeve cuff print areas
+      if (label.startsWith("person")) return 5; // other person shots deprioritised
+      if (label === "front") return 99;         // excluded — never renders front_left_chest
       return 6;
     };
 
