@@ -10,12 +10,15 @@
  */
 
 import { db, artworksTable } from "@workspace/db";
-import { merchProductsTable } from "@workspace/db/schema";
+import { merchProductsTable, merchArtworkProductsTable } from "@workspace/db/schema";
 import type { SignatureConfig } from "@workspace/db/schema";
 import { printifyRequest, getShopId } from "../lib/printify";
 import { eq } from "drizzle-orm";
 
 const FORCE = process.argv.includes("--force");
+// --clear-cache: delete merch_artwork_products rows for the scoped slug before
+// re-provisioning; forces fresh mockup generation on the next customer request.
+const CLEAR_CACHE = process.argv.includes("--clear-cache");
 // Optional: scope to a single product slug (e.g. --slug hoodie)
 const SLUG_FILTER = (() => {
   const idx = process.argv.indexOf("--slug");
@@ -554,6 +557,7 @@ async function main() {
   console.log("=== Merch Provisioning Script ===");
   console.log(`Mode: ${FORCE ? "FORCE (recreate all)" : "incremental (skip existing)"}`);
   if (SLUG_FILTER) console.log(`Scoped to: ${SLUG_FILTER}`);
+  if (CLEAR_CACHE) console.log("Cache eviction: enabled (--clear-cache)");
   console.log();
 
   const shopId = await getShopId();
@@ -597,6 +601,18 @@ async function main() {
       console.log(`  ✓ Already provisioned (product ID: ${existing.printifyProductId}) — skipping`);
       skipped++;
       continue;
+    }
+
+    // Evict stale per-artwork mockup cache rows before re-provisioning so the
+    // next customer request regenerates fresh mockups with the updated layout.
+    if (CLEAR_CACHE && existing) {
+      const deleted = await db
+        .delete(merchArtworkProductsTable)
+        .where(eq(merchArtworkProductsTable.merchProductId, existing.id))
+        .returning({ id: merchArtworkProductsTable.id });
+      if (deleted.length > 0) {
+        console.log(`  ↻ Cleared ${deleted.length} stale artwork-product cache row(s)`);
+      }
     }
 
     try {
