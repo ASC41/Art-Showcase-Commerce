@@ -131,11 +131,14 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     const shopId = await getShopId();
 
     // Artwork scale on print area:
-    // – Landscape artwork (artW > artH) on a portrait/square print area → COVER (scale=1.0):
-    //   fills the entire area, cropping the left/right edges of the painting.
-    //   This is the correct look for wide paintings on tall garments/media.
-    // – All other cases → CONTAIN (min ratio / max ratio): no cropping.
-    //   Portrait areas with landscape print areas (e.g. bucket hat) fall here naturally.
+    // – artRatio > areaRatio (artwork wider than area in ratio) → COVER (scale=1.0):
+    //   fills the entire area; sides of the artwork are lightly cropped.
+    //   Handles: landscape art on portrait areas, portrait art on very narrow areas
+    //   (e.g. phone cases), portrait art on poster/tote areas — all cases where the
+    //   artwork would otherwise leave white borders.
+    // – artRatio ≤ areaRatio (artwork narrower/taller than area) → CONTAIN:
+    //   fits the artwork without cropping. Handles standard portrait art on hoodies,
+    //   t-shirts, crewnecks; any art on the bucket hat's wide panel.
     // Printify IGNORES width/height fields; at scale=1.0 it renders COVER.
     const artW = artwork.imageWidth ?? 3000;
     const artH = artwork.imageHeight ?? 3000;
@@ -143,9 +146,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     const areaH = merch.printAreaHeight ?? 3000;
     const artRatio = artW / artH;
     const areaRatio = areaW / areaH;
-    const isLandscapeArt = artW > artH;
-    const isPortraitArea = areaH >= areaW;
-    const artworkScale = (isLandscapeArt && isPortraitArea)
+    const artworkScale = artRatio > areaRatio
       ? 1.0
       : Math.min(artRatio, areaRatio) / Math.max(artRatio, areaRatio);
 
@@ -320,8 +321,8 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     // Crewneck ("left_sleeve"): artwork on front, wordmark on both sleeves.
     //   0=front(artwork), 1=person-5-left-sleeve, 2=person-5-right-sleeve,
     //   3=person-1, 4=folded. Back/lifestyle/size-chart shots excluded.
-    const sigIsBackPos = sig.position === "back" || sig.position === "back-2";
-    const sigIsWristPos = sig.position.includes("wrist") || sig.position.includes("sleeve");
+    const sigIsBackPos = sig?.position === "back" || sig?.position === "back-2";
+    const sigIsWristPos = Boolean(sig?.position?.includes("wrist") || sig?.position?.includes("sleeve"));
     const sigCameraPriority = (url: string) => {
       const label = cameraLabel(url);
       if (sigIsWristPos) {
