@@ -161,17 +161,33 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     if (sig) {
       // Color-aware signature product (e.g. hoodie):
       //   dark variants → white wordmark; light variants → black wordmark.
-      // Both wordmark uploads can happen in parallel.
+      // Upload both wordmarks in parallel; Printify returns actual pixel dims.
       const [whiteUpload, blackUpload] = await Promise.all([
         printifyRequest("/uploads/images.json", {
           method: "POST",
           body: JSON.stringify({ file_name: "wordmark-white.png", url: sig.whiteWordmarkUrl }),
-        }) as Promise<{ id: string }>,
+        }) as Promise<{ id: string; width: number; height: number }>,
         printifyRequest("/uploads/images.json", {
           method: "POST",
           body: JSON.stringify({ file_name: "wordmark-black.png", url: sig.blackWordmarkUrl }),
-        }) as Promise<{ id: string }>,
+        }) as Promise<{ id: string; width: number; height: number }>,
       ]);
+
+      // Contain-scale each wordmark against the embroidery area using real dims.
+      const containScale = (w: number, h: number, aW: number, aH: number) =>
+        Math.min(w / h, aW / aH) / Math.max(w / h, aW / aH);
+      const whiteWordmarkScale = containScale(
+        whiteUpload.width ?? sig.areaWidth,
+        whiteUpload.height ?? sig.areaHeight,
+        sig.areaWidth,
+        sig.areaHeight
+      );
+      const blackWordmarkScale = containScale(
+        blackUpload.width ?? sig.areaWidth,
+        blackUpload.height ?? sig.areaHeight,
+        sig.areaWidth,
+        sig.areaHeight
+      );
 
       const artworkPlaceholder = {
         position: merch.printAreaPosition,
@@ -190,7 +206,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
         ],
       };
 
-      const signaturePlaceholder = (wordmarkId: string) => ({
+      const signaturePlaceholder = (wordmarkId: string, wordmarkScale: number) => ({
         position: sig.position,
         images: [
           {
@@ -201,7 +217,7 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
             height: sig.areaHeight,
             x: 0.5,
             y: 0.5,
-            scale: 1.0,
+            scale: wordmarkScale,
             angle: 0,
           },
         ],
@@ -210,11 +226,11 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
       printAreas = [
         {
           variant_ids: sig.darkVariantIds,
-          placeholders: [artworkPlaceholder, signaturePlaceholder(whiteUpload.id)],
+          placeholders: [artworkPlaceholder, signaturePlaceholder(whiteUpload.id, whiteWordmarkScale)],
         },
         {
           variant_ids: sig.lightVariantIds,
-          placeholders: [artworkPlaceholder, signaturePlaceholder(blackUpload.id)],
+          placeholders: [artworkPlaceholder, signaturePlaceholder(blackUpload.id, blackWordmarkScale)],
         },
       ];
     } else {

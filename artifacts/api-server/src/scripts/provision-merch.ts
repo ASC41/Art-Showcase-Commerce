@@ -411,7 +411,9 @@ async function createMerchProduct(
     //     the correct wordmark on the secondary position (front_left_chest).
     //   • Artwork scale-to-contain is always computed from the actual image dims.
 
-    // Upload both wordmarks (can happen in parallel)
+    // Upload both wordmarks in parallel.
+    // Printify returns the actual pixel dims of each uploaded file —
+    // use those to contain-scale the wordmark against the embroidery area.
     const [whiteUpload, blackUpload] = await Promise.all([
       printifyRequest(`/uploads/images.json`, {
         method: "POST",
@@ -419,23 +421,29 @@ async function createMerchProduct(
           file_name: "wordmark-white.png",
           url: sig.whiteWordmarkUrl,
         }),
-      }) as Promise<{ id: string }>,
+      }) as Promise<{ id: string; width: number; height: number }>,
       printifyRequest(`/uploads/images.json`, {
         method: "POST",
         body: JSON.stringify({
           file_name: "wordmark-black.png",
           url: sig.blackWordmarkUrl,
         }),
-      }) as Promise<{ id: string }>,
+      }) as Promise<{ id: string; width: number; height: number }>,
     ]);
 
-    // Compute contain-scale for each wordmark against the embroidery area.
-    // We don't know wordmark pixel dims ahead of time, but Printify normalises
-    // width/height to the actual file — so we just pass the area dims here and
-    // Printify will use the real uploaded dimensions internally.
-    // We use scale=1.0 intentionally for the wordmark so it fills the embroidery
-    // area at maximum size; the PNG transparency prevents overflow artifacts.
-    const wordmarkScale = 1.0;
+    // Contain-scale: same formula as artwork — prevents embroidery area overflow.
+    const whiteWordmarkScale = computeScale(
+      whiteUpload.width ?? sig.areaWidth,
+      whiteUpload.height ?? sig.areaHeight,
+      sig.areaWidth,
+      sig.areaHeight
+    );
+    const blackWordmarkScale = computeScale(
+      blackUpload.width ?? sig.areaWidth,
+      blackUpload.height ?? sig.areaHeight,
+      sig.areaWidth,
+      sig.areaHeight
+    );
 
     const artworkPlaceholder = (imgId: string) => ({
       position: config.printAreaPosition,
@@ -454,7 +462,7 @@ async function createMerchProduct(
       ],
     });
 
-    const signaturePlaceholder = (wordmarkId: string) => ({
+    const signaturePlaceholder = (wordmarkId: string, wordmarkScale: number) => ({
       position: sig.position,
       images: [
         {
@@ -477,7 +485,7 @@ async function createMerchProduct(
         variant_ids: sig.darkVariantIds,
         placeholders: [
           artworkPlaceholder(imageId),
-          signaturePlaceholder(whiteUpload.id),
+          signaturePlaceholder(whiteUpload.id, whiteWordmarkScale),
         ],
       },
       // Light variants (White) → black wordmark
@@ -485,7 +493,7 @@ async function createMerchProduct(
         variant_ids: sig.lightVariantIds,
         placeholders: [
           artworkPlaceholder(imageId),
-          signaturePlaceholder(blackUpload.id),
+          signaturePlaceholder(blackUpload.id, blackWordmarkScale),
         ],
       },
     ];
