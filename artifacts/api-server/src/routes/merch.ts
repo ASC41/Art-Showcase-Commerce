@@ -151,8 +151,11 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     const areaH = merch.printAreaHeight ?? 3000;
     const artRatio = artW / artH;
     const areaRatio = areaW / areaH;
-    const artworkScale = merch.slug === "bucket-hat"
-      ? Math.min(1.0, artRatio / areaRatio)   // CONTAIN: full artwork visible in wide panel
+    // bucket-hat: 1500×705 (areaRatio=2.128) — wide front patch, CONTAIN to avoid top/bottom crop
+    // cuff-beanie: 1500×526 (areaRatio=2.852) — even wider band, CONTAIN to preserve full art
+    const CONTAIN_SLUGS = new Set(["bucket-hat", "cuff-beanie"]);
+    const artworkScale = CONTAIN_SLUGS.has(merch.slug)
+      ? Math.min(1.0, artRatio / areaRatio)   // CONTAIN: full artwork visible, may have margins
       : Math.max(1.0, artRatio / areaRatio);  // COVER: fills area edge-to-edge
 
     // Upload artwork image to Printify
@@ -311,6 +314,71 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
           ],
         },
       ];
+    } else if (merch.slug === "cuff-beanie") {
+      // Cuff beanie: front embroidery patch only (blueprint 1689, provider 217 is front-only).
+      // Layout: artwork CONTAINED (fills patch height, side margins) + small wordmark badge
+      // in the lower-right corner of the patch.
+      //   - Dark variants (Black=116203, Navy=116211, Army=116201): white wordmark
+      //   - Light variants (Ecru=116206): black wordmark
+      // Note: embroidery requires slightly larger minimum size, so we use scale=0.15
+      // (vs 0.10 for bucket hat DTF) to ensure the wordmark stitches cleanly.
+      const WORDMARK_WHITE_URL =
+        "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@475907b09a0969a684bac008d7aca675f3138ef4/uploads/2026-04-12T05-30-52-237Z-pd2wptkwr.png";
+      const WORDMARK_BLACK_URL =
+        "https://cdn.jsdelivr.net/gh/free-whiteboard-online/Free-Erasorio-Alternative-for-Collaborative-Design@232b3d5040a133da0e8c0c29a46a9dc28016d2f8/uploads/2026-04-12T05-31-45-372Z-upz8q5hd4.png";
+
+      const [wmWhite, wmBlack] = await Promise.all([
+        printifyRequest("/uploads/images.json", {
+          method: "POST",
+          body: JSON.stringify({ file_name: "wordmark-white.png", url: WORDMARK_WHITE_URL }),
+        }) as Promise<{ id: string; width: number; height: number }>,
+        printifyRequest("/uploads/images.json", {
+          method: "POST",
+          body: JSON.stringify({ file_name: "wordmark-black.png", url: WORDMARK_BLACK_URL }),
+        }) as Promise<{ id: string; width: number; height: number }>,
+      ]);
+
+      const BEANIE_DARK_VARIANT_IDS = [116203, 116211, 116201]; // Black, Navy, Army
+      const BEANIE_LIGHT_VARIANT_IDS = [116206]; // Ecru
+
+      const buildBeanieFrontPlaceholder = (wmId: string, wmW: number, wmH: number) => ({
+        position: "front",
+        images: [
+          {
+            id: imageId,
+            name: `${artwork.title} — ${merch.name}`,
+            type: "image/jpeg",
+            width: artW,
+            height: artH,
+            x: 0.5,
+            y: 0.5,
+            scale: artworkScale,
+            angle: 0,
+          },
+          {
+            id: wmId,
+            name: "Artist Wordmark",
+            type: "image/png",
+            width: wmW,
+            height: wmH,
+            x: 0.88,
+            y: 0.88,
+            scale: 0.15,
+            angle: 0,
+          },
+        ],
+      });
+
+      printAreas = [
+        {
+          variant_ids: variants.filter((v) => BEANIE_DARK_VARIANT_IDS.includes(v.id)).map((v) => v.id),
+          placeholders: [buildBeanieFrontPlaceholder(wmWhite.id, wmWhite.width, wmWhite.height)],
+        },
+        {
+          variant_ids: variants.filter((v) => BEANIE_LIGHT_VARIANT_IDS.includes(v.id)).map((v) => v.id),
+          placeholders: [buildBeanieFrontPlaceholder(wmBlack.id, wmBlack.width, wmBlack.height)],
+        },
+      ].filter((pa) => pa.variant_ids.length > 0);
     } else if (merch.slug === "bucket-hat") {
       // Bucket hat: front-panel only (provider doesn't support back-panel printing).
       // Layout: artwork CONTAINED at full height (CONTAIN formula above), centered on the
@@ -580,6 +648,22 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
       mockupImages = [...byVariant.entries()]
         .sort(([a], [b]) => (variantOrder.get(a) ?? 999) - (variantOrder.get(b) ?? 999))
         .map(([, url]) => url);
+    } else if (merch.slug === "cuff-beanie") {
+      // Cuff beanie: 4 colors × 1 angle (all share camera 112813) = 4 images.
+      // The frontend uses per-variant filtering, so we store all 4 images in
+      // our variant order (Black, Navy, Ecru, Army). Selecting a color shows its image.
+      const BEANIE_VARIANT_ORDER = [116203, 116211, 116206, 116201]; // Black, Navy, Ecru, Army
+      const byVariant = new Map<number, string>();
+      for (const img of product.images ?? []) {
+        if (!img.src) continue;
+        const vid = variantIdFromUrl(img.src);
+        if (vid !== null && BEANIE_VARIANT_ORDER.includes(vid)) {
+          byVariant.set(vid, img.src);
+        }
+      }
+      mockupImages = BEANIE_VARIANT_ORDER
+        .filter((vid) => byVariant.has(vid))
+        .map((vid) => byVariant.get(vid)!);
     } else if (merch.slug === "bucket-hat") {
       // Bucket hat: 4 colors × 4 angles = 16 images.
       // The frontend uses per-variant filtering (isPerVariant=true), so we store ALL
