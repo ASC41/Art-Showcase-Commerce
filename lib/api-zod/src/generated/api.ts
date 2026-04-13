@@ -112,7 +112,7 @@ export const VerifyCheckoutBody = zod.object({
 
 export const VerifyCheckoutResponse = zod.object({
   success: zod.boolean(),
-  purchaseType: zod.enum(["original", "print"]),
+  purchaseType: zod.enum(["original", "print", "merch"]),
   artworkTitle: zod.string(),
   message: zod.string(),
 });

@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { ZodError } from "zod";
 import Stripe from "stripe";
-import { db, artworksTable, ordersTable } from "@workspace/db";
+import { db, artworksTable, ordersTable, merchOrdersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import {
   CreateCheckoutSessionBody,
@@ -51,11 +51,14 @@ function getStripe(): Stripe | null {
 }
 
 function successMessage(
-  purchaseType: "original" | "print",
+  purchaseType: "original" | "print" | "merch",
   status: string
 ): string {
   if (purchaseType === "original") {
     return "Ryan will be in touch shortly to arrange delivery of your original artwork.";
+  }
+  if (purchaseType === "merch") {
+    return "Your order has been sent to production and will ship directly to you.";
   }
   if (status === "failed") {
     return "Your payment was received. Our team will be in touch to arrange shipping of your print.";
@@ -372,10 +375,14 @@ router.post("/checkout/session", async (req, res) => {
     if (purchaseType === "print" && printType && printSize) {
       printifyProductId = artwork.printifyMatteProductId;
 
+      // Determine display orientation, accounting for rotation metadata.
+      // A -90° or 90° rotation swaps width and height in the displayed image,
+      // so the orientation must be based on DISPLAY dimensions, not file dimensions.
+      const isRotated90 = artwork.imageRotation === 90 || artwork.imageRotation === -90;
+      const displayW = isRotated90 ? artwork.imageHeight : artwork.imageWidth;
+      const displayH = isRotated90 ? artwork.imageWidth : artwork.imageHeight;
       const orientation: PrintOrientation =
-        artwork.imageWidth && artwork.imageHeight && artwork.imageWidth > artwork.imageHeight
-          ? "landscape"
-          : "portrait";
+        displayW && displayH && displayW > displayH ? "landscape" : "portrait";
 
       printifyVariantId = getVariantId(printType, printSize, orientation);
 
@@ -516,6 +523,29 @@ router.post("/checkout/verify", async (req, res) => {
       return;
     }
 
+    // Check merch orders table (Printify-fulfilled merch products)
+    const [merchOrder] = await db
+      .select({
+        status: merchOrdersTable.status,
+        artworkTitle: artworksTable.title,
+      })
+      .from(merchOrdersTable)
+      .leftJoin(artworksTable, eq(artworksTable.id, merchOrdersTable.artworkId))
+      .where(eq(merchOrdersTable.stripeSessionId, sessionId))
+      .limit(1);
+
+    if (merchOrder) {
+      res.json(
+        VerifyCheckoutResponse.parse({
+          success: true,
+          purchaseType: "merch",
+          artworkTitle: merchOrder.artworkTitle ?? "Your artwork",
+          message: successMessage("merch", merchOrder.status),
+        })
+      );
+      return;
+    }
+
     const stripe = getStripe();
     if (!stripe) {
       res.status(503).json({ error: "Payment processing not configured" });
@@ -530,7 +560,7 @@ router.post("/checkout/verify", async (req, res) => {
     }
 
     const meta = session.metadata as {
-      purchaseType: "original" | "print";
+      purchaseType: "original" | "print" | "merch";
       artworkTitle: string;
     };
 

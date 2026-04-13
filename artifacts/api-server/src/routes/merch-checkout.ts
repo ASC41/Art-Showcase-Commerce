@@ -10,6 +10,7 @@ import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { printifyRequest, getShopId, getBlueprintShippingRates } from "../lib/printify";
 import { buildStripeShippingOptions } from "../lib/shipping";
+import { sendOrderNotification } from "../lib/mailer";
 
 const router: IRouter = Router();
 
@@ -256,7 +257,7 @@ export async function fulfillMerchOrder(session: Stripe.Checkout.Session): Promi
           },
         ],
         shipping_method: 1,
-        is_economy_shipping: false,
+        is_printify_express: false,
         send_shipping_notification: true,
         address_to: {
           first_name: customerName.split(" ")[0] ?? customerName,
@@ -274,11 +275,32 @@ export async function fulfillMerchOrder(session: Stripe.Checkout.Session): Promi
     }) as { id?: string | number };
 
     if (printifyOrder?.id) {
+      const orderId = String(printifyOrder.id);
+
+      // CRITICAL: send to production so Printify actually prints and ships the order.
+      // Without this call the order stays in draft/pending state indefinitely.
+      await printifyRequest(
+        `/shops/${shopId}/orders/${orderId}/send_to_production.json`,
+        { method: "POST" }
+      );
+
       await db
         .update(merchOrdersTable)
-        .set({ printifyOrderId: String(printifyOrder.id), status: "fulfilled" })
+        .set({ printifyOrderId: orderId, status: "fulfilled" })
         .where(eq(merchOrdersTable.stripeSessionId, sessionId));
-      console.log(`fulfillMerchOrder: Printify order ${printifyOrder.id} created`);
+
+      console.log(`fulfillMerchOrder: Printify order ${orderId} created and sent to production`);
+
+      // Notify Ryan of the sale (best-effort, non-blocking)
+      sendOrderNotification({
+        artworkTitle: meta.artworkTitle,
+        purchaseType: "merch",
+        customerEmail: session.customer_details?.email ?? null,
+        stripeSessionId: sessionId,
+        merchName: merch.name,
+      }).catch((e) =>
+        console.error("Merch sale email notification failed:", e instanceof Error ? e.message : String(e))
+      );
     }
   } catch (err) {
     console.error(

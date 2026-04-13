@@ -80,6 +80,7 @@ export type VerifyCheckoutResponsePurchaseType =
 export const VerifyCheckoutResponsePurchaseType = {
   original: "original",
   print: "print",
+  merch: "merch",
 } as const;
 
 export interface VerifyCheckoutResponse {

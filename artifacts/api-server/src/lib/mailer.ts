@@ -59,25 +59,30 @@ export async function sendInquiry(opts: {
 
 export async function sendOrderNotification(opts: {
   artworkTitle: string;
-  purchaseType: "original" | "print";
+  purchaseType: "original" | "print" | "merch";
   customerEmail: string | null;
   stripeSessionId: string;
+  merchName?: string;
 }) {
   const transporter = createTransport();
   if (!transporter) return;
 
-  const { artworkTitle, purchaseType, customerEmail, stripeSessionId } = opts;
-  const typeLabel = purchaseType === "original" ? "Original" : "Print";
+  const { artworkTitle, purchaseType, customerEmail, stripeSessionId, merchName } = opts;
+  const typeLabel =
+    purchaseType === "original" ? "Original" :
+    purchaseType === "merch" ? `Merch — ${merchName ?? "item"}` :
+    "Print";
 
   const subject = `New ${typeLabel} Sale — ${artworkTitle}`;
   const text = [
-    `You sold a ${typeLabel.toLowerCase()} of "${artworkTitle}"!`,
+    `You sold a ${purchaseType === "merch" ? "merch item" : typeLabel.toLowerCase()} of "${artworkTitle}"!`,
+    ...(purchaseType === "merch" && merchName ? [`Product: ${merchName}`] : []),
     ``,
     `Customer email: ${customerEmail ?? "(not provided)"}`,
     `Stripe session: ${stripeSessionId}`,
     purchaseType === "original"
       ? `\nNext step: Contact the buyer to arrange shipping of the original artwork.`
-      : `\nNext step: The print order will be fulfilled automatically via Printify.`,
+      : `\nNext step: The order has been sent to Printify for production and shipping.`,
   ].join("\n");
 
   try {
