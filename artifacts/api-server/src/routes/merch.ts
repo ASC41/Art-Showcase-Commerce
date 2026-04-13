@@ -782,33 +782,47 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
         entries.sort((a, b) => a.order - b.order).map((e) => e.url)
       );
     } else if (merch.slug === "tote-bag") {
-      // Tote bag: front (Side A = artwork) → back (Side B = wordmark) → person shots.
-      // The AOP blueprint generates 6 variants × 8 camera labels = 48 images.
-      // Deduplicate: prefer the Black 13" variant (103599) per angle, then pick by priority.
-      const PREFERRED_TOTE_VARIANT = 103599;
+      // AOP tote bag: two strap colours (Black, White) × 3 sizes.
+      //
+      // AOP products use variant-specific camera IDs — swapping just the variant
+      // segment in a URL produces a broken CDN link, so the generic recolour
+      // approach used for apparel does NOT work here.
+      //
+      // Fix: store one representative image set per colour (smallest variant of
+      // each colour: Black=103599, White=103605).  The frontend filters the image
+      // list to the selected colour's representative variant ID.
+      //
+      // Result: ~8 stored URLs (4 angles × 2 colours).
+      const TOTE_COLOR_REPS: Record<string, number> = { Black: 103599, White: 103605 };
       const totePriority = (label: string) => {
         if (label === "front") return 0;
         if (label === "back") return 1;
         if (label.startsWith("person")) return 2;
-        return 3;
+        return 99;
       };
       const allUrls = (product.images ?? [])
         .filter((img) => img.src)
         .map((img) => img.src);
 
-      // Group by camera label, prefer the canonical variant
-      const byLabel = new Map<string, string>();
-      for (const url of allUrls) {
-        const label = cameraLabel(url);
-        const vid = variantIdFromUrl(url);
-        if (!byLabel.has(label) || vid === PREFERRED_TOTE_VARIANT) {
-          byLabel.set(label, url);
+      const chosen: string[] = [];
+      for (const repVariantId of Object.values(TOTE_COLOR_REPS)) {
+        // For this colour's representative variant, pick the best URL per camera label.
+        const byLabel = new Map<string, string>();
+        for (const url of allUrls) {
+          const label = cameraLabel(url);
+          const vid = variantIdFromUrl(url);
+          if (!byLabel.has(label) || vid === repVariantId) {
+            byLabel.set(label, url);
+          }
         }
+        const colorImages = [...byLabel.entries()]
+          .filter(([label]) => totePriority(label) < 99)
+          .sort((a, b) => totePriority(a[0]) - totePriority(b[0]))
+          .map(([, url]) => url)
+          .slice(0, 4); // front + back + 2 person shots per colour
+        chosen.push(...colorImages);
       }
-      mockupImages = [...byLabel.entries()]
-        .sort((a, b) => totePriority(a[0]) - totePriority(b[0]))
-        .map(([, url]) => url)
-        .slice(0, 6);
+      mockupImages = chosen;
     } else if (merch.slug === "giclee-print") {
       // Giclée prints: show exactly ONE flat front image per artwork.
       //

@@ -305,6 +305,12 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
   const PER_VARIANT_SLUGS = ["phone-case", "cuff-beanie", "bucket-hat"];
   const isPerVariant = PER_VARIANT_SLUGS.includes(product.slug);
 
+  // Per-colour products (AOP tote bag): camera IDs are variant-specific so URL rewriting
+  // breaks.  Instead the server stores one image set per colour and the frontend filters
+  // to the representative variant for the currently selected colour.
+  const PER_COLOR_SLUGS = ["tote-bag"];
+  const isPerColor = PER_COLOR_SLUGS.includes(product.slug);
+
   const representativeVariantId = (color: string | null): number | null => {
     if (!color) return null;
     const colorVars = variants.filter((v) => v.color === color);
@@ -319,9 +325,9 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
     url.replace(/\/mockup\/([^/]+)\/\d+\//, `/mockup/$1/${targetVariantId}/`);
 
   const colorizedMockups = (urls: string[]): string[] => {
-    // Per-variant products: URLs already have the correct variant ID baked in.
-    // Return unchanged — filtering handles color display below.
-    if (isPerVariant) return urls;
+    // Per-variant and per-colour products: URLs already have the correct variant ID
+    // baked in by the server.  Return unchanged — filtering handles display below.
+    if (isPerVariant || isPerColor) return urls;
     const targetId = selectedVariantId ?? representativeVariantId(selectedColor);
     if (!targetId) return urls;
     return urls.map((url) =>
@@ -341,21 +347,41 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
     if (idx >= 0) setMockupIndex(idx);
   }, [product?.slug, selectedVariantId, artworkMockups]);
 
+  // Per-colour products (tote bag): reset carousel to first image when colour changes
+  // so the user always sees the front of the newly selected colour first.
+  useEffect(() => {
+    if (!isPerColor) return;
+    setMockupIndex(0);
+  }, [selectedColor]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Use artwork-specific mockups if loaded, else fall back to template mockups;
   // then apply color substitution so every image shows the selected color.
   const rawMockups = colorizedMockups(artworkMockups ?? product.mockupImages ?? []);
 
   // For per-variant products: only show images for the currently selected variant
   // so the carousel doesn't mix different colors in the thumbnail strip.
+  // For per-colour products (tote bag): show images for the representative variant
+  // of the selected colour (ignores size — all sizes share the same representative).
   const displayMockups = (() => {
-    if (!isPerVariant) return rawMockups;
-    const targetId = selectedVariantId ?? representativeVariantId(selectedColor);
-    if (!targetId) return rawMockups;
-    const filtered = rawMockups.filter((url) => {
-      const m = url.match(/\/mockup\/[^/]+\/(\d+)\//);
-      return m ? parseInt(m[1], 10) === targetId : true;
-    });
-    return filtered.length > 0 ? filtered : rawMockups;
+    if (isPerVariant) {
+      const targetId = selectedVariantId ?? representativeVariantId(selectedColor);
+      if (!targetId) return rawMockups;
+      const filtered = rawMockups.filter((url) => {
+        const m = url.match(/\/mockup\/[^/]+\/(\d+)\//);
+        return m ? parseInt(m[1], 10) === targetId : true;
+      });
+      return filtered.length > 0 ? filtered : rawMockups;
+    }
+    if (isPerColor) {
+      const repId = representativeVariantId(selectedColor);
+      if (!repId) return rawMockups;
+      const filtered = rawMockups.filter((url) => {
+        const m = url.match(/\/mockup\/[^/]+\/(\d+)\//);
+        return m ? parseInt(m[1], 10) === repId : true;
+      });
+      return filtered.length > 0 ? filtered : rawMockups;
+    }
+    return rawMockups;
   })();
   displayMockupsLengthRef.current = displayMockups.length;
   const currentMockup = displayMockups[mockupIndex] ?? displayMockups[0] ?? null;
