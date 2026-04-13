@@ -786,36 +786,70 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
                     marginBottom: "10px",
                   }}
                 >
-                  Color — {selectedColor}
+                  {isPerColor ? "Strap Color" : "Color"} — {selectedColor}
                 </div>
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  {uniqueColors.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => {
-                        setSelectedColor(color);
-                        setSelectedVariantId(null);
-                        setMockupIndex(0);
-                      }}
-                      style={{
-                        padding: "6px 14px",
-                        background: "transparent",
-                        border: selectedColor === color
-                          ? "1px solid #f5f5f5"
-                          : "1px solid rgba(255,255,255,0.18)",
-                        borderRadius: "20px",
-                        color: selectedColor === color ? "#f5f5f5" : "#888",
-                        fontFamily: "'Inter'",
-                        fontSize: "12px",
-                        cursor: "pointer",
-                        transition: "all 0.2s",
-                        letterSpacing: "0.04em",
-                      }}
-                    >
-                      {color}
-                    </button>
-                  ))}
+                  {uniqueColors.map((color) => {
+                    const swatchColor =
+                      color.toLowerCase() === "black" ? "#111" :
+                      color.toLowerCase() === "white" ? "#e8e3dc" :
+                      color.toLowerCase() === "navy" ? "#1a2a4a" :
+                      color.toLowerCase() === "red" ? "#c0392b" :
+                      color.toLowerCase() === "gray" || color.toLowerCase() === "grey" ? "#888" :
+                      null;
+                    return (
+                      <button
+                        key={color}
+                        onClick={() => {
+                          setSelectedColor(color);
+                          setSelectedVariantId(null);
+                          setMockupIndex(0);
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "6px 14px",
+                          background: "transparent",
+                          border: selectedColor === color
+                            ? "1px solid #f5f5f5"
+                            : "1px solid rgba(255,255,255,0.18)",
+                          borderRadius: "20px",
+                          color: selectedColor === color ? "#f5f5f5" : "#888",
+                          fontFamily: "'Inter'",
+                          fontSize: "12px",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        {swatchColor && (
+                          <span style={{
+                            display: "inline-block",
+                            width: "10px",
+                            height: "10px",
+                            borderRadius: "50%",
+                            background: swatchColor,
+                            border: "1px solid rgba(255,255,255,0.25)",
+                            flexShrink: 0,
+                          }} />
+                        )}
+                        {color}
+                      </button>
+                    );
+                  })}
                 </div>
+                {isPerColor && (
+                  <div style={{
+                    marginTop: "8px",
+                    fontSize: "10px",
+                    color: "#555",
+                    fontFamily: "'Inter'",
+                    letterSpacing: "0.04em",
+                  }}>
+                    AOP print covers the full bag — strap color is the visible difference
+                  </div>
+                )}
               </div>
             )}
 
