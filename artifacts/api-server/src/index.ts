@@ -1,4 +1,5 @@
 import app from "./app";
+import { autoSeedIfEmpty } from "./autoSeed";
 
 const rawPort = process.env["PORT"];
 
@@ -14,6 +15,8 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
+autoSeedIfEmpty().then(() => {
+  app.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
+  });
 });
