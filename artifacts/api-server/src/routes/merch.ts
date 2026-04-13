@@ -150,8 +150,9 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     // If the image file is stored rotated (e.g. portrait file displayed landscape via -90°),
     // derive the display-space dimensions so orientation/scale math matches the visual.
     const artRotation = artwork.imageRotation ?? 0;
-    const dispW = artRotation === 90 || artRotation === -90 ? artH : artW;
-    const dispH = artRotation === 90 || artRotation === -90 ? artW : artH;
+    const isRotated90 = artRotation === 90 || artRotation === -90;
+    const dispW = isRotated90 ? artH : artW;
+    const dispH = isRotated90 ? artW : artH;
     const areaW = merch.printAreaWidth ?? 3000;
     const areaH = merch.printAreaHeight ?? 3000;
     // Use display-space dimensions so rotated images pick the correct scale/orientation.
@@ -159,16 +160,28 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
     const artRatio = dispW / dispH;
     const areaRatio = areaW / areaH;
     // Artwork scale on the print area.
-    // phone-case uses COVER: the case is designed to be fully wrapped, so the
-    //   painting fills the full 1853px height (trimming ~3.8% each side — invisible
-    //   on a curved case). CONTAIN would leave a 59px white gap top and bottom.
-    // All other products use CONTAIN: full artwork visible, no clipping, may have
-    //   margins. This preserves each painting's full composition on tees, hoodies,
-    //   crewnecks, bucket hats, and wide accessories.
+    //
+    // Printify applies `scale` to the PRE-ROTATION image width. After rotation by ±90°,
+    // the post-rotation display dimensions are:
+    //   POST_W = scale × areaW × (artH/artW)   ← original height becomes display width
+    //   POST_H = scale × areaW                  ← original width becomes display height
+    //
+    // CONTAIN (no cropping, full artwork visible) constraints:
+    //   Non-rotated: scale = min(1.0, artRatio/areaRatio)
+    //   ±90° rotated: scale = min(artW/artH, areaH/areaW)
+    //
+    // phone-case uses COVER (fills edge-to-edge, slight side bleed invisible on curved case).
     const COVER_SLUGS = new Set(["phone-case"]);
-    const artworkScale = COVER_SLUGS.has(merch.slug)
-      ? Math.max(1.0, artRatio / areaRatio)  // COVER: fills case edge-to-edge
-      : Math.min(1.0, artRatio / areaRatio); // CONTAIN: full artwork visible
+    let artworkScale: number;
+    if (COVER_SLUGS.has(merch.slug)) {
+      artworkScale = isRotated90
+        ? Math.max(artW / artH, areaH / areaW)  // COVER rotated
+        : Math.max(1.0, artRatio / areaRatio);   // COVER non-rotated
+    } else {
+      artworkScale = isRotated90
+        ? Math.min(artW / artH, areaH / areaW)  // CONTAIN rotated: full artwork, no crop
+        : Math.min(1.0, artRatio / areaRatio);  // CONTAIN non-rotated: full artwork, no crop
+    }
 
     // Upload artwork image to Printify
     const uploadRes = await printifyRequest("/uploads/images.json", {
@@ -215,15 +228,18 @@ router.get("/merch/:slug/artwork/:artworkSlug/mockups", async (req, res) => {
                   height: artH,
                   x: 0.5,
                   y: 0.25,   // Center of Side A (top half of AOP template)
-                  // CONTAIN with breathing room on all sides:
-                  //   scale=artRatio fills Side A height exactly (2175px), but the bag's visible face
-                  //   starts ~5-8% below y=0 (strap attachment area hides the very top of the template),
-                  //   causing top/bottom crop on taller artworks. Scaling to 85% of the contain size
-                  //   gives a consistent ~7.5% white border top & bottom (clearing the strap zone)
-                  //   and proportional side margins. Works for all aspect ratios via Math.min clamp:
-                  //     portrait art (artRatio<1): height-constrained, height=0.85×2175=1849px, side margins vary
-                  //     landscape art (artRatio>1): width-constrained, width=0.85×2175=1849px, top/bottom margins vary
-                  scale: 0.85 * Math.min(1.0, artRatio),
+                  // CONTAIN with breathing room on all sides.
+                  // The front face (Side A) is approximately 2175×2175 (square), so the
+                  // face aspect ratio is 1.0. CONTAIN scale relative to areaW:
+                  //   Non-rotated portrait (artW/artH < 1): height-constrained → scale = artW/artH
+                  //   Non-rotated landscape (artW/artH ≥ 1): width-constrained → scale = 1.0
+                  //   ±90° rotated: POST_W = scale×areaW×artH/artW ≤ areaW → scale = artW/artH
+                  //
+                  // Use artW/artH (pre-rotation ratio) for all cases — correctly handles rotation
+                  // because the constraint is always artW/artH ≤ 1 for portrait-file images.
+                  // The 0.85 factor gives ~7.5% breathing room on each side of the binding dimension
+                  // and clears the strap-attachment zone visible on the very top of the template.
+                  scale: 0.85 * Math.min(artW / artH, 1.0),
                   angle: artRotation,
                 },
                 {
