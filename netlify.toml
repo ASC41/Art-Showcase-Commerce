@@ -1,0 +1,68 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Ryan Cellar — Netlify deployment config
+#
+# BEFORE FIRST DEPLOY:
+#   1. Deploy the API server on Replit (or another host).
+#   2. Copy the live API server URL (e.g. https://ryan-cellar.replit.app).
+#   3. Replace the placeholder in the [[redirects]] block below with that URL.
+#   4. Push to GitHub — Netlify will rebuild automatically.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[build]
+  # Install pnpm, install workspace deps, then build only the frontend artifact.
+  command = "npm install -g pnpm@10 && pnpm install --frozen-lockfile && pnpm --filter @workspace/artist-website run build"
+  publish = "artifacts/artist-website/dist/public"
+
+[build.environment]
+  # Tells the Vite config to use "/" as the base path (standard for a root-level site).
+  BASE_PATH = "/"
+  NODE_VERSION = "20"
+  # PORT is only needed for the dev server; the build step ignores it.
+  # Do NOT set STRIPE_SECRET_KEY, PRINTIFY_API_KEY, or DATABASE_URL here —
+  # those live on the API server, not the frontend.
+
+# ─── API proxy ───────────────────────────────────────────────────────────────
+# All /api/* requests are proxied to the live API server.
+# ⚠️  Replace the `to` URL with your deployed API server address.
+[[redirects]]
+  from   = "/api/*"
+  to     = "https://YOUR-REPLIT-API-URL.replit.app/api/:splat"
+  status = 200
+  force  = true
+
+# Stripe webhook (POST) — proxy the same way so webhooks from Stripe still reach the server.
+[[redirects]]
+  from   = "/webhooks/*"
+  to     = "https://YOUR-REPLIT-API-URL.replit.app/webhooks/:splat"
+  status = 200
+  force  = true
+
+# ─── SPA fallback ────────────────────────────────────────────────────────────
+# All non-file routes serve index.html so client-side routing works on direct nav / refresh.
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
+
+# ─── Security & caching headers ──────────────────────────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options           = "DENY"
+    X-Content-Type-Options    = "nosniff"
+    X-XSS-Protection          = "1; mode=block"
+    Referrer-Policy           = "strict-origin-when-cross-origin"
+    Permissions-Policy        = "camera=(), microphone=(), geolocation=()"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+
+# Immutable cache for hashed JS/CSS bundles emitted by Vite.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Short cache for HTML so deploys propagate quickly.
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
