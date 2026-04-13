@@ -61,6 +61,9 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
   // never fire duplicate Image() requests.
   const preloadedUrlsRef = useRef<Set<string>>(new Set());
 
+  // Swipe-to-navigate: store the X position where the touch started.
+  const swipeTouchStartX = useRef<number | null>(null);
+
   // Hover-prefetch cache: maps `${productSlug}/${artworkSlug}` → mockup URL list.
   // Populated when the user hovers an artwork thumbnail BEFORE clicking it, so
   // the 5-10 s first-provision delay is already finished or in-flight by click.
@@ -505,14 +508,27 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
 
           {/* LEFT: Product mockup (artwork-specific from Printify) */}
           <div style={isMobile ? { width: "100%", padding: "56px 0 0" } : { flex: "0 0 440px", maxWidth: "440px" }}>
-            {/* Main mockup image */}
+            {/* Main mockup image — touch swipe navigates between mockups */}
             <div
+              onTouchStart={(e) => { swipeTouchStartX.current = e.touches[0].clientX; }}
+              onTouchEnd={(e) => {
+                if (swipeTouchStartX.current === null) return;
+                const delta = e.changedTouches[0].clientX - swipeTouchStartX.current;
+                swipeTouchStartX.current = null;
+                if (Math.abs(delta) < 40) return;
+                if (delta < 0) {
+                  setMockupIndex((i) => Math.min(i + 1, displayMockupsLengthRef.current - 1));
+                } else {
+                  setMockupIndex((i) => Math.max(i - 1, 0));
+                }
+              }}
               style={{
                 position: "relative",
                 borderRadius: "12px",
                 overflow: "hidden",
                 background: "#111",
                 aspectRatio: "1",
+                touchAction: "pan-y",
               }}
             >
               {/* Loading overlay */}
@@ -715,38 +731,38 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
                   overflowY: "auto",
                 }}
               >
-                {artworks?.map((artwork) => (
+                {artworks?.map((artwork) => {
+                  const triggerPrefetch = () => {
+                    if (!product) return;
+                    const key = `${product.slug}/${artwork.slug}`;
+                    if (prefetchCacheRef.current.has(key)) return;
+                    prefetchCacheRef.current.set(key, []);
+                    fetch(
+                      `${BASE_URL}/api/merch/${encodeURIComponent(product.slug)}/artwork/${encodeURIComponent(artwork.slug)}/mockups`
+                    )
+                      .then((r) => r.json())
+                      .then((data: { mockupImages: string[] }) => {
+                        const urls = data.mockupImages ?? [];
+                        if (urls.length > 0) {
+                          prefetchCacheRef.current.set(key, urls);
+                          if (!preloadedUrlsRef.current.has(urls[0])) {
+                            preloadedUrlsRef.current.add(urls[0]);
+                            const img = new window.Image();
+                            img.src = urls[0];
+                          }
+                        } else {
+                          prefetchCacheRef.current.delete(key);
+                        }
+                      })
+                      .catch(() => prefetchCacheRef.current.delete(key));
+                  };
+                  return (
                   <button
                     key={artwork.slug}
                     onClick={() => setSelectedArtwork(artwork)}
                     title={artwork.title}
-                    onMouseEnter={() => {
-                      if (!product) return;
-                      const key = `${product.slug}/${artwork.slug}`;
-                      // Don't re-fetch if already cached (even with empty placeholder)
-                      if (prefetchCacheRef.current.has(key)) return;
-                      // Optimistic placeholder — prevents concurrent duplicate calls
-                      prefetchCacheRef.current.set(key, []);
-                      fetch(
-                        `${BASE_URL}/api/merch/${encodeURIComponent(product.slug)}/artwork/${encodeURIComponent(artwork.slug)}/mockups`
-                      )
-                        .then((r) => r.json())
-                        .then((data: { mockupImages: string[] }) => {
-                          const urls = data.mockupImages ?? [];
-                          if (urls.length > 0) {
-                            prefetchCacheRef.current.set(key, urls);
-                            // Kick off preload of first image in the background
-                            if (!preloadedUrlsRef.current.has(urls[0])) {
-                              preloadedUrlsRef.current.add(urls[0]);
-                              const img = new window.Image();
-                              img.src = urls[0];
-                            }
-                          } else {
-                            prefetchCacheRef.current.delete(key);
-                          }
-                        })
-                        .catch(() => prefetchCacheRef.current.delete(key));
-                    }}
+                    onMouseEnter={triggerPrefetch}
+                    onTouchStart={triggerPrefetch}
                     style={{
                       width: "60px",
                       height: "60px",
@@ -769,7 +785,8 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -809,7 +826,7 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
                           display: "flex",
                           alignItems: "center",
                           gap: "6px",
-                          padding: "6px 14px",
+                          padding: isMobile ? "11px 16px" : "6px 14px",
                           background: "transparent",
                           border: selectedColor === color
                             ? "1px solid #f5f5f5"
@@ -879,7 +896,7 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
                         key={variant?.id ?? size}
                         onClick={() => variant && setSelectedVariantId(variant.id)}
                         style={{
-                          padding: "6px 14px",
+                          padding: isMobile ? "12px 14px" : "6px 14px",
                           background: isSelected ? "#f5f5f5" : "transparent",
                           border: isSelected
                             ? "1px solid #f5f5f5"
