@@ -48,13 +48,25 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
   const [isZoomed, setIsZoomed] = useState(false);
   const isMobile = useIsMobile();
   const displayMockupsLengthRef = useRef(0);
+  // Ref updated on every render — lets effects below the early return read the
+  // current displayMockups array without violating React's hooks ordering rules.
+  const displayMockupsRef = useRef<string[]>([]);
 
   // Artwork-specific mockup state
   const [artworkMockups, setArtworkMockups] = useState<string[] | null>(null);
   const [loadingMockups, setLoadingMockups] = useState(false);
   const fetchAbortRef = useRef<AbortController | null>(null);
 
-  // Reset state when product changes
+  // Image optimisation: track which CDN URLs have already been preloaded so we
+  // never fire duplicate Image() requests.
+  const preloadedUrlsRef = useRef<Set<string>>(new Set());
+
+  // Hover-prefetch cache: maps `${productSlug}/${artworkSlug}` → mockup URL list.
+  // Populated when the user hovers an artwork thumbnail BEFORE clicking it, so
+  // the 5-10 s first-provision delay is already finished or in-flight by click.
+  const prefetchCacheRef = useRef<Map<string, string[]>>(new Map());
+
+  // Reset state when product changes; also clear per-product image caches.
   useEffect(() => {
     if (product) {
       setSelectedArtwork(null);
@@ -63,6 +75,8 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
       setMockupIndex(0);
       setArtworkMockups(null);
       setLoadingMockups(false);
+      preloadedUrlsRef.current.clear();
+      prefetchCacheRef.current.clear();
     }
   }, [product?.slug]);
 
@@ -135,9 +149,21 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
     }
   }, [initialSize, product, selectedColor]);
 
-  // Fetch artwork-specific mockup images when artwork changes
+  // Fetch artwork-specific mockup images when artwork changes.
+  // Checks the hover-prefetch cache first — if the user already hovered this
+  // artwork the URLs (and first image) are ready immediately, no spinner needed.
   useEffect(() => {
     if (!product || !selectedArtwork) return;
+
+    const cacheKey = `${product.slug}/${selectedArtwork.slug}`;
+    const prefetched = prefetchCacheRef.current.get(cacheKey);
+    if (prefetched && prefetched.length > 0) {
+      // Instant path: URLs already fetched via hover-prefetch.
+      setArtworkMockups(prefetched);
+      setMockupIndex(0);
+      setLoadingMockups(false);
+      return;
+    }
 
     // Cancel any in-flight request
     if (fetchAbortRef.current) {
@@ -175,6 +201,7 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
             }
           };
           img.src = urls[0];
+          preloadedUrlsRef.current.add(urls[0]);
         } else {
           setArtworkMockups(null);
           setLoadingMockups(false);
@@ -243,6 +270,44 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
       setIsCheckingOut(false);
     }
   };
+
+  // Radial preload: when the user is at index N, kick off background Image() fetches
+  // in priority order N → N+1 → N−1 → N+2 → N−2 … so the images they're most
+  // likely to view next are already in the browser cache.
+  // Reads displayMockupsRef (updated every render) to avoid a TDZ issue with
+  // displayMockups being computed after the early-return guard below.
+  useEffect(() => {
+    const mocks = displayMockupsRef.current;
+    if (!mocks.length) return;
+
+    const order: number[] = [mockupIndex];
+    for (let d = 1; d < mocks.length; d++) {
+      if (mockupIndex + d < mocks.length) order.push(mockupIndex + d);
+      if (mockupIndex - d >= 0) order.push(mockupIndex - d);
+    }
+    const urls = order.map((i) => mocks[i]).filter(Boolean);
+    let cancelled = false;
+
+    const preloadOne = (url: string) =>
+      new Promise<void>((resolve) => {
+        if (preloadedUrlsRef.current.has(url)) { resolve(); return; }
+        preloadedUrlsRef.current.add(url);
+        const img = new window.Image();
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+        img.src = url;
+      });
+
+    (async () => {
+      await Promise.all(urls.slice(0, 2).map(preloadOne));
+      for (const url of urls.slice(2)) {
+        if (cancelled) break;
+        await preloadOne(url);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [mockupIndex, artworkMockups, selectedColor]); // artworkMockups/selectedColor trigger ref update
 
   if (!product) return null;
 
@@ -384,6 +449,7 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
     return rawMockups;
   })();
   displayMockupsLengthRef.current = displayMockups.length;
+  displayMockupsRef.current = displayMockups;
   const currentMockup = displayMockups[mockupIndex] ?? displayMockups[0] ?? null;
 
   const isOneSize =
@@ -503,6 +569,7 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
                   transition={{ duration: 0.35 }}
                   src={currentMockup}
                   alt={`${product.name} mockup`}
+                  fetchPriority="high"
                   onClick={() => setIsZoomed(true)}
                   style={{
                     width: "100%",
@@ -564,6 +631,7 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
                     <img
                       src={src}
                       alt={`Mockup ${i + 1}`}
+                      loading="lazy"
                       style={{ width: "100%", height: "100%", objectFit: "contain" }}
                     />
                   </button>
@@ -652,6 +720,33 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
                     key={artwork.slug}
                     onClick={() => setSelectedArtwork(artwork)}
                     title={artwork.title}
+                    onMouseEnter={() => {
+                      if (!product) return;
+                      const key = `${product.slug}/${artwork.slug}`;
+                      // Don't re-fetch if already cached (even with empty placeholder)
+                      if (prefetchCacheRef.current.has(key)) return;
+                      // Optimistic placeholder — prevents concurrent duplicate calls
+                      prefetchCacheRef.current.set(key, []);
+                      fetch(
+                        `${BASE_URL}/api/merch/${encodeURIComponent(product.slug)}/artwork/${encodeURIComponent(artwork.slug)}/mockups`
+                      )
+                        .then((r) => r.json())
+                        .then((data: { mockupImages: string[] }) => {
+                          const urls = data.mockupImages ?? [];
+                          if (urls.length > 0) {
+                            prefetchCacheRef.current.set(key, urls);
+                            // Kick off preload of first image in the background
+                            if (!preloadedUrlsRef.current.has(urls[0])) {
+                              preloadedUrlsRef.current.add(urls[0]);
+                              const img = new window.Image();
+                              img.src = urls[0];
+                            }
+                          } else {
+                            prefetchCacheRef.current.delete(key);
+                          }
+                        })
+                        .catch(() => prefetchCacheRef.current.delete(key));
+                    }}
                     style={{
                       width: "60px",
                       height: "60px",
@@ -670,6 +765,7 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
                     <img
                       src={artwork.imageUrl}
                       alt={artwork.title}
+                      loading="lazy"
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
                   </button>
