@@ -10,7 +10,7 @@
 
 [build]
   # Install pnpm, install workspace deps, then build only the frontend artifact.
-  command = "npm install -g pnpm@10 && pnpm install --frozen-lockfile && pnpm --filter @workspace/artist-website run build"
+  command = "npm install -g pnpm@9 && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/artist-website run build"
   publish = "artifacts/artist-website/dist/public"
 
 [build.environment]
