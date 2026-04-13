@@ -1,0 +1,78 @@
+The Netlify deploy errored, with the following guidance provided:
+
+Diagnosis
+- I can't find any relevant error lines in the logs you provided — the build log you pasted is empty (just "}" ). Without the build output I cannot isolate the exact failing lines or error message, so I cannot give a precise root-cause diagnosis.
+
+Solution (how you can get a precise diagnosis and common fixes to try now)
+1. Provide the full build log
+   - From Netlify, open the failed deploy and copy the full build log (the section around the failure — lines containing "Error", "failed", "ERR!", "Cannot find module", "rollup", "vite", "npm ERR!", etc.). Paste that here so I can isolate the exact error lines and give a targeted fix.
+
+2. Quick checks to run locally (these often reveal the failure)
+   - In your repo root run:
+```bash
+# clean install and run the build the same way Netlify does
+rm -rf node_modules
+npm ci
+npm run build
+```
+   - If npm ci fails, run npm install and note errors. If build fails, copy the exact error block and paste it here.
+
+3. Common causes and specific actions you can try now
+   - Missing dependency / "Cannot find module" errors:
+     - Verify the missing package appears in package.json and that package-lock.json or yarn.lock is committed.
+     - If it is missing, add it with npm/yarn and commit lockfile:
+```bash
+npm install <missing-package> --save
+git add package.json package-lock.json
+git commit -m "Add missing dependency"
+```
+   - Rollup/Vite externalization errors (e.g., build complaining about bundling a native file or a particular package):
+     - First verify the package is present in package.json and that any required file exists in the repo. Do not add something to rollupOptions.external until you confirmed the package/file is committed.
+     - If you must mark a package external in Vite, add it to build.rollupOptions.external in vite.config.js. Example:
+```js
+// vite.config.js
+export default {
+  build: {
+    rollupOptions: {
+      external: ['some-external-package']
+    }
+  }
+}
+```
+   - Node version mismatch / engine errors:
+     - Ensure the Node version used locally and on Netlify match. Add an .nvmrc or engines field in package.json. See Netlify docs for changing Node versions: https://docs.netlify.com/configure-builds/manage-dependencies/#node-js-and-javascript
+     - Example .nvmrc (commit this file):
+```
+16
+```
+     - Or in package.json:
+```json
+"engines": { "node": "16.x" }
+```
+   - Incorrect build command or publish directory in Netlify settings:
+     - In Netlify UI check Site settings → Build & deploy → Continuous Deployment → Build settings:
+       - Build command should match package.json (e.g., npm run build)
+       - Publish directory should be the folder with static output (e.g., dist, build, out)
+     - Alternatively add a netlify.toml at repo root to define them:
+```toml
+[build]
+  command = "npm run build"
+  publish = "dist"
+```
+   - Missing committed build files (e.g., client-side assets, config files):
+     - Verify files required by the build are tracked in git and present in the repo (use git status and check GitHub to confirm).
+
+4. If you want me to diagnose immediately
+   - Paste the full failing portion of the Netlify build log (the lines around the first error and the last 50–100 lines). Once I have those lines I will:
+     1) isolate the error lines,
+     2) identify the error type and cause,
+     3) provide the precise code/config change to fix it.
+
+Helpful repo pointers
+- package.json: https://github.com/ASC41/Art-Showcase-Commerce/blob/master/package.json
+
+Once you paste the full build log I will produce a precise diagnosis and exact fixes.
+
+The relevant error logs are:
+
+Line 0: Failed during stage 'building site': Build script returned non-zero exit code: 2
