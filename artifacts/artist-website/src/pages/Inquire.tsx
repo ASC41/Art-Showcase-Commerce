@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -21,7 +21,7 @@ const SLIDES = [
   },
 ];
 
-const DISPLAY_MS = 3750;
+const DISPLAY_MS = 5000;
 
 export default function Inquire() {
   const [slideIdx, setSlideIdx] = useState(0);
@@ -80,8 +80,6 @@ export default function Inquire() {
     transition: "border-color 0.2s",
   };
 
-  const slide = SLIDES[slideIdx];
-
   return (
     <div style={{ minHeight: "100vh", position: "relative", overflow: "hidden", color: "#f5f5f5" }}>
       {/* ── Ken Burns keyframe — single continuous loop, never resets ── */}
@@ -115,17 +113,15 @@ export default function Inquire() {
             animationFillMode: "both",
           }}
         >
-          <AnimatePresence>
+          {SLIDES.map((s, i) => (
             <motion.div
-              key={slide.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeInOut" }}
+              key={s.id}
+              animate={{ opacity: i === slideIdx ? 1 : 0 }}
+              transition={{ duration: 1.5, ease: "easeInOut" }}
               style={{ position: "absolute", inset: 0 }}
             >
               <img
-                src={slide.url}
+                src={s.url}
                 alt=""
                 draggable={false}
                 style={{
@@ -139,7 +135,7 @@ export default function Inquire() {
                 }}
               />
             </motion.div>
-          </AnimatePresence>
+          ))}
         </div>
 
         {/* Dark vignette overlay — preserves readability */}
