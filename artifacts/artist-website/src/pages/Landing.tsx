@@ -3,10 +3,12 @@ import DraggableGallery, { DraggableGalleryItem } from "@/framer/draggable-galle
 import Navbar from "@/components/Navbar";
 import { ARTWORK_ASPECT, ARTWORK_ROTATION } from "@/lib/artworkDimensions";
 import { useLocation } from "wouter";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Landing() {
   const { data: artworks, isLoading } = useListArtworks();
   const [, navigate] = useLocation();
+  const isMobile = useIsMobile();
 
   const SPACER: DraggableGalleryItem = { type: "empty", src: "", alt: "", title: "" };
 
@@ -94,8 +96,8 @@ export default function Landing() {
             itemGap={22}
             hoverScale={1.04}
             expandedScale={0.82}
-            dragEase={0.1}
-            momentumFactor={20}
+            dragEase={isMobile ? 0.45 : 0.1}
+            momentumFactor={isMobile ? 40 : 20}
             bufferZone={0.5}
             borderRadius={4}
             background="transparent"
