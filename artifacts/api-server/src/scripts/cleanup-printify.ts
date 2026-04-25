@@ -59,14 +59,17 @@ async function buildKeepSet(): Promise<Set<string>> {
 async function fetchAllPrintifyProducts(shopId: string): Promise<PrintifyProduct[]> {
   const all: PrintifyProduct[] = [];
   let page = 1;
-  const limit = 50;
+  const limit = 50; // Printify API max is 50; requests above that return HTTP 400
 
   while (true) {
     const data = (await printifyRequest(
       `/shops/${shopId}/products.json?limit=${limit}&page=${page}`
     )) as { data: PrintifyProduct[] };
 
-    const products: PrintifyProduct[] = data.data ?? [];
+    const products: PrintifyProduct[] = (data.data ?? []).map((p) => ({
+      ...p,
+      id: String(p.id), // normalize in case API returns a non-string type
+    }));
     all.push(...products);
 
     if (products.length < limit) break;
