@@ -11,7 +11,8 @@
     "provision-printify": "tsx ./src/scripts/provision-printify.ts",
     "provision-merch": "tsx ./src/scripts/provision-merch.ts",
     "printify:cleanup": "tsx ./src/scripts/cleanup-printify.ts",
-    "printify:cleanup:confirm": "tsx ./src/scripts/cleanup-printify.ts --confirm"
+    "printify:cleanup:confirm": "tsx ./src/scripts/cleanup-printify.ts --confirm",
+    "verify-stripe-webhook": "tsx ./src/scripts/verify-stripe-webhook.ts"
   },
   "dependencies": {
     "@types/nodemailer": "^7.0.11",
