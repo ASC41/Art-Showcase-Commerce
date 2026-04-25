@@ -220,6 +220,16 @@ function MerchCard({
               }}
             >
               ${(minPrice / 100).toFixed(0)}
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: "#666",
+                  fontWeight: 400,
+                  marginLeft: "5px",
+                }}
+              >
+                + shipping
+              </span>
             </span>
             {colors.length > 1 && (
               <span
