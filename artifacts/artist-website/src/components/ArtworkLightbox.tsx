@@ -656,7 +656,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                 </span>
               </div>
               <div style={{ display: "flex", gap: "10px" }}>
-                {isAvailable && artwork.price && (
+                {SHOP_ENABLED && isAvailable && artwork.price && (
                   <button
                     onClick={handleBuyOriginal}
                     disabled={checkoutMutation.isPending}
@@ -671,7 +671,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                     {checkoutMutation.isPending ? "Loading…" : "Buy Original"}
                   </button>
                 )}
-                {hasPrints && (
+                {SHOP_ENABLED && hasPrints && (
                   <button
                     onClick={handleOpenPicker}
                     disabled={checkoutMutation.isPending}
