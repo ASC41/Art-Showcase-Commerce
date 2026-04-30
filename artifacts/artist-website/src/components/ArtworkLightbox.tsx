@@ -4,6 +4,8 @@ import type { Artwork, PrintSize } from "@workspace/api-client-react";
 import { ARTWORK_ASPECT, ARTWORK_ROTATION } from "@/lib/artworkDimensions";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+const SHOP_ENABLED = false;
+
 interface Props {
   artworks: Artwork[];
   currentIndex: number;
@@ -435,7 +437,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                     {formatPrice(artwork.price)}
                   </span>
                   <div style={{ display: "flex", gap: "8px" }}>
-                    {isAvailable && artwork.price && (
+                    {SHOP_ENABLED && isAvailable && artwork.price && (
                       <button
                         onClick={handleBuyOriginal}
                         disabled={checkoutMutation.isPending}
@@ -450,7 +452,7 @@ export default function ArtworkLightbox({ artworks, currentIndex, onClose, onNav
                         {checkoutMutation.isPending ? "…" : "Buy Original"}
                       </button>
                     )}
-                    {hasPrints && (
+                    {SHOP_ENABLED && hasPrints && (
                       <button
                         onClick={() => setShowPrintPicker(true)}
                         style={{

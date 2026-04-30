@@ -6,6 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ARTWORK_ASPECT } from "@/lib/artworkDimensions";
 
+const SHOP_ENABLED = false;
+
 interface MerchVariant {
   id: number;
   title: string;
@@ -938,26 +940,28 @@ export default function MerchLightbox({ product, onClose, initialArtworkSlug, in
             {/* BUY BUTTON */}
             <motion.button
               onClick={handleCheckout}
-              disabled={!canBuy || isCheckingOut}
-              whileHover={canBuy ? { scale: 1.02 } : {}}
-              whileTap={canBuy ? { scale: 0.98 } : {}}
+              disabled={!SHOP_ENABLED || !canBuy || isCheckingOut}
+              whileHover={SHOP_ENABLED && canBuy ? { scale: 1.02 } : {}}
+              whileTap={SHOP_ENABLED && canBuy ? { scale: 0.98 } : {}}
               style={{
                 width: "100%",
                 padding: "16px 24px",
-                background: canBuy ? "#f5f5f5" : "#1a1a1a",
+                background: SHOP_ENABLED && canBuy ? "#f5f5f5" : "#1a1a1a",
                 border: "none",
                 borderRadius: "6px",
-                color: canBuy ? "#080808" : "#444",
+                color: SHOP_ENABLED && canBuy ? "#080808" : "#444",
                 fontFamily: "'Inter'",
                 fontSize: "13px",
                 fontWeight: 600,
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
-                cursor: canBuy ? "pointer" : "not-allowed",
+                cursor: SHOP_ENABLED && canBuy ? "pointer" : "not-allowed",
                 transition: "background 0.2s",
               }}
             >
-              {isCheckingOut
+              {!SHOP_ENABLED
+                ? "COMING SOON"
+                : isCheckingOut
                 ? "PROCESSING..."
                 : canBuy
                 ? `BUY NOW — $${(displayPriceCents / 100).toFixed(0)}`

@@ -88,10 +88,12 @@ function HamburgerIcon({ isOpen }: { isOpen: boolean }) {
   );
 }
 
+const SHOP_ENABLED = false;
+
 const NAV_LINKS = [
   { label: "Gallery", href: "/" },
   { label: "Portfolio", href: "/portfolio" },
-  { label: "Merch", href: "/merch" },
+  ...(SHOP_ENABLED ? [{ label: "Merch", href: "/merch" }] : []),
   { label: "Inquire", href: "/inquire" },
   { label: "About", href: "/about" },
 ];
