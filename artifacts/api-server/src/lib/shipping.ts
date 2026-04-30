@@ -3,6 +3,18 @@ import { type BlueprintShippingRates, shippingCostForCountry } from "./printify"
 
 type ShippingOption = Stripe.Checkout.SessionCreateParams.ShippingOption;
 
+// Countries Printify ships to — used for Stripe shipping_address_collection.
+export const PRINTIFY_SHIP_TO_COUNTRIES: Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry[] =
+  [
+    "US","CA","GB","AU","NZ",
+    "AT","BE","BG","HR","CY","CZ","DK","EE","FI","FR","DE","GR","HU","IE",
+    "IT","LV","LT","LU","MT","NL","PL","PT","RO","SK","SI","ES","SE",
+    "NO","CH","IS","LI",
+    "JP","KR","SG","HK","TW","TH","MY","PH","VN","IN","AE","SA","IL",
+    "MX","BR","AR","CL","CO","PE",
+    "ZA","NG","KE","EG","MA",
+  ];
+
 function makeOption(
   displayName: string,
   costCents: number,

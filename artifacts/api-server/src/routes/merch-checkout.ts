@@ -9,7 +9,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { printifyRequest, getShopId, getBlueprintShippingRates } from "../lib/printify";
-import { buildStripeShippingOptions } from "../lib/shipping";
+import { buildStripeShippingOptions, PRINTIFY_SHIP_TO_COUNTRIES } from "../lib/shipping";
 import { sendOrderNotification } from "../lib/mailer";
 
 const router: IRouter = Router();
@@ -114,6 +114,7 @@ router.post("/checkout/merch-session", async (req: Request, res: Response) => {
         artworkId: String(artwork.id),
         artworkTitle: artwork.title,
       },
+      shipping_address_collection: { allowed_countries: PRINTIFY_SHIP_TO_COUNTRIES },
       shipping_options: shippingOptions,
       phone_number_collection: { enabled: false },
       success_url: successUrl,

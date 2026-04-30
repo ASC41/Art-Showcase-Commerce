@@ -18,7 +18,7 @@ import {
   type PrintSize,
   type PrintOrientation,
 } from "../lib/printify";
-import { buildStripeShippingOptions } from "../lib/shipping";
+import { buildStripeShippingOptions, PRINTIFY_SHIP_TO_COUNTRIES } from "../lib/shipping";
 import { fulfillMerchOrder } from "./merch-checkout";
 
 const router: IRouter = Router();
@@ -467,6 +467,7 @@ router.post("/checkout/session", async (req, res) => {
     if (purchaseType === "print") {
       // Fine Art Print: blueprint 804, provider 72 (Print Clever)
       const printShippingRates = await getBlueprintShippingRates(804, 72);
+      sessionParams.shipping_address_collection = { allowed_countries: PRINTIFY_SHIP_TO_COUNTRIES };
       sessionParams.shipping_options = buildStripeShippingOptions(printShippingRates);
       sessionParams.phone_number_collection = { enabled: true };
     }
